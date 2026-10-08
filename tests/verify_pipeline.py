@@ -596,6 +596,8 @@ def check_bams(work: Path) -> None:
                     "docker",
                     "run",
                     "--rm",
+                    "--user",
+                    f"{os.getuid()}:{os.getgid()}",
                     "--network",
                     "none",
                     "-v",
