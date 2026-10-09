@@ -4,7 +4,6 @@ set -euo pipefail
 
 script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 repo_dir=$(dirname "$script_dir")
-tag=$(pushd "$repo_dir" &> /dev/null && git describe --tags --abbrev=0)
 
 push="true"
 while [[ "$#" -gt 1 ]]; do
@@ -27,7 +26,13 @@ while [[ "$#" -gt 1 ]]; do
     esac
 done
 project="$1"
-tag="${2:-$tag}"
+tag="${2:-}"
+if [[ -z "$tag" ]]; then
+    if ! tag=$(git -C "$repo_dir" describe --tags --abbrev=0 2>/dev/null); then
+        echo "No Git tag found; pass an explicit tag as the second positional argument." >&2
+        exit 2
+    fi
+fi
 registry="${3:-kundajelab}"
 
 trap 'rm -f "$repo_dir/$project/.dockerignore"' EXIT

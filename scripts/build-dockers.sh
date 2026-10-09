@@ -5,7 +5,7 @@ script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 repo_dir=$(dirname "$script_dir")
 pushd "$repo_dir" &> /dev/null
 
-tag=$(git describe --tags --abbrev=0)
+tag=""
 
 function usage {
     cat << EOF
@@ -16,7 +16,7 @@ Update .env with the list of current dockers.
 
 ARGS:
     -h|--help: Show this message and exit.
-    -t|--tag: Specify docker tag. Defaults to current git tag: $tag
+    -t|--tag: Specify docker tag. Defaults to the latest reachable Git tag.
     --push/--no-push: Whether or not to push images to the remote repo
 EOF
 }
@@ -30,6 +30,10 @@ while [[ "$#" -ge 1 ]]; do
             exit 0
             ;;
         "-t"|"--tag")
+            if [[ "$#" -lt 2 || -z "$2" || "$2" == -* ]]; then
+                echo "--tag requires a tag value." >&2
+                exit 2
+            fi
             tag="$2"
             shift 2
             ;;
@@ -49,6 +53,13 @@ done
 
 if [[ "$#" -gt 0 ]]; then
     projects+=("${@}")
+fi
+
+if [[ -z "$tag" ]]; then
+    if ! tag=$(git describe --tags --abbrev=0 2>/dev/null); then
+        echo "No Git tag found; pass --tag TAG." >&2
+        exit 2
+    fi
 fi
 
 case ${#projects[@]} in
