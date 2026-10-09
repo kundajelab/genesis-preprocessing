@@ -155,7 +155,19 @@ SPP scores can differ from the old workflow because of the aligner, read lengths
 and upstream correlation-baseline changes.
 
 MACS3 uses `BAM` for SE and `BAMPE` for PE, the assigned control, inferred genome
-size, and its remaining defaults. deepTools produces total and strand-specific
+size, and its remaining defaults. In particular, MACS3's default `--keep-dup=1`
+limits identical-position/strand SE tags or identical PE fragments during peak
+calling. It still reads alignments carrying the BAM duplicate flag; marking a
+BAM is not the same as excluding those records. Thus retaining duplicates in the
+alignment BAM does not mean peak calling retains every duplicate observation.
+
+Tracks and primary-weighted quantification use the retained BAM, without a
+separate duplicate filter; paired read ends count independently in quantification.
+Consequently, excluding duplicate records can change coverage and quantification
+even when peak calls remain unchanged. These behaviors describe the current
+implementation, not a recommendation to remove duplicates from DAP-seq libraries.
+
+deepTools produces total and strand-specific
 CPM coverage and strand-specific 5-prime counts at one-base resolution. PE
 libraries additionally receive first-read tracks. Tracks have no MAPQ filter.
 Strand CPM uses the total alignment count as its shared scaling denominator.
