@@ -516,6 +516,11 @@ def check_outputs(work: Path, *, docker: bool) -> None:
             assert source.count("samtools view -u -F 2308 -") == 3 and " -q " not in source
             assert "trimfastq" not in source and "head " not in source
             assert source.count("substr($0, 1, bases)") == 1 and "-v bases=50 " in source
+        if docker and "bamCoverage " in source:
+            assert (
+                "Matplotlib created a temporary cache directory"
+                not in (command.parent / ".command.err").read_text()
+            )
         if "macs3 callpeak" in source:
             assert "_control.primary.bam" in source
         if "Rscript" in source:

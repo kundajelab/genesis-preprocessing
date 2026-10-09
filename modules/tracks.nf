@@ -19,6 +19,8 @@ process TRACKS {
     def qcTracks = meta.layout == 'PE' ?
         "make_tracks '${qc_bam}' '${meta.id}.tracks.read1'" : ''
     """
+    export MPLCONFIGDIR="\$PWD/.matplotlib"
+    mkdir -p "\$MPLCONFIGDIR"
     make_tracks() {
         local input=\$1 stem=\$2 count factor
         count=\$(samtools view -c "\$input")
