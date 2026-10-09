@@ -25,7 +25,8 @@ workflow {
         max_seed_occurrences: params.bwa_max_seed_occurrences,
         score_threshold: params.bwa_score_threshold
     ]
-    VALIDATE_SHEET(Channel.value(sheet), Channel.value(referencesDir))
+    VALIDATE_SHEET(Channel.value(sheet), Channel.value(referencesDir),
+                   file("${projectDir}/genesis_tools/src"))
     samples = VALIDATE_SHEET.out.sheet.splitCsv(header: true, sep: '\t')
         .map { row ->
             [id: row.sample_id, species: row.species, read1_url: row.read1_url,

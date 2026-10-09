@@ -9,15 +9,20 @@ process VALIDATE_SHEET {
     input:
     path sheet
     path references
+    path toolsSource
     output:
     path 'validated.tsv', emit: sheet
     script:
     """
+    export PYTHONPATH='${toolsSource}'
+    export PYTHONDONTWRITEBYTECODE=1
     genesis-tools validate-sheet --sheet '${sheet}' \
         --references '${references}' --output validated.tsv
     """
     stub:
     """
+    export PYTHONPATH='${toolsSource}'
+    export PYTHONDONTWRITEBYTECODE=1
     genesis-tools validate-sheet --sheet '${sheet}' \
         --references '${references}' --output validated.tsv
     """

@@ -51,6 +51,16 @@ def load_samples(sheet: Path, references: Path) -> list[dict[str, str]]:
             rows.append(row)
     if not rows:
         raise ValueError(f"{sheet}: no samples")
+    references_by_id: dict[str, str] = {}
+    for row in rows:
+        filename = row["reference_fasta"]
+        reference_id = re.sub(r"\.(fa|fasta|fna)\.gz$", "", filename)
+        previous = references_by_id.setdefault(reference_id, filename)
+        if previous != filename:
+            raise ValueError(
+                f"{sheet}: reference ID collision: {previous} and {filename} both use "
+                f"{reference_id}; use distinct reference basenames"
+            )
     samples = {row["sample_id"]: row for row in rows}
     if len(samples) != len(rows):
         raise ValueError(f"{sheet}: duplicate sample_id")
