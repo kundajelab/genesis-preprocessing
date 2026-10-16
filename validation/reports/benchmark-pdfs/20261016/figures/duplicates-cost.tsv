@@ -1,0 +1,3 @@
+"cohort"	"method"	"measurement"	"n"	"median"	"minimum"	"maximum"
+"atac-arabidopsis-1m"	"baseline"	"processing_seconds"	"3"	"289.25980048207566"	"273.2263788320124"	"293.6746944708284"
+"atac-arabidopsis-1m"	"picard"	"processing_seconds"	"3"	"243.22746341791935"	"238.06595097505488"	"248.16222864296287"

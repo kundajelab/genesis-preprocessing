@@ -1,0 +1,74 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{times,microtype,graphicx,booktabs,float}
+\usepackage[font=small,labelfont=bf,labelsep=period,skip=4pt]{caption}
+\setlength{\textwidth}{6in}
+\setlength{\textheight}{9in}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\evensidemargin}{0.25in}
+\setlength{\topmargin}{-0.35in}
+\setlength{\headheight}{0.15in}
+\setlength{\headsep}{0.2in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlength{\intextsep}{4pt}
+\setlength{\textfloatsep}{9pt}
+\newcommand{\reporttitle}[2]{\noindent\rule{\linewidth}{4pt}\par
+{\LARGE\bfseries #1\par}\vspace{2pt}\noindent\rule{\linewidth}{1pt}\par
+#2\par October 16, 2026\par\vspace{4pt}}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}{9pt}{4pt}{\large\bfseries}}
+\makeatother
+\renewenvironment{abstract}{\small\textbf{Abstract}\par}{\par\vspace{3pt}}
+\let\originalitemize\itemize
+\renewcommand{\itemize}{\originalitemize\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\parsep}{0pt}}
+\let\originalenumerate\enumerate
+\renewcommand{\enumerate}{\originalenumerate\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\parsep}{0pt}}
+\begin{document}
+\reporttitle{Duplicate marker comparison}{Arabidopsis bulk ATAC; samtools and Picard}
+\begin{abstract}At 1 million pairs per library, samtools and Picard retain identical counts in one replicate and differ by one fragment in the other. Both produce peak Jaccard of 1.0 against the samtools baseline. Median cohort time is 289.3 seconds with samtools and 243.2 seconds with Picard, but this is one short-read cohort. We would broaden validation before changing the default marker.\end{abstract}
+\section*{Setup}
+\textbf{Comparisons.} samtools 1.24 and Picard 3.5.0 mark the same aligned inputs, followed by the same proper-pair, MAPQ and organellar selection. Duplicate-marked fragments are excluded in both arms; DAP duplicate retention is a separate scientific policy.
+
+\textbf{Scoring.} Retention is selected fragments/raw pairs. Jaccard uses peak-base intersection/union. Fixed-region Spearman compares counts on baseline regions. Post-filter duplicate flags cannot estimate pre-filter PCR duplication; pre-exclusion coordinate complexity is a separate measurement.
+
+\begin{table}[H]\centering\small\caption{Input identities at the atac-arabidopsis-1m cap.}
+\begin{tabular}{lrr}\toprule
+Library & Role / control & Raw templates \\ \midrule
+SRR4000468 & biological replicate 1 & 1,000,000 \\
+SRR4000469 & biological replicate 2 & 1,000,000 \\
+\bottomrule\end{tabular}\end{table}
+\section{The two markers preserve nearly identical selected data}
+Both arms retain 458,813 fragments in SRR4000468; SRR4000469 retains 565,032 with samtools and 565,033 with Picard. Fixed-region Spearman is 1.0 and 0.999998 for the 2 Picard comparisons.
+
+\begin{figure}[H]\centering\makebox[\linewidth][c]{\includegraphics[width=7in]{figures/duplicates-quality.pdf}}
+\caption{Retained fragments and peak agreement after duplicate exclusion.}\end{figure}
+\newpage
+\section{Picard lowers observed cohort time in this dataset}
+The median cohort reduction is 46.0 seconds, or 15.9\%, over 3 fresh repetitions per arm. The observed samtools range is 273.2 to 293.7 seconds, versus 238.1 to 248.2 seconds for Picard.
+
+\begin{figure}[H]\centering\makebox[\linewidth][c]{\includegraphics[width=4.6in]{figures/duplicates-cost.pdf}}
+\caption{Whole-cohort processing time, excluding indexing and evaluation.}\end{figure}
+\begin{table}[H]\centering\small\caption{Pre-exclusion NRF uses distinct outer-coordinate groups / eligible fragments.}
+\begin{tabular}{lp{2in}p{2in}}\toprule
+Measurement & 1M pairs: replicate 1 / 2 & 5M pairs: replicate 1 / 2 \\ \midrule
+Baseline NRF & 0.99639 / 0.99520 & 0.98273 / 0.97605 \\
+Raw pairs & 1,000,000 / 1,000,000 & 5,000,000 / 5,000,000 \\
+\bottomrule\end{tabular}\end{table}
+\section*{Open issues}
+\begin{itemize}
+\item Cohort time is not the isolated marking phase and includes common processing.
+\item The larger maize-genome comparison is not established by these records.
+\item Outer-fragment complexity differs from unclipped-start definitions used elsewhere.
+\end{itemize}
+\section*{Recommendation}
+We would treat Picard as a performance candidate, with the duplicate-exclusion policy unchanged.
+
+\begin{enumerate}
+\item Compare longer reads and larger genomes under matched resource limits.
+\item Inspect tie-breaking and optical-duplicate behavior before a default change.
+\end{enumerate}
+\section*{Appendix: Methods}
+We summarize recorded results without rerunning biological processing. The main Arabidopsis matrix uses seeded nested raw-template subsets (seed 60141), three fresh technical repetitions at the 1-million cap and one at the 5-million cap. Actual counts replace requested caps for short libraries. DAP retains primary mapped reads including MAPQ 0; ATAC selects proper primary pairs with both mates MAPQ at least 30, excludes MAPQ 255, organelles and marked duplicates. Biological identity is preserved. Source files are SHA-256 checked against the accompanying catalog; evidence snapshot revision ed1c50b8e4b5 includes the October 13 to 16 records. Completed local reference assessments are separately identified in that catalog.
+
+\end{document}

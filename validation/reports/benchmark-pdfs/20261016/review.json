@@ -1,0 +1,59 @@
+{
+  "snapshot_date": "2026-10-16",
+  "status": "PASS",
+  "scope": "All 16 pages visually inspected at 60 dpi; final rebuild renders are byte-identical to the reviewed pages.",
+  "pages": {
+    "alignment-01.png": "4cf5b81980ef8e87db7ad1b9946ec7184a1b891918090908c1f9a4e43fa1de94",
+    "alignment-02.png": "774469df6be772839b926553c6ede147bc5392004a2be9cf190a1d81c0ea4e23",
+    "duplicates-01.png": "02b584be3584233668a783c60c7c4bf01a44f305076e525d65c0b743f01255f8",
+    "duplicates-02.png": "2193acfc408eaaf28432eafff6f9d1e617b481370f37c73c120ab7620a93050a",
+    "interval-counting-01.png": "76139114a08222c2a5b2ea9508f9575a6434d9d6349bf1dd5dd7a16ab24bee24",
+    "interval-counting-02.png": "2981fcda297e37fe82a2a9ac6a9bbc0d4e166192168d4b70bfdc55fb6ae42878",
+    "overview-01.png": "c6c38dd7c8dec7534212b5b3392e4e9b2867979adf41fcb5d9bac684398211ea",
+    "overview-02.png": "9b6273a879ad7402101ba68b4937d23663a61df6cb39943cf628b68d576115e4",
+    "peak-calling-01.png": "8f192ca7982a1c7db9078f4fdfed086ef4691c92a1969226a2c76557a750754a",
+    "peak-calling-02.png": "4e0f192388c3bc331b4fa5eca0bd5b020f3bad475bb02caf4fe7e09baae92861",
+    "peak-calling-03.png": "45ebccaac9b0f7c6246c2ea705dd023ad37d7cf309334c036d470f9538b36884",
+    "references-01.png": "5081399b3be850b864c7756b96c656915b9d2d35339333ba01930d26c9494ba0",
+    "references-02.png": "7b431878d277673f730b9dfeae59956718ce9a6d0b1eeb5756e0424b87066f7c",
+    "references-03.png": "19b6d395d162ed3e23f94f878403480fd97756c419b76c21b154da28697ab2f9",
+    "trimming-01.png": "a371b8f1355874f6ad5f5da109fd5712b30baa6b8247f20f73e1466af1d139cf",
+    "trimming-02.png": "193936318edda4df3993a3a57bae796cf10bc098b1bef3efd224ea0cecc70117"
+  },
+  "pdfs": {
+    "alignment.pdf": "49af5152dccbff3242cd2f35967a0bbeba7d561ad785d7a416d5ee3fa9d93380",
+    "duplicates.pdf": "2dee28cc330313c8168beccb82677d3b12a6e22382903918ce6ed7df2a4a09b3",
+    "interval-counting.pdf": "535bc54d69b1a516b8b8d5d6ee0e0fd4913c343484b1b87a27206ae875ddfa4b",
+    "overview.pdf": "929125a58accb8ddd6b84ef1420766e8c80269c8391a4fe80d4a4e439758280c",
+    "peak-calling.pdf": "9f8edc69c9fd88f06646450511267fa165d3cc653fa45d52e7fef96f7bb104a7",
+    "references.pdf": "472499c4b70f010a7e60262334310880b217fb0b3bb8e2c75ec52f5507bbf279",
+    "trimming.pdf": "14f7209015d6240bf14a7043b083021e09fc5865b4f07e7e6177df8e6fc1b388"
+  },
+  "checks": {
+    "unit_tests": {
+      "exit": 0,
+      "count": 10,
+      "log_sha256": "3aacfd84b3bb7e2779b45ff8bbd427d34a7459c3f7a42613012f06a267d5b93c"
+    },
+    "documentation": {
+      "exit": 0,
+      "cli_examples": 144,
+      "pixi_recipes": 28,
+      "documents": 85
+    },
+    "ruff_check": {
+      "exit": 0
+    },
+    "ruff_format_check": {
+      "exit": 0
+    },
+    "git_diff_check": {
+      "exit": 0
+    }
+  },
+  "not_run": [
+    "Scientific pipeline reruns",
+    "Full Genesis regression"
+  ],
+  "build_manifest_sha256": "e5c6d177450318fa420a12ac6e144feb21f39b018c06a5fa9048c0f6b01ba584"
+}

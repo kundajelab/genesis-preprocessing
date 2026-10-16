@@ -1,0 +1,4 @@
+"cohort"	"method"	"measurement"	"n"	"median"	"minimum"	"maximum"
+"dap-pe-1m"	"baseline"	"processing_seconds"	"3"	"772.0690149588045"	"766.0623149529565"	"772.7988487719558"
+"dap-pe-1m"	"bwa"	"processing_seconds"	"3"	"802.9518585701007"	"795.4602115969174"	"822.7383534580003"
+"dap-pe-1m"	"bowtie2"	"processing_seconds"	"3"	"1782.2337477880064"	"1778.9415833710227"	"1785.2166162480135"

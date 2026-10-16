@@ -1,0 +1,18 @@
+{
+  "tex_release_url": "https://github.com/rstudio/tinytex-releases/releases/download/v2026.10/TinyTeX-1-linux-x86_64-v2026.10.tar.xz",
+  "tex_archive_sha256": "4d519d6236ee6798e3ec0d8e2093d1fda01aeb267aa22c2a5586d76bcfce6566",
+  "additional_package_revisions": {
+    "microtype": 78228,
+    "caption": 79618,
+    "texlive.infra": 80630
+  },
+  "files": {
+    "texmf-var/web2c/pdftex/pdflatex.fmt": "7ef0c4c2324d9b948c62b5b255d78464eda0b50e47053c838ba0b37872a861a2",
+    "texmf-dist/tex/latex/psnfss/times.sty": "66c2602acee391948a87460295758391a12c9e0bdac0a9f7c3c0ab00849d23c5",
+    "texmf-dist/tex/latex/caption/caption.sty": "94b3a07d83bfdc9171d3fcb5ea510e6a9ce01ff9bebac37a1dc066e55f6ad48f",
+    "texmf-dist/tex/latex/microtype/microtype.sty": "49f84ac779174f3295733b64fcf382fde6178b09c2c67c198fdf0167c2f3e71d"
+  },
+  "arial_installer_url": "https://downloads.sourceforge.net/corefonts/arial32.exe",
+  "arial_installer_sha256": "85297a4d146e9c87ac6f74822734bdee5f4b2a722d7eaa584b7f2cbf76f478f6",
+  "note": "Font files remain local; per-font hashes are recorded in each build manifest. TeX format hash may depend on release build details."
+}

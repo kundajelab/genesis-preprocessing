@@ -1,0 +1,87 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{times,microtype,graphicx,booktabs,float}
+\usepackage[font=small,labelfont=bf,labelsep=period,skip=4pt]{caption}
+\setlength{\textwidth}{6in}
+\setlength{\textheight}{9in}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\evensidemargin}{0.25in}
+\setlength{\topmargin}{-0.35in}
+\setlength{\headheight}{0.15in}
+\setlength{\headsep}{0.2in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlength{\intextsep}{4pt}
+\setlength{\textfloatsep}{9pt}
+\newcommand{\reporttitle}[2]{\noindent\rule{\linewidth}{4pt}\par
+{\LARGE\bfseries #1\par}\vspace{2pt}\noindent\rule{\linewidth}{1pt}\par
+#2\par October 16, 2026\par\vspace{4pt}}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}{9pt}{4pt}{\large\bfseries}}
+\makeatother
+\renewenvironment{abstract}{\small\textbf{Abstract}\par}{\par\vspace{3pt}}
+\let\originalitemize\itemize
+\renewcommand{\itemize}{\originalitemize\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\parsep}{0pt}}
+\let\originalenumerate\enumerate
+\renewcommand{\enumerate}{\originalenumerate\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\parsep}{0pt}}
+\begin{document}
+\reporttitle{Interval counting verification}{Genesis/Python read-end overlap counts and bedtools coverage}
+\begin{abstract}Across 160 evaluated library/method/repetition records, independent read-end counts have zero mismatching regions. The records contain 892,528 region evaluations, including repeated regions across methods and technical runs. This verifies arithmetic under the declared overlap convention, not biological accuracy or relative speed. We would retain the current counter and its independent checks.\end{abstract}
+\section*{Setup}
+\textbf{Comparisons.} The benchmark counts retained primary read-end spans in zero-based half-open peak intervals using Python and bedtools 2.31.1 coverage. Paired ends count independently. Fragment-level FRiP is a different quantity and is not used as a counting-equivalence target.
+
+\textbf{Scoring.} A mismatch is a region whose integer overlap counts differ. Any shared base counts as overlap; no fractional NH weighting is introduced. Denominators count evaluated region instances, not distinct regulatory elements or biological replicates.
+
+\begin{table}[H]\centering\small\caption{Read-end counting comparisons; repeated region evaluations are retained.}
+\begin{tabular}{lrrr}\toprule
+Cohort & Records & Region evaluations & Mismatches \\ \midrule
+dap-se-1m & 24 & 48,888 & 0 \\
+dap-se-5m & 8 & 17,876 & 0 \\
+dap-pe-1m & 48 & 291,804 & 0 \\
+dap-pe-5m & 16 & 130,152 & 0 \\
+atac-arabidopsis-1m & 48 & 192,960 & 0 \\
+atac-arabidopsis-5m & 16 & 210,848 & 0 \\
+\bottomrule\end{tabular}\end{table}
+\section{The evaluated integer overlap counts agree exactly}
+The 160 evaluated records report 0 mismatches over 892,528 region instances. This denominator includes the 1-million and 5-million caps, multiple method arms, and repeated execution; none increases the number of biological samples.
+
+\begin{table}[H]\centering\small\caption{Measurement conventions distinguish otherwise similar interval files.}
+\begin{tabular}{p{1.25in}p{3.1in}p{1in}}\toprule
+Quantity & Unit / denominator & Equivalent? \\ \midrule
+Read-end overlap count & Integer aligned ends per region & Tested \\
+Fragment FRiP & Fragments overlapping peaks / retained fragments & Different target \\
+Peak RPM & Read-end count / retained ends, scaled by 1 million & Normalization separate \\
+Mean coverage RPKM & Length-weighted coverage, including zero bases & Different target \\
+\bottomrule\end{tabular}\end{table}
+\newpage
+\section{The evidence does not establish a counting speed advantage}
+The independent bedtools evaluation runs after processing, whereas the 64 method-case processing timings exclude common evaluation. There are 0 matched standalone Python-versus-bedtools timing series in this report, so relative speed and memory are nd.
+
+\begin{table}[H]\centering\small\caption{nd means not determined in a matched counting-only comparison.}
+\begin{tabular}{lrr}\toprule
+Measurement & Python & bedtools \\ \midrule
+Matching read-end arithmetic & PASS & PASS \\
+Matched standalone runtime & nd & nd \\
+Matched standalone peak memory & nd & nd \\
+\bottomrule\end{tabular}\end{table}
+\textbf{Missing values.} A missing or unevaluated count is not zero. Any unavailable records remain in the exported counting table with their status and reason; the denominator above includes only records explicitly marked OK.
+
+\textbf{Publication scope.} These checks cover the benchmark's independent integer read-end overlap calculation. They do not certify all production quantification modes, NH fractional weighting, spliced-block conventions, or coverage integration by transitivity.
+
+\section*{Open issues}
+\begin{itemize}
+\item Repeated evaluation of a fixed peak set is not independent biological validation.
+\item Span-based overlap should not be generalized to spliced exon-block counting.
+\item No matched standalone runtime advantage is established.
+\end{itemize}
+\section*{Recommendation}
+We would retain exact arithmetic tests and avoid choosing a counter by unmatched timings.
+
+\begin{enumerate}
+\item Define a counting-only test with identical interval ordering, BAM cache conditions and units.
+\item Measure time and process memory separately from conversion and file staging.
+\end{enumerate}
+\section*{Appendix: Methods}
+We summarize recorded results without rerunning biological processing. The main Arabidopsis matrix uses seeded nested raw-template subsets (seed 60141), three fresh technical repetitions at the 1-million cap and one at the 5-million cap. Actual counts replace requested caps for short libraries. DAP retains primary mapped reads including MAPQ 0; ATAC selects proper primary pairs with both mates MAPQ at least 30, excludes MAPQ 255, organelles and marked duplicates. Biological identity is preserved. Source files are SHA-256 checked against the accompanying catalog; evidence snapshot revision ed1c50b8e4b5 includes the October 13 to 16 records. Completed local reference assessments are separately identified in that catalog.
+
+\end{document}

@@ -1,5 +1,10 @@
 # Compare preprocessing methods
 
+[Download the benchmark PDF reports](../validation/reports/benchmark-pdfs/20261016/README.md)
+for concise package comparisons, reference/annotation results and scoped decisions.
+[Build instructions](reports/README.md) include the pinned evidence catalog,
+shared LaTeX style, vector plots and validation procedure.
+
 Use `genesis benchmark` to compare tools on the same reads and reference. It
 records the settings, input hashes, commands, failures, measurements and resource
 use for each method. Comparisons run separately from normal processing and do

@@ -1,0 +1,201 @@
+{
+  "assessment_statuses": {
+    "atac-arabidopsis-5m": "COMPLETE",
+    "atac-colcen-5m-diagnostics": "COMPLETE",
+    "atac-tair10-5m-diagnostics": "COMPLETE"
+  },
+  "frozen_records": [
+    {
+      "experiment_sha256": "85826aacd1d0c9b5c00f7a6b1ab51cdacc667620ae53b1d5adaa08b63f60a9e4",
+      "name": "atac-arabidopsis-colcen-1m-frozen-results",
+      "results_sha256": "6a96a3e4e3a43e1a91ff85059f713806f5b48068b71c4b737331086596fcd47a",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "6bc67d5fdb4cf57b11aabfc0350fa909eaaaedad517082ff9336f32fa91c5cc3",
+      "name": "atac-arabidopsis-colcen-5m-frozen-results",
+      "results_sha256": "ecad627cee952286b5f30976f83095244e05fd87ec1e3d90c3b9cd9f2cd4f22a",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "6c4fa14ee446f0ecb722541db9b839149bd7d2175f69c522225a83ce2be2dd6a",
+      "name": "atac-arabidopsis-tair10-1m-frozen-results",
+      "results_sha256": "09051eab91ae34b04079a575ae9960a705f7e7030f180dc712e8dac607bc3412",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "7e0591465eb65b9b05a8b8652b4bbc9aa832cfc019b42af3ba3376943ec41145",
+      "name": "atac-arabidopsis-tair10-5m-frozen-results",
+      "results_sha256": "995620c4a830d6d083bf495fb130a442a89940bc1815e98aa6aa6d00cb174e09",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "da928f242666fb255bd1cbf6b8dd70abc4207e44686c4201090e238d6d382022",
+      "name": "dap-pe-colcen-1m-frozen-results",
+      "results_sha256": "9287d84c8115afe0507bef8bb0ed74558d4d761ee55e57a3fb5348b1385aa9ca",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "828d70c8cd7eee96a36a6adcf0c094db180a802ccabd57c73effaac391a4c7c0",
+      "name": "dap-pe-colcen-5m-frozen-results",
+      "results_sha256": "20a57abcb01e5f962f5a08d8de898257785e8f076ef7106e059038329ea00d7c",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "d460fdf234216a1f3bce706f3f5fb7e2b8abc9f7820645f8c8573da5c0ec0614",
+      "name": "dap-se-colcen-1m-frozen-results",
+      "results_sha256": "c25a111405caace45f08b93582bca05ece47f8db16cf7e4788e97ec08eb13206",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    },
+    {
+      "experiment_sha256": "fc7d80a3c11bb7c6ceacc16b024f604bd0ae6715ac9a1e923229bdf109fe6d53",
+      "name": "dap-se-colcen-5m-frozen-results",
+      "results_sha256": "b33908b50b5b9e6055535423c71b83150e73ca26cb0a15c94bb1dae057661c09",
+      "scope": "Completed record inspected; scientific outputs not independently rerun",
+      "status": "COMPLETE"
+    }
+  ],
+  "limitation": "Compact extraction from local records; underlying local files are not distributed here. Not a new experiment or independently rerun analysis.",
+  "reference_5m": {
+    "experiments": [
+      "fdf1ef8b3e07f732521646e694595da08046c7a21a32a8de2495d86e8f3c58aa",
+      "398252a49194224efa03654ea06eca5f9a56f467c349bd5d4643f1a32749fe61"
+    ],
+    "libraries": {
+      "SRR4000468": {
+        "left_mapping": {
+          "counts": {
+            "AMBIGUOUS_FORWARD": 3,
+            "ROUNDTRIP_DIFFERENT_LOCUS_OR_SPAN": 2,
+            "ROUNDTRIP_UNMAPPED": 4,
+            "UNIQUE_RECIPROCAL": 14788,
+            "UNMAPPED_OR_LESS_THAN_95_PERCENT_ALIGNED": 8
+          },
+          "input_peaks": 14805,
+          "unique_reciprocal_fraction": {
+            "definition": "unique forward and reverse placements; roundtrip overlap >=95% of both spans / input peaks",
+            "denominator": 14805,
+            "reason": null,
+            "status": "OK",
+            "unit": "fraction",
+            "value": 0.9988517392772712,
+            "version": 1
+          }
+        },
+        "metrics": {
+          "common_region_fragment_spearman": {
+            "definition": "Spearman fragment counts in left baseline peaks and their unique reciprocal projections; widths may differ",
+            "denominator": 14788,
+            "reason": null,
+            "status": "OK",
+            "unit": "correlation",
+            "value": 0.9990298757601396,
+            "version": 1
+          },
+          "reciprocal_peak_base_jaccard": {
+            "definition": "peak intersection / union in right-reference coordinates, restricted to uniquely reciprocal intervals on both sides",
+            "denominator": 7977520,
+            "reason": null,
+            "status": "OK",
+            "unit": "fraction",
+            "value": 0.9547007089922682,
+            "version": 1
+          }
+        },
+        "right_mapping": {
+          "counts": {
+            "AMBIGUOUS_FORWARD": 3,
+            "AMBIGUOUS_ROUNDTRIP": 1,
+            "ROUNDTRIP_UNMAPPED": 1,
+            "UNIQUE_RECIPROCAL": 15312,
+            "UNMAPPED_OR_LESS_THAN_95_PERCENT_ALIGNED": 26
+          },
+          "input_peaks": 15343,
+          "unique_reciprocal_fraction": {
+            "definition": "unique forward and reverse placements; roundtrip overlap >=95% of both spans / input peaks",
+            "denominator": 15343,
+            "reason": null,
+            "status": "OK",
+            "unit": "fraction",
+            "value": 0.9979795346412045,
+            "version": 1
+          }
+        }
+      },
+      "SRR4000469": {
+        "left_mapping": {
+          "counts": {
+            "AMBIGUOUS_FORWARD": 2,
+            "ROUNDTRIP_DIFFERENT_LOCUS_OR_SPAN": 1,
+            "ROUNDTRIP_UNMAPPED": 2,
+            "UNIQUE_RECIPROCAL": 11538,
+            "UNMAPPED_OR_LESS_THAN_95_PERCENT_ALIGNED": 8
+          },
+          "input_peaks": 11551,
+          "unique_reciprocal_fraction": {
+            "definition": "unique forward and reverse placements; roundtrip overlap >=95% of both spans / input peaks",
+            "denominator": 11551,
+            "reason": null,
+            "status": "OK",
+            "unit": "fraction",
+            "value": 0.9988745563154705,
+            "version": 1
+          }
+        },
+        "metrics": {
+          "common_region_fragment_spearman": {
+            "definition": "Spearman fragment counts in left baseline peaks and their unique reciprocal projections; widths may differ",
+            "denominator": 11538,
+            "reason": null,
+            "status": "OK",
+            "unit": "correlation",
+            "value": 0.9976960747921303,
+            "version": 1
+          },
+          "reciprocal_peak_base_jaccard": {
+            "definition": "peak intersection / union in right-reference coordinates, restricted to uniquely reciprocal intervals on both sides",
+            "denominator": 8678306,
+            "reason": null,
+            "status": "OK",
+            "unit": "fraction",
+            "value": 0.9571327630069739,
+            "version": 1
+          }
+        },
+        "right_mapping": {
+          "counts": {
+            "AMBIGUOUS_FORWARD": 3,
+            "AMBIGUOUS_ROUNDTRIP": 1,
+            "ROUNDTRIP_UNMAPPED": 1,
+            "UNIQUE_RECIPROCAL": 11905,
+            "UNMAPPED_OR_LESS_THAN_95_PERCENT_ALIGNED": 20
+          },
+          "input_peaks": 11930,
+          "unique_reciprocal_fraction": {
+            "definition": "unique forward and reverse placements; roundtrip overlap >=95% of both spans / input peaks",
+            "denominator": 11930,
+            "reason": null,
+            "status": "OK",
+            "unit": "fraction",
+            "value": 0.9979044425817267,
+            "version": 1
+          }
+        }
+      }
+    },
+    "mapping_sha256": "fb931bf08f1e79c7aab368090db29b3bd521eeb0c0976e12a2f80844352b74d8",
+    "scope": "Unique within the supplied assembly alignments; at least 95% aligned bases each way and 95% reciprocal span overlap. Excluded mappings remain explicit; this is concordance, not biological accuracy.",
+    "script_sha256": "8b32983d85bb575977cc762f672bf366bd959cd7652dab4a8939d42acdae3b88",
+    "source_sha256": "6c58ad34f6a2702095e6143a0eefd48d9bf39850240007f3f60ecc73f6eddd51",
+    "status": "COMPLETE",
+    "status_receipt_sha256": "4031fa52dc01bb5885d778b4836ee3b6c54fdee8d9569b8f4182455431ffa528"
+  },
+  "snapshot": "2026-10-16"
+}

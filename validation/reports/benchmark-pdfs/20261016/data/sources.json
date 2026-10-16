@@ -1,0 +1,386 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-16",
+  "reviewed_revision": "ed1c50b8e4b55eb4a87e58f27120da62368c5509",
+  "sources": [
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-1m/manifest.json",
+      "sha256": "11fc67778a92617d573f766e55e396e208ec1211177a4665c7b4f6f8b35ec847",
+      "bytes": 116609,
+      "source_revision": "bf760a73c977f8c154af703892d6953f771ef926",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-1m/evidence.tar.gz",
+      "sha256": "28c681024a929d6c810b9b660c859fa34f48b0ef356fe8cc7fa99b2369cd4cc4",
+      "bytes": 9210865,
+      "source_revision": "bf760a73c977f8c154af703892d6953f771ef926",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-1m/metrics.tsv",
+      "sha256": "efd7dc610aab8dbfb53acdf4ec76f1c575bc984441da44a0ff5b46538e9b7abe",
+      "bytes": 60420,
+      "source_revision": "bf760a73c977f8c154af703892d6953f771ef926",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-1m/processing.tsv",
+      "sha256": "a36937a5e78ae36d4e4b81d838d4f7649f0b5b8020c1b0a2a5aea66d6d5505d3",
+      "bytes": 2024,
+      "source_revision": "bf760a73c977f8c154af703892d6953f771ef926",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-1m/resources.tsv",
+      "sha256": "736ca6813f39d4e8ee074844a6a5c653ea5b9bd006417b3022b2d1060bd605ac",
+      "bytes": 20379,
+      "source_revision": "bf760a73c977f8c154af703892d6953f771ef926",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-1m/library-qc.tsv",
+      "sha256": "607d75ef2ec2f575f1b50ec1c398c972bb06b6882254f6614c9355cbeb99aa11",
+      "bytes": 60929,
+      "source_revision": "bf760a73c977f8c154af703892d6953f771ef926",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-5m/manifest.json",
+      "sha256": "b65acf7a3685496af7d3e794f722326a8ee674604b4d08be620d7b8b1cd3b845",
+      "bytes": 71703,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-5m/evidence.tar.gz",
+      "sha256": "8751f483393ead47b39ff55ebb9de4682d17a0a6fe590786df629911884fdb33",
+      "bytes": 3766561,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-5m/metrics.tsv",
+      "sha256": "add7aaff732d7af3a6a279fae6220b750d6d20ee49e55d4388e9b5af9e1e676f",
+      "bytes": 20279,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-5m/processing.tsv",
+      "sha256": "ab50a822f63185b9cc87e366bd31b6f5c9e9d4f31923003c9aa67af0245cc3dc",
+      "bytes": 704,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-5m/resources.tsv",
+      "sha256": "3b50f3c1587b6cc351d157d9926d3ac43bcf3584b009781d42cb521d75d80ddc",
+      "bytes": 7293,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-se-5m/library-qc.tsv",
+      "sha256": "9628feb23112271672dafba426784030d166f818e268ee4649b3d2b50581ac0b",
+      "bytes": 21147,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-1m/manifest.json",
+      "sha256": "e5f2149bc0d5a4b1ebb03512d8cb134fed981bbf2d2533f1d30a89c380e1902a",
+      "bytes": 337214,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-1m/evidence.tar.gz",
+      "sha256": "46f534dc1e962a2b4eaa6494e5eba052bb2ba1e772d708f35a889cb924b2b55d",
+      "bytes": 43134468,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-1m/metrics.tsv",
+      "sha256": "1bcc8d185122459263c97ea73ee137814c6a34eb746965b8fc1eb72452cd567e",
+      "bytes": 121662,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-1m/processing.tsv",
+      "sha256": "84acac93932ad5acf9387953454cffc40c1ceec6f1d31c86257a9e9f915e21bb",
+      "bytes": 2015,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-1m/resources.tsv",
+      "sha256": "af274e5c70b18941e82485b4b90648ea46d3d522bed95ea4d3bb25bb5e9d8077",
+      "bytes": 37633,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-1m/library-qc.tsv",
+      "sha256": "2e77f420e12593af5f8a043838eef9e95227fd12e0dd994d83b8f3b673f3d60c",
+      "bytes": 103352,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-5m/manifest.json",
+      "sha256": "0b6bcc279cf447c1303964c697e5bdbf6a35ec95d76158e9445929d25354e381",
+      "bytes": 119823,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-5m/evidence.tar.gz",
+      "sha256": "c728ff90005187e88b8128de5cd6354c7cc4b982f9420babe186609a7b41ef1c",
+      "bytes": 20100640,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-5m/metrics.tsv",
+      "sha256": "b87d423e75759730469206b43b1f212a128c69aa0740b950258615a2a5c99210",
+      "bytes": 40856,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-5m/processing.tsv",
+      "sha256": "7f441c77b6bdbdfa07cdce858e51870374afad7837544e67302e76bb9e64d791",
+      "bytes": 707,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-5m/resources.tsv",
+      "sha256": "7294c77e5a686a2f1caec44357eb0bb9f56a24fda0b31a7f802f723344294e86",
+      "bytes": 13093,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/dap-pe-5m/library-qc.tsv",
+      "sha256": "4d9168dd96dff6f54f020a6e5394c9e0b27e987fa92a2e0e078fe54d4bad76dd",
+      "bytes": 35419,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-1m/manifest.json",
+      "sha256": "40d745f73a1eb06162dfc794bd4d875d1edbb6ebf593eb6848471c147bd09fce",
+      "bytes": 563169,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-1m/evidence.tar.gz",
+      "sha256": "2239e025b9fb1c8ce1ffab4d31a0a96c431ee462bd2411978cde4f08be4a771d",
+      "bytes": 32860544,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-1m/metrics.tsv",
+      "sha256": "29750cd9933b87e884560a0e2e003192231663a08b91d371862fafec1bcebd5d",
+      "bytes": 149493,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-1m/processing.tsv",
+      "sha256": "002e836d832fc21cc3b359d9699db1e12a7bd90d8bba3c5ce250ee860329896e",
+      "bytes": 3997,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-1m/resources.tsv",
+      "sha256": "6b1bc4a00d4c2395446b08c975fa72bcbf147ef3f47674dd2ced8817a2cd00e3",
+      "bytes": 80205,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-1m/library-qc.tsv",
+      "sha256": "d492f13adaa09da60e3772e09da2dbdd076168b6666d4937178de5341b0146eb",
+      "bytes": 621179,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-5m/manifest.json",
+      "sha256": "e4f48a73468728c5fcb2f074f70a68c43c471439ed805cee6d0b8ee68be16585",
+      "bytes": 195150,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-5m/evidence.tar.gz",
+      "sha256": "beb29825bf0abfd840b26cd91d755220a570605ce3142c356631603c3e905972",
+      "bytes": 31222148,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-5m/metrics.tsv",
+      "sha256": "d2ef480967322cb3c14537c8f6ab25705d80cdedb5c1d90daa459777dd6c1b38",
+      "bytes": 50167,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-5m/processing.tsv",
+      "sha256": "126e397668ccde184c82c72625aa59b0453e9b090c7d24d3d111850b1d788330",
+      "bytes": 1368,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-5m/resources.tsv",
+      "sha256": "bdf6f12b638648fafc77dc37cadf8af76b02f3c2243a93889f0a2b60f5410fd0",
+      "bytes": 27336,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261013/atac-arabidopsis-5m/library-qc.tsv",
+      "sha256": "3f5e64abdb9b85d39b594da4d0c00a41b03ca33d7abc243d95e6aa7ff82a7d9b",
+      "bytes": 229149,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/figures/quality-summary.tsv",
+      "sha256": "caac3f6a771d761d020de78ead70f3d6f9ab1c59baeceeefe3843acc8a0cc36b",
+      "bytes": 288911,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/figures/cost-summary.tsv",
+      "sha256": "bda4bf45ec293459a75f6ea5286d7949629525873498c349e56288469153310c",
+      "bytes": 9608,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/figures/cost-observations.tsv",
+      "sha256": "2a9750a2401a2d161800720d36b685a3f0d96cb95639ad5181a60be24af6287f",
+      "bytes": 8748,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/figures/index-observations.tsv",
+      "sha256": "11a939398f252c340f892e005941b47653acbafe681a56116e7a72e0602c4138",
+      "bytes": 3957,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/dap-se-5m-motifs/motif-metrics.tsv",
+      "sha256": "52b19957cef9c16e4be4cbfc0310c9ccb01deb6497da307d92314790f474e47c",
+      "bytes": 2988,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/annotation-sensitivity-1m.json",
+      "sha256": "b93e6276ad5d9e8d10c2fb2a7a77d0e3fd063bc4b2492974b9a0414822b8ad96",
+      "bytes": 928032,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/reference-concordance-1m.json",
+      "sha256": "4212a93c8230fb1c6f3c098dd25a3110ebd2ae401b148fa9b5dbb7cd244d155a",
+      "bytes": 873504,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/method-comparison-20261014/caller-diagnostics-colcen-5m.json",
+      "sha256": "3c6fa4afaaa068823398966209e95c59bb97d40cbb871041c6548d4db4996eee",
+      "bytes": 6511704,
+      "source_revision": "3d0b0dc143557ff2def9d0e992fb2eda8d85f943",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/macs3-optimization-20261016/timings.tsv",
+      "sha256": "b29d0af30ba36d517ed592dae2b566a8ccb0361c7b06c8bacd6a5fe10dd4f1c6",
+      "bytes": 3512,
+      "source_revision": "72e71ce132ca6365b65180a0e279620de68d055c",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/macs3-optimization-20261016/results.json",
+      "sha256": "a24655dd672a629d0d050188b4f9f940c8d80c4d73f336c9a6227535b23fc3c8",
+      "bytes": 221560,
+      "source_revision": "72e71ce132ca6365b65180a0e279620de68d055c",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/macs3-optimization-20261016/input-context.json",
+      "sha256": "398260371e628f825758c06bec730753460d7de6cdce1ffd6ac5eaa2d4102f50",
+      "bytes": 6303,
+      "source_revision": "72e71ce132ca6365b65180a0e279620de68d055c",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/macs3-optimization-20261016/builds.json",
+      "sha256": "8abe5fdb8e12f7b3269de30c1a8131b3ad171c1238ca73f142b738001bb7e17c",
+      "bytes": 1363,
+      "source_revision": "72e71ce132ca6365b65180a0e279620de68d055c",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/evidence/macs3-optimization-20261016/verification.json",
+      "sha256": "a5f643f089f14cf2e35d4b4b1a007161071d5941871b2c477a2618af58404e6a",
+      "bytes": 6808,
+      "source_revision": "72e71ce132ca6365b65180a0e279620de68d055c",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "benchmarks/reports/local-audit.json",
+      "sha256": "04017ee38e7254c4ff32707ec13e616152424f503a3acd7ecb410a0419441c22",
+      "bytes": 8581,
+      "source_revision": "local extraction; original hashes in local-audit.json",
+      "evidence_kind": "structured recorded evidence"
+    },
+    {
+      "path": "validation/reports/expanded-plant-comparison.md",
+      "sha256": "8ab7d2dbea7ebc5c6bd403a5ac34b848d75ceef9603c71ff2f5f7721f001a16b",
+      "bytes": 16401,
+      "source_revision": "3d0b0dc143557ff2def9d0e992fb2eda8d85f943",
+      "evidence_kind": "reported historical narrative"
+    },
+    {
+      "path": "validation/reports/pipeline-method-comparison.md",
+      "sha256": "42863f2fd3d14857bef06325d46892e078dfcb11338e72d94caa96c57d973176",
+      "bytes": 15239,
+      "source_revision": "1c0917bdc18fcdfd801141f5c7f7321fa87b62e1",
+      "evidence_kind": "reported historical narrative"
+    },
+    {
+      "path": "validation/reports/macs3-optimization.md",
+      "sha256": "3553bba4de63777037dc3e54a972cb566e353d360cc4f09ebc801f57ebad7d97",
+      "bytes": 10364,
+      "source_revision": "72e71ce132ca6365b65180a0e279620de68d055c",
+      "evidence_kind": "reported historical narrative"
+    },
+    {
+      "path": "benchmarks/experiments/plant-methods-20261013/README.md",
+      "sha256": "25bbd5a4cb5a18591b1075683ba52f5ae17640fbd8d3cf6948e71f9803e9921f",
+      "bytes": 18508,
+      "source_revision": "4e790dbffcaf9e401ba6eb7939bc2ae89bf62258",
+      "evidence_kind": "reported historical narrative"
+    }
+  ],
+  "scope": "Existing evidence rechecked; no biological pipeline rerun"
+}

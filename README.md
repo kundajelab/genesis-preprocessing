@@ -182,12 +182,15 @@ definitions, results and reproduction commands. It distinguishes package compari
 from parameter sensitivity and software tests. A higher mapping rate or more peaks
 alone is not evidence that one method is better.
 
-The [plant comparison report](validation/reports/expanded-plant-comparison.md)
-contains 64 completed Arabidopsis method/depth cases, independent TF motif evidence,
-biological ATAC replicate measurements, and comparisons of reference assemblies
-and annotation releases. Tables distinguish completed results from the ongoing
-A. lyrata, sorghum and maize runs. The current evidence does not establish a better
-replacement for the BWA-MEM2/MACS3 defaults across assays.
+The [benchmark PDF collection](validation/reports/benchmark-pdfs/20261016/README.md)
+provides seven short reports on alignment, trimming, duplicate handling, peak
+calling, interval counting, references and the overall evidence. Each includes
+measured results, definitions, limitations and a scoped recommendation. The
+[plant comparison snapshot](validation/reports/expanded-plant-comparison.md)
+provides the earlier detailed narrative; the PDF collection reconciles its case
+counts and includes the later completed 5-million-pair reference assessment.
+The evidence does not establish a better replacement for the BWA-MEM2/MACS3
+scientific defaults across assays.
 The [optimized MACS3 comparison](validation/reports/macs3-optimization.md) measures
 caller speed, memory use and output equivalence at matched CPU allocations.
 The [complete-workflow comparison](validation/reports/pipeline-method-comparison.md)
