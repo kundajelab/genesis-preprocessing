@@ -37,7 +37,7 @@ GENESIS_RUNTIME_DIR=/scratch/run/runtime scripts/nersc-podman.sh genesis pipelin
   --config /path/site.config --outdir /scratch/run
 
 # DAP-seq uses the same scheduler profiles
-genesis pipeline -p slurm,apptainer samples.tsv -c /path/site.config
+pixi run pipeline -p slurm,apptainer /path/samples.tsv -c /path/site.config
 ```
 
 NERSC submissions are capped at 15 outstanding tasks with five-minute scheduler

@@ -34,12 +34,11 @@ standalone peak-rpm and peak-rpkm commands use the same code.
 ## Build and check changes
 
 ```bash
-pixi run install-all --install-cli
-export PATH="$HOME/.local/bin:$PATH"
+pixi run install-all
 pixi run build-dockers --no-push
 pixi run build-dockers --no-push -- dap_seq_alignment genesis_tools
-genesis pipeline INPUT.tsv -profile local,docker
-genesis pipeline INPUT.tsv -profile sherlock,apptainer
+pixi run pipeline -p local,docker /path/INPUT.tsv
+pixi run pipeline -p sherlock,apptainer /path/INPUT.tsv
 ```
 
 Every Docker build targets both linux/amd64 and linux/arm64. The build scripts
@@ -49,7 +48,7 @@ override it. Image names match project/environment names without an extra prefix
 The scripts update `conf/dap-images.lock` using image digests. Publishing images requires user
 approval; local images alone are not available to Sherlock's Apptainer.
 
-Without a supplied profile, the pipeline wrapper uses scripts/get-default-profile.sh. `genesis pipeline` selects the checkout's Pixi runtime automatically. The default is `local,docker`; choose a cluster profile explicitly. Input TSV and references are staged
+Without a supplied profile, the pipeline wrapper uses scripts/get-default-profile.sh. `scripts/run-pipeline.sh` (and `pixi run pipeline`) runs Nextflow in the checkout's Pixi environment. The default is `local,docker`; choose a cluster profile explicitly. Input TSV and references are staged
 inputs, so container tasks do not depend on undeclared host source paths.
 
 The four sample sheets use the six-column schema. The [DAP reference guide](usage/dapseq-reference.md)

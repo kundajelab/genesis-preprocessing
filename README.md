@@ -58,19 +58,18 @@ already be available to your user. Run:
 ```bash
 git clone https://github.com/kundajelab/genesis-preprocessing.git
 cd genesis-preprocessing
-pixi run install-all --install-cli
-export PATH="$HOME/.local/bin:$PATH"
-genesis doctor
-genesis --help
+pixi run install-all
 ```
 
-Keep `~/.local/bin` on your PATH in new shells. The installer links `genesis` to
-this checkout; keep the checkout in place. To use another command directory,
-add `--bin-dir /your/bin` to the install command.
+This installs everything the DAP-seq pipeline needs; run it with `pixi run pipeline`
+(see [DAP-seq](#dap-seq) below).
 
-After installation, use `genesis` directly. Scientific commands use Pixi
-internally for Nextflow and the project runtime. You can also run commands through
-`pixi run`. See [installation and upgrades](docs/development.md#command-installation-and-maintenance)
+The bulk ATAC, validation and curation commands below use the `genesis` command.
+To install it, run `pixi run install-all --install-cli` instead, keep
+`~/.local/bin` on your PATH (`export PATH="$HOME/.local/bin:$PATH"`), and check it
+with `genesis doctor`. The installer links `genesis` to this checkout; keep the
+checkout in place, or add `--bin-dir /your/bin` to use another command directory.
+See [installation and upgrades](docs/development.md#command-installation-and-maintenance)
 for moving a checkout, using a Python wheel or removing the command.
 
 ## Run your first analysis
@@ -95,18 +94,34 @@ Replace the example URLs. Use `-` for an absent mate or control. Put the named
 gzipped FASTA in your reference directory. Each treatment's control must occur
 in the same sheet and match its species, reference and read layout.
 
+Run the pipeline from the checkout with `pixi run pipeline`. Pixi runs it from the
+checkout folder, so give the sheet and other paths as absolute paths:
+
 ```bash
-genesis validate inputs dap.tsv --assay DAP-seq --references /data/references
-genesis pipeline -w /scratch/genesis -n study-A dap.tsv --references /data/references
+pixi run pipeline -w /scratch/genesis -n study-A /data/dap.tsv --references /data/references
 # Continue the same analysis after an interruption.
-genesis pipeline -w /scratch/genesis -n study-A dap.tsv --references /data/references -resume
+pixi run pipeline -w /scratch/genesis -n study-A /data/dap.tsv --references /data/references -resume
 ```
+
+Alternatively, call the script directly; it uses the checkout's Pixi environment
+itself, and relative paths resolve from your current folder:
+
+```bash
+/path/to/genesis-preprocessing/scripts/run-pipeline.sh -w /scratch/genesis -n study-A \
+  dap.tsv --references /data/references
+```
+
+`pixi run pipeline --help` lists the options. Choose a profile with `-p` (for
+example `-p local,conda` or `-p sherlock,apptainer`); the default is `local,docker`,
+and a cluster is always selected explicitly. The pipeline checks the whole sheet
+before starting any task.
 
 Results appear in `/scratch/genesis/study-A/output/`, grouped by species and
 sample. Treatments receive peaks and peak scores; controls receive QC and tracks.
 Keep the run's `work/` directory to allow resume.
 
-For the source-pinned optimized caller on Linux, see [MACS3 builds and resources](docs/usage/macs3.md). Published container pins and source builds have separate version identities.
+Peak calling uses MACS3 built from a pinned upstream revision; see
+[MACS3 builds and resources](docs/usage/macs3.md).
 
 Read the [DAP-seq guide](docs/usage/dapseq-reference.md) for complete sample-sheet
 rules, reference setup, analysis choices and output definitions.
@@ -197,6 +212,7 @@ scores Genesis and nf-core ATAC using common metric definitions.
 
 | Problem | First step |
 | --- | --- |
+| `Missing input TSV` from `pixi run pipeline` | Pixi runs from the checkout folder: give absolute paths, or call `scripts/run-pipeline.sh` directly. |
 | `genesis: command not found` | Complete installation with `--install-cli` and check your PATH. |
 | Docker or Nextflow is unavailable | Run `genesis doctor`; check the selected runtime and installation. |
 | Reference or input checksum differs | Check which file changed. Preserve the old run and use a new input/run version. |

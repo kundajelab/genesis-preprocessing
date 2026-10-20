@@ -3,7 +3,7 @@
 Use `genesis study` when you want to track a study from its prepared sample sheet
 through processing, review and export. The commands save the input version, run
 jobs on your chosen workers and collect results into a catalog. AI is optional.
-For a single analysis without a catalog, use `genesis pipeline` or
+For a single analysis without a catalog, use `pixi run pipeline` (DAP-seq) or
 `genesis pipeline-atac` instead.
 
 Before starting, prepare the sample sheet and choose the reference, controls and

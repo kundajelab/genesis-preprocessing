@@ -41,30 +41,33 @@ must not collapse to the same reference ID after removing their suffix. The firs
 resume after generating references can rerun downstream tasks as inputs move to
 published paths; subsequent resumes reuse computation.
 
-Run exactly one sheet per invocation:
+Run exactly one sheet per invocation. These examples run from the checkout, where
+the bundled sheets live; `pixi run pipeline` always runs from the checkout folder, so
+give sheets elsewhere as absolute paths:
 
 ```bash
 # Show wrapper options.
-genesis pipeline --help
-
+pixi run pipeline --help
 
 # Run test data with default profile: local Docker.
-genesis pipeline test-Sorghum_bicolor-PRJNA1177471.tsv
+pixi run pipeline test-Sorghum_bicolor-PRJNA1177471.tsv
 
 # Local execution with micromamba/conda environments.
-genesis pipeline -p local,conda 15-Arabidopsis_lyrata-PRJNA1177479.tsv
+pixi run pipeline -p local,conda 15-Arabidopsis_lyrata-PRJNA1177479.tsv
 
 # Continue a previous run using Nextflow's task cache.
-genesis pipeline 15-Arabidopsis_lyrata-PRJNA1177479.tsv -resume
+pixi run pipeline 15-Arabidopsis_lyrata-PRJNA1177479.tsv -resume
 
 # Submit tasks from Sherlock using accessible container images.
-genesis pipeline -p sherlock,apptainer 15-Arabidopsis_lyrata-PRJNA1177479.tsv
+pixi run pipeline -p sherlock,apptainer 15-Arabidopsis_lyrata-PRJNA1177479.tsv
 ```
 
-`genesis pipeline` selects the checkout's Pixi environment so Nextflow can find micromamba.
-You can also invoke it as `pixi run pipeline`. Without
-`-p`/`--profile` (or a Nextflow `-profile`), `scripts/get-default-profile.sh`
-always chooses `local,docker`. Cluster execution is selected explicitly.
+You can also call `scripts/run-pipeline.sh` directly, from any folder; relative paths
+then resolve from your current folder. Either way, Nextflow runs in the checkout's
+Pixi environment, so it can find micromamba. Choose the profile with `-p`/`--profile`
+rather than Nextflow's `-profile`, which the script already sets. Without `-p`,
+`scripts/get-default-profile.sh` always chooses `local,docker`. Cluster execution is
+selected explicitly.
 Choose an executor and a software environment together. `sherlock` uses SLURM and the
 `normal` queue; select another queue with `--slurm_queue`. Locally built images
 must be published with approval, or made available on the cluster, before
