@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,11 @@ from .records import (
 
 
 def snapshot(path: Path, worker: str) -> dict[str, Any]:
+    """Store a source document under its resolved location.
+
+    Metric evidence must cite source["data"]["location"], not the caller's path: validation
+    matches them as strings, and a path through a symlink would never match.
+    """
     with path.open("rb") as stream:
         raw = stream.read(32 * 1024 * 1024 + 1)
     if len(raw) > 32 * 1024 * 1024:
@@ -135,7 +141,9 @@ def measurements(
                     units,
                     denominator,
                     data[name],
-                    SourceEvidence(str(path), source["data"]["sha256"], "/" + name, worker),
+                    SourceEvidence(
+                        source["data"]["location"], source["data"]["sha256"], "/" + name, worker
+                    ),
                     metric_version=data.get("metric_version", 1),
                     denominator_value=data.get("usable_fragments")
                     if name == "FRiP"
@@ -163,7 +171,12 @@ def measurements(
                     ),
                     "none",
                     value,
-                    SourceEvidence(str(path), source["data"]["sha256"], "/counts/" + name, worker),
+                    SourceEvidence(
+                        source["data"]["location"],
+                        source["data"]["sha256"],
+                        "/counts/" + name,
+                        worker,
+                    ),
                     metric_version=data.get("metric_version", 1),
                 ).export()
             )
@@ -178,7 +191,10 @@ def measurements(
                     "mean cut count in two 100bp TSS flanks",
                     metric["value"],
                     SourceEvidence(
-                        str(path), source["data"]["sha256"], "/tss/metric/value", worker
+                        source["data"]["location"],
+                        source["data"]["sha256"],
+                        "/tss/metric/value",
+                        worker,
                     ),
                     denominator_value=metric.get("denominator"),
                 ).export()
@@ -311,6 +327,54 @@ def from_atac(root: Path, source_id: str, worker: str, study: str | None) -> lis
     return result
 
 
+CONTAINER_ENGINES = {"docker", "apptainer", "singularity", "podman"}
+
+
+def dap_run_record(output: Path) -> tuple[str | None, dict[str, Any], list[str]]:
+    """Read a DAP run's git-status.txt and dap-images.lock copy.
+
+    Return the recorded commit, the evidence to keep with each manifest, and the reasons the
+    run's provenance is incomplete. It is complete only for a clean checkout run with a
+    container engine, using images pinned by digest.
+    """
+    limitations: list[str] = []
+    status_path, lock_path = output / "git-status.txt", output / "dap-images.lock"
+    fields: dict[str, str] = {}
+    dirty: list[str] = []
+    if status_path.is_file():
+        lines = status_path.read_text().splitlines()
+        for index, line in enumerate(lines):
+            key, separator, value = line.partition(": ")
+            if line == "dirty files:":
+                dirty = [entry for entry in lines[index + 1 :] if entry.strip()]
+                break
+            if separator:
+                fields[key] = value
+    else:
+        limitations.append("DAP run has no git-status.txt")
+    commit = fields.get("commit")
+    if commit is None or not re.fullmatch(r"[0-9a-f]{40}", commit):
+        commit = None
+        limitations.append("DAP run lacks a recorded Git commit")
+    if commit is not None and (dirty or fields.get("dirty files") != "none"):
+        limitations.append("DAP run used a checkout with uncommitted or untracked files")
+    engine = fields.get("container engine")
+    if engine not in CONTAINER_ENGINES:
+        limitations.append("DAP run did not use a container engine")
+    images: dict[str, str] = {}
+    if lock_path.is_file():
+        for line in lock_path.read_text().splitlines():
+            name, separator, image = line.strip().partition("=")
+            if separator and not name.startswith("#"):
+                images[name] = image
+    if not images:
+        limitations.append("DAP run has no recorded image pins")
+    elif any(not re.search(r"@sha256:[0-9a-f]{64}$", image) for image in images.values()):
+        limitations.append("DAP run image pins are not all immutable digests")
+    evidence = {"container_engine": engine, "images": images, "dirty_files": dirty}
+    return commit, evidence, sorted(set(limitations))
+
+
 def from_dap(
     root: Path,
     source_id: str,
@@ -322,14 +386,8 @@ def from_dap(
     path = root / "output/multiqc/multiqc_data/genesis_provenance.json"
     provenance = load(path)
     sources = [snapshot(path, worker)]
-    run_path = root / "output/provenance/dap-run.json"
-    run_evidence: dict[str, Any] | None = None
-    limitations = ["Legacy DAP run has no versioned execution evidence"]
-    if run_path.exists():
-        from .dap import read_run
-
-        run_evidence, limitations = read_run(run_path, provenance["samples"], sheet)
-        sources.append(snapshot(run_path, worker))
+    # DAP runs record image pins and Git status beside their outputs, not per-task evidence.
+    commit, run_evidence, limitations = dap_run_record(root / "output")
     rows: dict[str, dict[str, str]] = {}
     if sheet:
         with sheet.open() as stream:
@@ -358,14 +416,6 @@ def from_dap(
                 else None,
             }
         )
-        if run_evidence is not None:
-            matching = next(r for r in run_evidence["references"] if r["id"] == sample["ref_id"])
-            ref.update(
-                version=matching["sizes_cache"]["compressed_fasta_sha256"],
-                fasta_sha256=matching["sizes_cache"]["compressed_fasta_sha256"],
-                contigs=matching["contigs"],
-                genome_size=sum(matching["contigs"].values()),
-            )
         folder = root / "output" / species / name
         artifacts = []
 
@@ -448,7 +498,7 @@ def from_dap(
                         "none",
                         value,
                         SourceEvidence(
-                            str(raw_path),
+                            qc_source["data"]["location"],
                             qc_source["data"]["sha256"],
                             "/" + key + "/" + metric,
                             worker,
@@ -466,12 +516,6 @@ def from_dap(
                 ref["id"],
             )
         )
-        if run_evidence is not None:
-            for item in artifacts:
-                relative = Path(item["path"]).relative_to(root / "output").as_posix()
-                if relative not in run_evidence["outputs"]:
-                    raise ValueError(f"DAP provenance missing published artifact: {relative}")
-                item["sha256"] = run_evidence["outputs"][relative]["sha256"]
         result.append(
             ArtifactManifest(
                 source_id,
@@ -490,11 +534,9 @@ def from_dap(
                     "job_id": None,
                     "attempt": None,
                     "execution_state": "UNKNOWN",
-                    "git_sha": run_evidence["context"]["git_sha"]
-                    if run_evidence
-                    else provenance.get("run", {}).get("git_sha"),
-                    "parameters": run_evidence["context"]["parameters"] if run_evidence else {},
-                    "provenance_complete": run_evidence is not None and not limitations,
+                    "git_sha": commit or provenance.get("run", {}).get("git_sha"),
+                    "parameters": run_evidence,
+                    "provenance_complete": not limitations,
                     "root": str(root),
                 },
                 {
@@ -524,7 +566,9 @@ def run_manifests(
 ) -> list[dict[str, Any]]:
     if not source_id.strip() or not worker.strip():
         raise ValueError("Explicit source and worker identities are required")
-    root = root.resolve()
+    # absolute(), not resolve(), as in artifact(): run roots and artifact paths must stay spelled as
+    # planned (e.g. not /var rewritten to /private/var), or collection cannot match them.
+    root = root.absolute()
     if assay == "bulk-ATAC":
         return from_atac(root, source_id, worker, study)
     if assay == "DAP-seq":

@@ -12,6 +12,7 @@ import json
 import math
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -77,78 +78,6 @@ def write_reads(path: Path, sequences: list[str]) -> None:
     with gzip.open(path, "wt") as stream:
         for index, sequence in enumerate(sequences):
             stream.write(f"@read{index}\n{sequence}\n+\n{'I' * len(sequence)}\n")
-
-
-def check_wrapper(work: Path) -> None:
-    """Accept TSV-valued Nextflow options while rejecting multiple input sheets."""
-    binaries = work / "bin"
-    binaries.mkdir()
-    executable = binaries / "nextflow"
-    executable.write_text(
-        f"#!{sys.executable}\nimport json, os, sys\nfrom pathlib import Path\n"
-        "Path(os.environ['WRAPPER_LOG']).write_text(json.dumps(sys.argv[1:]))\n"
-    )
-    executable.chmod(0o755)
-    sheet = work / "wrapper.tsv"
-    sheet.touch()
-    env = {
-        **os.environ,
-        "PATH": f"{binaries}:{os.environ['PATH']}",
-        "WRAPPER_LOG": str(work / "wrapper.json"),
-    }
-    wrapper = ROOT / "scripts/run-pipeline.sh"
-    default_profile = subprocess.run(
-        [str(ROOT / "scripts/get-default-profile.sh")],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=10,
-    ).stdout.strip()
-    workspace = work / "wrapper-workspace"
-    for options, extra, profile, run_name in [
-        ([], [], default_profile, "wrapper"),
-        (["-p", "local,conda", "-n", "named"], [], "local,conda", "named"),
-        ([], ["-profile", "local,docker", "-with-trace", "trace.tsv"], "local,docker", "wrapper"),
-    ]:
-        result = subprocess.run(
-            [str(wrapper), "-w", str(workspace), *options, str(sheet), *extra],
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=10,
-        )
-        assert result.returncode == 0, result.stderr
-        arguments = json.loads((work / "wrapper.json").read_text())
-        assert arguments[arguments.index("--input") + 1] == str(sheet)
-        assert arguments[arguments.index("--workspace") + 1] == str(workspace)
-        assert arguments[arguments.index("--run_name") + 1] == run_name
-        assert arguments.count("-profile") == 1
-        assert arguments[arguments.index("-profile") + 1] == profile
-        assert (workspace / run_name).is_dir()
-    usage = subprocess.run(
-        [str(wrapper), "--help"], capture_output=True, text=True, check=False, timeout=10
-    )
-    assert usage.returncode == 0 and usage.stdout.startswith("Usage:"), usage.stderr
-    before = (work / "wrapper.json").read_bytes()
-    for options in (
-        [str(sheet)],
-        ["--input", str(sheet)],
-        ["--input=" + str(sheet)],
-        ["--workspace", str(workspace)],
-    ):
-        result = subprocess.run(
-            [str(wrapper), "-w", str(workspace), str(sheet), *options],
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=10,
-        )
-        assert result.returncode == 2 and (
-            "exactly one" in result.stderr or "-w/--workspace" in result.stderr
-        ), result.stderr
-        assert (work / "wrapper.json").read_bytes() == before
 
 
 def check_sheets(work: Path) -> None:
@@ -440,7 +369,10 @@ def run_pipeline(
 
 
 def trace_rows(work: Path, suffix: str = "run") -> list[dict[str, str]]:
-    with (work / f"trace-{suffix}.tsv").open() as stream:
+    trace = work / f"trace-{suffix}.tsv"
+    if not trace.exists():  # A run rejected before any task may not write a trace.
+        return []
+    with trace.open() as stream:
         return list(csv.DictReader(stream, delimiter="\t"))
 
 
@@ -450,7 +382,6 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     counts = Counter(row["name"].split(" ")[0] for row in rows)
     assert all(row["status"] == "COMPLETED" for row in rows), rows
     assert counts == {
-        "VALIDATE_SHEET": 1,
         "CHROM_SIZES": 2,
         "BWA_MEM2_INDEX": 2,
         "DOWNLOAD": 3,
@@ -462,7 +393,6 @@ def check_outputs(work: Path, *, docker: bool) -> None:
         "TRACKS": 5,
         "CALL_PEAKS": 3,
         "QUANTIFY": 3,
-        "DAP_PROVENANCE": 1,
     }, counts
     reports = list((work / "published" / "samples" / "trace").glob("execution_report_*.html"))
     assert len(reports) == 1, reports
@@ -491,20 +421,21 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert provenance["run"]["name"] == "samples"
     assert provenance["run"]["pipeline_version"] == "0.1.0"
     assert len(provenance["run"]["git_sha"]) == 40
-    from genesis_tools.contracts.dap import read_run
-
-    run_record, limitations = read_run(
-        published / "provenance/dap-run.json",
-        provenance["samples"],
-        work / "samples.tsv",
+    # The run records its image pins and source checkout beside its outputs, not task receipts.
+    assert (published / "dap-images.lock").read_bytes() == (
+        ROOT / "conf/dap-images.lock"
+    ).read_bytes()
+    status = (published / "git-status.txt").read_text().splitlines()
+    assert (
+        status[0].startswith("branch: ") and status[1] == "commit: " + provenance["run"]["git_sha"]
     )
-    assert len(run_record["inputs"]) == 7
-    assert len(run_record["tasks"]) == 37  # Every scientific task, excluding reference setup.
-    assert all(t["observed"] is None for t in run_record["tasks"])
-    if not docker:
-        assert limitations and all(t["mode"] == "stub" for t in run_record["tasks"])
-    for relative, expected in run_record["outputs"].items():
-        assert hashlib.sha256((published / relative).read_bytes()).hexdigest() == expected["sha256"]
+    assert status[2] == "container engine: " + ("docker" if docker else "none"), status
+    assert status[3] in ("dirty files: none", "dirty files:"), status
+    # Porcelain lines keep their two positional status columns, e.g. " M path" or "?? path".
+    assert all(re.fullmatch(r"[ MADRCU?!]{2} .+", line) for line in status[4:]), status
+    assert (
+        not list(published.rglob("*.genesis-task.json")) and not (published / "provenance").exists()
+    )
     identities = {sample["id"]: sample for sample in provenance["samples"]}
     assert set(identities) == set(SAMPLES)
     assert (
@@ -635,10 +566,11 @@ def check_outputs(work: Path, *, docker: bool) -> None:
                 "Matplotlib created a temporary cache directory"
                 not in (command.parent / ".command.err").read_text()
             )
-        if "macs3 callpeak" in source or (
-            "macs3.runtime.json" in source and "-- callpeak" in source
-        ):
+        assert "macs3_launch" not in source, command
+        if "macs3 callpeak" in source:
+            # MACS3 is invoked directly, bounded by the task's CPUs.
             assert "_control.primary.bam" in source
+            assert re.search(r"--threads [0-9]+\n", source), source
         if "Rscript" in source:
             assert "-s=-0:2:400" in source and "qc-bin/awk" in source
             assert ".spp.bam'" in source
@@ -680,7 +612,6 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
         "MULTIQC",
         "BWA_MEM2_ALIGN",
         "QUANTIFY",
-        "DAP_PROVENANCE",
     ):
         tasks = [row for row in rows if row["name"].split(" ")[0] == process]
         assert tasks and all(row["status"] == "CACHED" for row in tasks), tasks
@@ -701,11 +632,52 @@ def check_failures(work: Path, sheet: Path) -> None:
         rows = list(csv.DictReader(stream, delimiter="\t"))
     bad = work / "bad.tsv"
     write_sheet(bad, [{**rows[0], "control_sample": "missing"}])
+    # The whole sheet is checked before any task starts, so a rejected sheet runs nothing.
     assert run_pipeline(work, bad, suffix="invalid-sheet", expect_failure=True).returncode != 0
-    tasks = trace_rows(work, "invalid-sheet")
-    assert (
-        len(tasks) == 1 and tasks[0]["name"] == "VALIDATE_SHEET" and tasks[0]["status"] == "FAILED"
-    ), tasks
+    assert trace_rows(work, "invalid-sheet") == []
+    assert "invalid control missing" in (work / "output-invalid-sheet.log").read_text()
+    schema = work / "schema-invalid.tsv"
+    write_sheet(
+        schema,
+        [
+            rows[0],
+            {**rows[1], "sample_id": rows[0]["sample_id"]},
+            {**rows[2], "read1_url": "ftp://example.org/reads.fastq.gz"},
+        ],
+    )
+    assert run_pipeline(work, schema, suffix="schema-sheet", expect_failure=True).returncode != 0
+    assert trace_rows(work, "schema-sheet") == []
+    log = (work / "output-schema-sheet.log").read_text()
+    assert "Validation of samplesheet failed" in log and "duplicate entries" in log, log[-2000:]
+    assert "read1_url must be an HTTP or HTTPS URL" in log, log[-2000:]
+    lines = sheet.read_text().splitlines(keepends=True)
+    for suffix, text, diagnostic in (
+        # nf-schema reports a missing column; the header check rejects what it allows.
+        (
+            "missing-column",
+            sheet.read_text().replace("control_sample", "control", 1),
+            "Missing required field(s): control_sample",
+        ),
+        (
+            "extra-column",
+            "".join(line.rstrip("\n") + "\tnote\n" for line in lines),
+            "expected header",
+        ),
+        (
+            "reordered-columns",
+            "".join(
+                "\t".join(f[1:2] + f[:1] + f[2:]) + "\n"
+                for f in (line.rstrip("\n").split("\t") for line in lines)
+            ),
+            "expected header",
+        ),
+    ):
+        candidate = work / f"{suffix}.tsv"
+        candidate.write_text(text)
+        assert run_pipeline(work, candidate, suffix=suffix, expect_failure=True).returncode != 0
+        assert trace_rows(work, suffix) == []
+        log = (work / f"output-{suffix}.log").read_text()
+        assert diagnostic in log, (suffix, log[-2000:])
     assert (
         run_pipeline(
             work, sheet, suffix="invalid-bwa", expect_failure=True, extra=["--bwa_seed_length", "0"]
@@ -810,7 +782,7 @@ def check_bams(work: Path) -> None:
 
 
 def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
-    """Reject bad reference caches before DOWNLOAD, using copies of synthetic references."""
+    """Reject sheets with unusable references before any task, using copied references."""
     parent = work / "reference-failures"
     parent.mkdir()
     original = {
@@ -818,38 +790,27 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         for p in (work / "references").rglob("*")
         if p.is_file()
     }
-    for scenario in ("changed-fasta", "missing-provenance", "damaged-index", "id-collision"):
+    for scenario, diagnostic in (
+        ("id-collision", "reference ID collision"),
+        ("missing-reference", "reference missing: absent.fa.gz"),
+    ):
         case = parent / scenario
         case.mkdir()
         references = case / "references"
         shutil.copytree(work / "references", references)
         shutil.copy2(work / "limits.config", case / "limits.config")
         samples = list(csv.DictReader(sheet.open(), delimiter="\t"))
-        if scenario == "changed-fasta":
-            fasta = references / "se.fa.gz"
-            old = fasta.stat()
-            content = gzip.decompress(fasta.read_bytes())
-            fasta.write_bytes(gzip.compress(content.replace(b"A", b"T", 1), mtime=0))
-            os.utime(fasta, ns=(old.st_atime_ns, old.st_mtime_ns))
-        elif scenario == "missing-provenance":
-            (references / "se.chrom.sizes.provenance.json").unlink()
-        elif scenario == "damaged-index":
-            (references / "se.bwa-mem2/genome.ann").write_text("damaged\n")
-        else:
+        control = next(row for row in samples if row["sample_id"] == "se_control")
+        if scenario == "id-collision":
             shutil.copy2(references / "se.fa.gz", references / "se.fna.gz")
-            control = next(row for row in samples if row["sample_id"] == "se_control")
             samples.append({**control, "sample_id": "collision", "reference_fasta": "se.fna.gz"})
+        else:
+            samples.append({**control, "sample_id": "orphan", "reference_fasta": "absent.fa.gz"})
         candidate = case / "samples.tsv"
         write_sheet(candidate, samples)
         assert run_pipeline(case, candidate, docker=docker, expect_failure=True).returncode != 0
-        diagnostic = (
-            "reference ID collision" if scenario == "id-collision" else "Unverified reference cache"
-        )
         assert diagnostic in (case / "output-run.log").read_text()
-        tasks = trace_rows(case)
-        assert len(tasks) == 1, tasks
-        assert tasks[0]["name"].split(" ")[0] == "VALIDATE_SHEET", tasks
-        assert tasks[0]["status"] == "FAILED", tasks
+        assert trace_rows(case) == []
     assert original == {
         p.relative_to(work / "references"): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in (work / "references").rglob("*")
@@ -880,7 +841,6 @@ def main() -> None:
             == "778511418f32602383da97526a8f56033fa136577372dff14d014bef57866aaa"
         )
         if not args.docker:
-            check_wrapper(work)
             check_sheets(work)
             check_metadata(work)
         (work / "inputs").mkdir()

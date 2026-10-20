@@ -9,7 +9,6 @@ import defopt
 from .metadata import infer_metadata
 from .nh import add_nh
 from .quantification import mean_peak_rpkm, quantify, quantify_peaks
-from .samples import validate_sheet
 
 
 def main() -> None:
@@ -17,7 +16,6 @@ def main() -> None:
     try:
         defopt.run(
             {
-                "validate-sheet": validate_sheet,
                 "metadata": infer_metadata,
                 "peak-rpm": quantify_peaks,
                 "peak-rpkm": mean_peak_rpkm,

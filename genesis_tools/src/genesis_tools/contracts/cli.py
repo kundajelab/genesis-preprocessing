@@ -63,7 +63,6 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "inputs":
             child.add_argument("--assay", choices=("DAP-seq", "bulk-ATAC"), required=True)
             child.add_argument("--references", type=Path, required=True)
-            child.add_argument("--reference-recipes", type=Path)
         else:
             child.add_argument("--output", type=Path)
             scan_options(child)
@@ -83,16 +82,9 @@ def execute(args: argparse.Namespace) -> tuple[Any, int]:
 
             rows = libraries(args.path, references(args.references))
         else:
-            from ..reference_cache import verify_references
             from ..samples import load_samples
 
             rows = load_samples(args.path, args.references)
-            verify_references(
-                args.references,
-                [r["reference_fasta"] for r in rows],
-                args.reference_recipes,
-                "real",
-            )
         return {
             "schema_version": 1,
             "result": "PASS",

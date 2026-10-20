@@ -89,7 +89,7 @@ def edge(color: str, points: list[Point], label: str, planned: bool = False) -> 
 
 DAP_NODES = [
     ("samples", 140, 330, "Sample sheet", "SE / PE + controls", "reads"),
-    ("VALIDATE_SHEET", 370, 330, "Validate", "Inputs + provenance", "reads"),
+    ("validate", 370, 330, "Validate sheet", "Schema + controls", "reads"),
     ("DOWNLOAD", 600, 330, "Download", "Unmodified raw mates", "reads"),
     ("BWA_MEM2_ALIGN", 830, 330, "bwa-mem2", "Full-read alignment", "reads"),
     ("CALL_PEAKS", 1060, 330, "MACS3 peaks", "Assigned control", "peaks"),
@@ -103,12 +103,8 @@ DAP_NODES = [
     ("reference", 140, 690, "Exact FASTA", "Explicit assembly", "reference"),
     ("BWA_MEM2_INDEX", 370, 690, "bwa-mem2 index", "Verified products", "reference"),
     ("TRACKS", 1060, 690, "deepTools tracks", "BigWig signal", "tracks"),
-    ("DAP_PROVENANCE", 1290, 510, "Run provenance", "Input / output checksums", "qc"),
 ]
 DAP_EDGES = [
-    edge("qc", [(1290,180),(1425,180),(1425,510),(1290,510)], "Reports bind the run provenance"),
-    edge("peaks", [(1290,330),(1175,330),(1175,510),(1290,510)], "Quantified artifacts bind the run provenance"),
-    edge("tracks", [(1060,690),(1290,690),(1290,510)], "Tracks bind the run provenance"),
     edge("reads", [(140,330),(600,330),(830,330)], "Validated libraries download and align"),
     edge("peaks", [(830,330),(1060,330),(1290,330)], "Treatment/control peaks and quantification"),
     edge("qc", [(600,330),(715,330),(715,180),(600,180)], "Raw mates independently feed FastQC"),

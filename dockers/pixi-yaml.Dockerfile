@@ -18,6 +18,12 @@ RUN echo '#!/usr/bin/env bash' > /usr/local/bin/date && \
     echo 'if [ "$1" = "+%s%3N" ]; then /usr/bin/date +%s%N | cut -c1-13 ; else /usr/bin/date "$@" ; fi' >> /usr/local/bin/date && \
     chmod a+x /usr/local/bin/date
 
+# pixi fetches git-pinned PyPI sources (e.g. MACS3 at a commit) with the system git, before the
+# environment exists. Only the build stage needs it, and the lock pins the exact commit.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 # install the packages into this environment
 RUN --mount=type=cache,target=/root/.cache/pixi \
     --mount=type=bind,source="$ENV_NAME.lock",target="/opt/$ENV_NAME/pixi.lock" \

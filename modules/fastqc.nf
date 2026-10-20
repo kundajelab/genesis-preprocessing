@@ -1,5 +1,4 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { dapReceipt } from '../workflows/dap_receipt'
 
 process FASTQC {
     cpus 1
@@ -12,13 +11,11 @@ process FASTQC {
     input:
     tuple val(meta), val(mate), path(read)
     output:
-    path "*.genesis-task.json", emit: receipt
     tuple val(meta), val(mate), path("${meta.id}.${mate}_fastqc.html"),
         path("${meta.id}.${mate}_fastqc.zip"), emit: reports
     tuple val(meta), val(mate), path("${meta.id}.${mate}.fastqc.version.txt"), emit: version
     script:
     """
-    ${dapReceipt(task, 'FASTQC', ["${meta.id}.${mate}"], workflow.containerEngine, false)}
     # Fontconfig must not attempt a cache under the container's unwritable default HOME.
     export XDG_CACHE_HOME="\$PWD/.cache"
     mkdir -p "\$XDG_CACHE_HOME"
@@ -30,7 +27,6 @@ process FASTQC {
     """
     stub:
     """
-    ${dapReceipt(task, 'FASTQC', ["${meta.id}.${mate}"], workflow.containerEngine, true)}
     printf '<html>stub</html>\\n' > '${meta.id}.${mate}_fastqc.html'
     printf 'stub\\n' > '${meta.id}.${mate}_fastqc.zip'
     printf 'stub\\n' > '${meta.id}.${mate}.fastqc.version.txt'

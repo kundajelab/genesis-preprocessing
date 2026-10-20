@@ -7,8 +7,6 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .reference_cache import verify_references
-
 SAMPLE_HEADER = (
     "sample_id",
     "species",
@@ -81,31 +79,3 @@ def load_samples(sheet: Path, references: Path) -> list[dict[str, str]]:
         ):
             raise ValueError(f"{sheet}: invalid control {control_id} for {row['sample_id']}")
     return rows
-
-
-def validate_sheet(
-    *,
-    sheet: Path,
-    references: Path,
-    output: Path,
-    reference_recipes: Path | None = None,
-    reference_mode: str = "real",
-) -> None:
-    """Write a validated copy of exactly one sheet.
-
-    :param sheet: Input TSV.
-    :param references: Directory containing compressed reference FASTAs.
-    :param output: Validated TSV destination.
-    :param reference_recipes: Expected reference generator identities in JSON.
-    :param reference_mode: Real products or explicitly isolated stub-test products.
-    """
-    rows = load_samples(sheet, references)
-    verify_references(
-        references, [row["reference_fasta"] for row in rows], reference_recipes, reference_mode
-    )
-    with output.open("w", newline="") as stream:
-        writer = csv.DictWriter(
-            stream, fieldnames=SAMPLE_HEADER, delimiter="\t", lineterminator="\n"
-        )
-        writer.writeheader()
-        writer.writerows(rows)

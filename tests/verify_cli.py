@@ -94,9 +94,16 @@ if sys.argv[1] == 'info':
     prefix = Path(os.environ['CLI_FAKE_PREFIX'])
     print(json.dumps({'environments_info':[{'name':'default', 'prefix':str(prefix)}]}))
     sys.exit(0)
-Path(os.environ['CLI_PIXI_LOG']).write_text(json.dumps({'argv':sys.argv[1:], 'cwd':os.getcwd()}))
-args = sys.argv[sys.argv.index('--executable') + 1:]
-os.execv(args[0], args)
+record = json.dumps({'argv':sys.argv[1:], 'cwd':os.getcwd()})
+if '--executable' in sys.argv:
+    # The genesis launcher: pixi run --as-is --manifest-path ROOT --executable COMMAND...
+    Path(os.environ['CLI_PIXI_LOG']).write_text(record)
+    args = sys.argv[sys.argv.index('--executable') + 1:]
+    os.execv(args[0], args)
+# run-pipeline.sh: pixi run --manifest-path ROOT COMMAND...; run COMMAND from PATH.
+Path(os.environ['CLI_INNER_PIXI_LOG']).write_text(record)
+assert sys.argv[1:3] == ['run', '--manifest-path'], sys.argv
+os.execvp(sys.argv[4], sys.argv[4:])
 """,
     )
     script(
@@ -119,6 +126,7 @@ sys.exit(int(os.environ.get('CLI_EXIT', '0')))
         "GENESIS_REPO": str(ROOT),
         "CLI_FAKE_PREFIX": str(prefix),
         "CLI_PIXI_LOG": str(work / "pixi.json"),
+        "CLI_INNER_PIXI_LOG": str(work / "inner-pixi.json"),
         "CLI_TOOL_LOG": str(work / "tool.json"),
     }
 
@@ -153,6 +161,10 @@ def check_launchers(work: Path) -> None:
     assert fresh["cwd"] == str(work / "run folders/named")
     pixi = json.loads(Path(env["CLI_PIXI_LOG"]).read_text())
     assert pixi["cwd"] == str(work) and pixi["argv"][:2] == ["run", "--as-is"]
+    # run-pipeline.sh runs Nextflow through this checkout's Pixi environment, from the run folder.
+    inner = json.loads(Path(env["CLI_INNER_PIXI_LOG"]).read_text())
+    assert inner["argv"][:4] == ["run", "--manifest-path", str(ROOT), "nextflow"], inner
+    assert inner["cwd"] == str(work / "run folders/named"), inner
     assert not (work / "injected").exists()
     run([str(CLI), *arguments, "-resume"], work, env)
     resumed = json.loads(tool_log.read_text())

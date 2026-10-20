@@ -17,17 +17,37 @@ from typing import Any
 from genesis_tools.benchmark.spec import sha256, write_json
 
 
+def process_table() -> dict[int, tuple[int, str, str]]:
+    """Map each visible pid to (parent pid, start-time identity, state).
+
+    The start time guards against signalling a recycled pid. Linux reads /proc; other systems
+    (e.g. macOS) have no /proc, so they use ps, whose lstart is the start time to the second.
+    """
+    table: dict[int, tuple[int, str, str]] = {}
+    proc = Path("/proc")
+    if proc.is_dir():
+        for entry in proc.iterdir():
+            if not entry.name.isdecimal():
+                continue
+            try:
+                fields = (entry / "stat").read_text().rsplit(")", 1)[1].split()
+                table[int(entry.name)] = (int(fields[1]), fields[19], fields[0])
+            except OSError, IndexError, ValueError:
+                continue
+        return table
+    listing = subprocess.run(
+        ["ps", "-A", "-o", "pid=,ppid=,stat=,lstart="], capture_output=True, text=True, check=True
+    ).stdout
+    for line in listing.splitlines():
+        fields = line.split(None, 3)
+        if len(fields) == 4 and fields[0].isdecimal() and fields[1].isdecimal():
+            table[int(fields[0])] = (int(fields[1]), fields[3].strip(), fields[2])
+    return table
+
+
 def stop_owned_tree(process: subprocess.Popen) -> None:
     """Stop a runner and its tools, including descendants in separate sessions."""
-    snapshot: dict[int, tuple[int, int, str]] = {}
-    for entry in Path("/proc").iterdir():
-        if not entry.name.isdecimal():
-            continue
-        try:
-            fields = (entry / "stat").read_text().rsplit(")", 1)[1].split()
-            snapshot[int(entry.name)] = (int(fields[1]), int(fields[2]), fields[19])
-        except OSError, IndexError, ValueError:
-            continue
+    snapshot = process_table()
     descendants = {process.pid}
     while additional := {
         pid
@@ -39,17 +59,18 @@ def stop_owned_tree(process: subprocess.Popen) -> None:
 
     def signal_owned(sig: int) -> bool:
         alive = False
+        current = process_table()
         # Signal children before their parent can disappear and orphan them.
         for pid in sorted(owned, key=lambda p: p == process.pid):
-            try:
-                fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
-                if fields[19] != owned[pid][2] or fields[0] == "Z":
-                    continue
-                alive = True
-                if sig:
+            entry = current.get(pid)
+            if entry is None or entry[1] != owned[pid][1] or entry[2].startswith("Z"):
+                continue
+            alive = True
+            if sig:
+                try:
                     os.kill(pid, sig)
-            except ProcessLookupError, FileNotFoundError:
-                pass
+                except ProcessLookupError:
+                    pass
         return alive
 
     signal_owned(signal.SIGTERM)

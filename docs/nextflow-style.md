@@ -54,7 +54,7 @@ inputs, so container tasks do not depend on undeclared host source paths.
 
 The four sample sheets use the six-column schema. The [DAP reference guide](usage/dapseq-reference.md)
 describes the workflow and analysis policies. tests/verify_pipeline.py exercises actual Nextflow wiring,
-reference cache transitions, resume, validation failures, and publication boundaries.
+reference generation and reuse, resume, sheet and reference failures, and publication boundaries.
 DOWNLOAD fetches remote HTTP(S) FASTQs in batches with aria2c (maxForks 1); the
 regression tests serve their fixtures from a local HTTP server.
 

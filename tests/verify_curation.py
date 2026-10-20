@@ -68,7 +68,7 @@ def fixture(
         "fraction",
         "all usable fragments",
         0,
-        SourceEvidence(str(root / "source.json"), evidence["data"]["sha256"], "/FRiP", worker),
+        SourceEvidence(evidence["data"]["location"], evidence["data"]["sha256"], "/FRiP", worker),
         depth="synthetic-full",
     ).export()
     ref = reference(

@@ -1,5 +1,4 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { dapReceipt } from '../workflows/dap_receipt'
 
 process TRACKS {
     cpus { resources.cpus }
@@ -14,14 +13,12 @@ process TRACKS {
     tuple val(meta), path(bam), path(bai), path(qc_bam), path(qc_bai)
     val resources
     output:
-    path "*.genesis-task.json", emit: receipt
     tuple val(meta), path("${meta.id}.tracks*.bw"), emit: tracks
     tuple val(meta), path("${meta.id}.tracks.RPKM.bedGraph"), emit: rpkm
     script:
     def qcTracks = meta.layout == 'PE' ?
         "make_tracks '${qc_bam}' '${meta.id}.tracks.read1'" : ''
     """
-    ${dapReceipt(task, 'TRACKS', [meta.id], workflow.containerEngine, false)}
     export MPLCONFIGDIR="\$PWD/.matplotlib"
     mkdir -p "\$MPLCONFIGDIR"
     make_tracks() {
@@ -47,7 +44,6 @@ process TRACKS {
     """
     stub:
     """
-    ${dapReceipt(task, 'TRACKS', [meta.id], workflow.containerEngine, true)}
     touch '${meta.id}.tracks.CPM.bw' '${meta.id}.tracks.plus.CPM.bw' '${meta.id}.tracks.minus.CPM.bw'
     touch '${meta.id}.tracks.plus.5p.counts.bw' '${meta.id}.tracks.minus.5p.counts.bw'
     printf 'chr1\\t0\\t1000\\t0\\n' > '${meta.id}.tracks.RPKM.bedGraph'

@@ -62,8 +62,10 @@ pixi init \
     --import "$yaml" \
     -p linux-64 -p osx-64 -p osx-arm64 -p linux-aarch64 \
     .
-# update lock
-pixi lock --no-install --manifest-path "./pixi.toml"
+# update lock. Installing is allowed because locking a PyPI source dependency (e.g. MACS3 pinned to
+# a git commit) needs the conda environment to build its metadata; it installs into the temporary
+# folder, which is removed below.
+pixi lock --manifest-path "./pixi.toml"
 popd &> /dev/null
 cp "$temp_dir/pixi.toml" "$toml"
 if [[ ! -f "$lock" ]]; then

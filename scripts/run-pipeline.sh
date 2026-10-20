@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-root=$(dirname -- "$script_dir")
+repo_dir=$(dirname -- "$script_dir")
 
 profile=$("$script_dir/get-default-profile.sh")
 workspace=$("$script_dir/get-default-workspace.sh")
@@ -15,7 +15,8 @@ Run the pipeline on exactly one sample sheet.
 * Work, published output, trace files and the Nextflow log go in WORKSPACE/RUN_NAME/.
 * Nextflow is launched from WORKSPACE/RUN_NAME, so -resume picks up that run's history.
   Relative paths in NEXTFLOW_ARGS resolve against that folder; prefer absolute paths.
-* NEXTFLOW_ARGS are passed directly to nextflow (e.g. -resume, --slurm_queue owners).
+* NEXTFLOW_ARGS are passed directly to nextflow unchecked (e.g. -resume, --slurm_queue owners).
+* If launching via pixi, be sure to use full paths.
 
 ARGS:
     -h|--help: Show this message and exit.
@@ -72,36 +73,14 @@ if [[ -z $run_name ]]; then
     run_name=$(basename -- "$sheet" .tsv)
 fi
 
-profile_given=false
-option_value=false
-for argument in "$@"; do
-    case "$argument" in
-        --input|--input=*) printf 'Supply exactly one input TSV.\n' >&2; exit 2 ;;
-        --workspace|--workspace=*|--run_name|--run_name=*|--run_dir|--run_dir=*)
-            printf 'Use -w/--workspace or -n/--run-name before INPUT.tsv instead of %s.\n' \
-                "$argument" >&2
-            exit 2
-            ;;
-        *.tsv)
-            if ! "$option_value"; then
-                printf 'Supply exactly one input TSV.\n' >&2
-                exit 2
-            fi
-            ;;
-        -profile|-profile=*) profile_given=true ;;
-    esac
-    case "$argument" in
-        -*=*) option_value=false ;;
-        -*) option_value=true ;;
-        *) option_value=false ;;
-    esac
-done
-arguments=()
-if ! "$profile_given"; then arguments=(-profile "$profile"); fi
-
 run_folder="$workspace/$run_name"
 mkdir -p -- "$run_folder"
 # Launch from the run folder so .nextflow/ history and .nextflow.log are kept with the run.
 cd -- "$run_folder"
-exec nextflow run "$root/main.nf" --input "$sheet" --workspace "$workspace" \
-    --run_name "$run_name" ${arguments[@]+"${arguments[@]}"} "$@"
+exec pixi run --manifest-path "$repo_dir" \
+    nextflow run "$repo_dir/main.nf" \
+    --input "$sheet" \
+    -profile "$profile" \
+    --workspace "$workspace" \
+    --run_name "$run_name" \
+    "$@"

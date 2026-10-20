@@ -115,8 +115,11 @@ def mapped(path: str, worker: dict[str, Any]) -> str:
     for source in sorted(
         worker.get("path_map", {}), key=lambda s: len(Path(s).parts), reverse=True
     ):
-        if value.is_relative_to(source):
-            return str(Path(worker["path_map"][source]) / value.relative_to(source))
+        # Registered inputs are stored resolved, so also match the controller prefix resolved
+        # (e.g. macOS /var is /private/var). Worker-side destinations are never resolved here.
+        for prefix in dict.fromkeys((Path(source), Path(source).resolve())):
+            if value.is_relative_to(prefix):
+                return str(Path(worker["path_map"][source]) / value.relative_to(prefix))
     if worker["transport"] == "ssh":
         raise ValueError("SSH input path needs an explicit path_map entry: " + path)
     return str(value)

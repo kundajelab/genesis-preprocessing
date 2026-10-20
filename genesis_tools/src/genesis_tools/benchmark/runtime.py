@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import json
 import os
 import shutil
@@ -14,6 +15,21 @@ from pathlib import Path
 from typing import Any
 
 from .spec import public_url, sha256, write_json
+
+
+@functools.cache
+def gnu_time() -> bool:
+    """Whether /usr/bin/time is GNU time, whose -v report the benchmark parses.
+
+    macOS ships BSD time, which rejects -v, so commands would fail before running.
+    """
+    try:
+        result = subprocess.run(
+            ["/usr/bin/time", "--version"], capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return False
+    return "GNU" in result.stdout + result.stderr
 
 
 def disk_bytes(root: Path) -> int:
@@ -93,6 +109,10 @@ class Runtime:
     def asset(self, name: str) -> Path:
         return Path(self.plan["assets"][name]["path"])
 
+    def task_name(self, folder: Path) -> str:
+        """Name a task by its folder relative to the (resolved) output root."""
+        return str(folder.resolve().relative_to(self.out))
+
     def cached(self, folder: Path, inputs: list[Path], recipe: object) -> bool:
         marker = folder / "task.json"
         if not self.resume or not marker.exists():
@@ -109,7 +129,7 @@ class Runtime:
             Path(p).is_file() and sha256(Path(p)) == h for p, h in record["outputs"].items()
         )
         if valid:
-            self.events.append({"task": str(folder.relative_to(self.out)), "status": "CACHED"})
+            self.events.append({"task": self.task_name(folder), "status": "CACHED"})
         return valid
 
     def seal(
@@ -133,7 +153,7 @@ class Runtime:
                 "wall_seconds": elapsed,
             },
         )
-        self.events.append({"task": str(folder.relative_to(self.out)), "status": "COMPLETED"})
+        self.events.append({"task": self.task_name(folder), "status": "COMPLETED"})
         self.check()
 
     def command(
@@ -231,7 +251,7 @@ class Runtime:
             ]
         timed = (
             ["/usr/bin/time", "-v", "-o", str(log / "time.txt"), *command]
-            if Path("/usr/bin/time").is_file()
+            if gnu_time()
             else command
         )
         record = {

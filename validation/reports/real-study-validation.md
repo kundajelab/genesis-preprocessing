@@ -14,6 +14,11 @@ quality or acceptance on another server.
 
 ## Delivered behavior
 
+> **Later change:** a subsequent revision removed `dap-run.json` and its per-task
+> receipts. DAP runs now record `dap-images.lock` and `git-status.txt` instead; see
+> [DAP run records](../../docs/usage/dapseq-reference.md#run-records). This report
+> describes the revision it validated.
+
 New DAP runs publish `output/provenance/dap-run.json` through one final Nextflow task.
 Its shipped strict version-1 schema binds input checksums, sample/control relationships,
 reference/cache identity, contigs, effective scientific parameters, code/runtime identity,
@@ -128,7 +133,7 @@ pixi run validate-atac --keep
 
 New reference recipe hashes require verified fresh derived caches: preserve old caches and
 regenerate in a new directory containing the same approved FASTAs. See
-[DAP provenance](../../docs/usage/dapseq-reference.md#versioned-run-provenance).
+[DAP run records](../../docs/usage/dapseq-reference.md#run-records) (current behavior).
 Incomplete conda/native or mutable-runtime identities are not upgraded to complete evidence.
 Source snapshots and receipts remain bounded to 32 MiB; this tiny acceptance does not establish
 large-study throughput or catalog scale.

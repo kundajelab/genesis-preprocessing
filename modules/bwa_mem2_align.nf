@@ -1,5 +1,4 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { dapReceipt } from '../workflows/dap_receipt'
 
 process BWA_MEM2_ALIGN {
     cpus 8
@@ -22,7 +21,6 @@ process BWA_MEM2_ALIGN {
     val bwa_options
     val spp_read_length
     output:
-    path "*.genesis-task.json", emit: receipt
     tuple val(meta), path("${meta.id}.primary.bam"), path("${meta.id}.primary.bam.bai"),
         path("${meta.id}.qc.bam"), path("${meta.id}.qc.bam.bai"), emit: aligned
     tuple val(meta), path("${meta.id}.spp.bam"), emit: spp
@@ -34,7 +32,6 @@ process BWA_MEM2_ALIGN {
     def options = "-K ${bwa_options.batch_size} -k ${bwa_options.seed_length} " +
         "-c ${bwa_options.max_seed_occurrences} -T ${bwa_options.score_threshold}"
     """
-    ${dapReceipt(task, 'BWA_MEM2_ALIGN', [meta.id], workflow.containerEngine, false)}
     bwa-mem2 mem -t ${threads} ${options} -R '@RG\\tID:${meta.id}\\tSM:${meta.id}\\tPL:ILLUMINA' \
         "${index}/genome" ${inputs} \
         2> main.bwa.log | samtools view -u -F 2308 - | \
@@ -58,7 +55,6 @@ process BWA_MEM2_ALIGN {
     """
     stub:
     """
-    ${dapReceipt(task, 'BWA_MEM2_ALIGN', [meta.id], workflow.containerEngine, true)}
     touch '${meta.id}.primary.bam' '${meta.id}.primary.bam.bai' '${meta.id}.qc.bam' '${meta.id}.qc.bam.bai' \\
         '${meta.id}.spp.bam'
     printf 'stub\\n' > '${meta.id}.alignment.tsv'

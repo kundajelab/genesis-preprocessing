@@ -267,9 +267,13 @@ class Acceptance:
         assert all(d["structural"] == "PASS" for d in complete["datasets"]), complete
         if tag == "dap":
             for job in plan["data"]["jobs"].values():
-                record = load(Path(job["root"]) / "output/provenance/dap-run.json")
-                assert record["context"]["git_sha"] == self.revision
-                assert {t["engine"] for t in record["tasks"]} == {"docker"}
+                # DAP runs record image pins and the checkout beside their outputs.
+                output = Path(job["root"]) / "output"
+                status = (output / "git-status.txt").read_text().splitlines()
+                assert status[1] == "commit: " + self.revision, status
+                assert (output / "dap-images.lock").read_bytes() == (
+                    ROOT / "conf/dap-images.lock"
+                ).read_bytes()
         self.review_results(study)
         self.export(study, "approved", len(state["datasets"]))
         # Reconnecting/recollecting the same generation imports nothing new and keeps decisions.
@@ -298,9 +302,13 @@ class Acceptance:
         target.write_bytes(original)
         self.call("study", "collect", study, "--retry")
         # An invalid run sidecar causes a collection failure, never a sequencing retry.
-        sidecar = root / ("output/provenance/dap-run.json" if tag == "dap" else "provenance.json")
+        sidecar = root / (
+            "output/multiqc/multiqc_data/genesis_provenance.json"
+            if tag == "dap"
+            else "provenance.json"
+        )
         before = sidecar.read_bytes()
-        sidecar.write_text('{"schema_version":999}\n')
+        sidecar.write_text('{"schema_version":999}\n' if tag != "dap" else "not JSON\n")
         failed = self.call("study", "collect", study, "--retry", expected=(3,))
         assert any(d["collection"] == "FAILED" for d in failed["datasets"]), failed
         assert any(d["collection"] == "COLLECTED" for d in failed["datasets"]), failed

@@ -231,8 +231,9 @@ Automatic assessment records evidence and missing values; it cannot approve a da
 Measurements, policy assessment and human exceptions remain separate. Reassess with
 `genesis qc evaluate --policy FILE` when an approved policy is available.
 
-DAP runs with [versioned provenance](dapseq-reference.md#versioned-run-provenance)
-can pass full structural validation and the default reviewed export. Legacy or incomplete
+DAP runs with [complete run records](dapseq-reference.md#run-records), from a clean
+checkout in digest-pinned containers, can pass full structural validation and the
+default reviewed export. Legacy or incomplete
 records remain excluded. DAP shared-control groups retain the exact six-column public
 sheet order when compiled for a worker. Each collection generation records its request
 and observations; restoring artifact bytes and revalidating creates new evidence without

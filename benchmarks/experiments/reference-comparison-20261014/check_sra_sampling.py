@@ -17,7 +17,9 @@ from sample_sra import sample_sra, stream_pairs
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory)
+        # sample_sra keys receipts by resolved source paths; resolve the fixture root to match
+        # (macOS temporary folders are reached through the /var -> /private/var symlink).
+        root = Path(directory).resolve()
         paths = [root / f"R{i}.fq" for i in (1, 2)]
         for i, path in enumerate(paths, 1):
             path.write_bytes(b"".join(f"@run.{j}/{i}\nACGT\n+\nIIII\n".encode() for j in range(20)))

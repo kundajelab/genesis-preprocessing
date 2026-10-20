@@ -1,75 +1,65 @@
 # MACS3 builds and peak-calling resources
 
-Genesis supports the optimized upstream MACS3 revision
-`22eb40f7b51f5b20b635614ca0b1759dc5398c5c`. It includes the callpeak optimization
-and subsequent fixes to worker cleanup, process safety and concurrent scoring.
-The package still reports `macs3 3.0.5`; use the source revision in
-`macs3.runtime.json` to distinguish it from the released 3.0.5 package.
+DAP-seq peak calling builds MACS3 from upstream source. The DAP environment,
+`environments/DAP_SEQ_PEAKS.yaml`, and its image pin revision
+`da19e1dcbf3a2ff06ab906abc0658edb0c7e82d1`. It includes the callpeak
+optimization, later fixes to worker cleanup, process safety and concurrent
+scoring, and a CPU budget (`--threads`) that bounds MACS3's threads and worker
+processes. The package still reports `macs3 3.0.5`; the pinned revision in the
+environment lock and `dap-images.lock` distinguishes it from the released 3.0.5
+package.
 
-## Select the source-pinned build
+## Profiles and images
 
-For DAP-seq on Linux, use the opt-in native environment profile:
+The DAP profiles (`local,conda`, `local,docker`, `sherlock,apptainer`) use this
+environment or its image. Until a rebuilt image is published,
+`conf/dap-images.lock` may still name an earlier peak-calling image for container
+profiles. Each run copies that lock to its output folder as `dap-images.lock`
+(see [DAP run records](dapseq-reference.md#run-records)).
 
-```bash
-genesis pipeline -p local,macs3_optimized -n study-optimized samples.tsv \
-  --references /data/references
-```
+Source builds require a C compiler, zlib headers and the pinned SIMDe Git
+submodule; the environment declares these build dependencies. Do not substitute
+a GitHub source archive: it omits the submodule. Native macOS and ARM builds
+require their own acceptance tests; resolving their lock entries does not
+validate them.
 
-This profile enables Conda execution and disables Docker/Apptainer. It installs
-the exact Git revision for peak calling; the other tools keep their existing
-environments. Installation requires access to the package channels and upstream
-Git repository. Use a new run name when comparing builds.
+The bulk ATAC and scATAC workflows pin the released peak-calling image separately
+and are unchanged. The scATAC workflow ingests existing fragments and calls peaks
+from BEDPE pseudobulks; it does not process scATAC FASTQs or switch to MACS3's
+FRAG mode.
 
-The source build requires a C compiler, zlib headers and the pinned SIMDe Git
-submodule. The environment declares these build dependencies. Do not substitute
-a GitHub source archive: it omits the submodule. The separate Pixi manifest and
-lock in `environments/macs3-optimized/` provide a fully resolved environment for
-standalone comparisons and container builds. Native macOS and ARM builds require
-their own acceptance tests; resolving their lock entries does not validate them.
+## CPU limits
 
-The public image pins used by default DAP, bulk ATAC and scATAC workflows still
-refer to the released peak-calling image until a verified replacement is
-published. Selecting a source environment does not update those images. The
-scATAC workflow ingests existing fragments and calls peaks from BEDPE pseudobulks;
-it does not process scATAC FASTQs or switch to MACS3's FRAG mode.
+DAP peak calling runs `macs3 callpeak` directly with `--threads` set to the
+task's CPU allocation. The budget includes MACS3's calling thread and bounds its
+threads and peak worker processes on any operating system. MACS3 starts peak
+worker processes only on Linux; elsewhere those phases run serially. A container
+or scheduler CPU limit remains the outer bound.
 
-## CPU limits and provenance
+The DAP peak-calling process requests four CPUs, 1 GB plus a quarter of the
+treatment and control BAM sizes, and one hour, retrying twice with more memory and
+time if killed. On a Sorghum sample (52M treatment and 12M control read pairs,
+8.1 GB of BAMs) with revision `da19e1dcbf`, four CPUs called peaks in 13 s against
+73 s for one, eight CPUs were no faster than four, and peaks were byte-identical at
+every budget. That sample needed about 1.1 GB at one CPU and ran within 2 GB at
+four. Use explicit Nextflow process overrides to change resources; faster
+execution can use more memory. The caller's thresholds, controls, genome size,
+duplicate policy and input formats are unchanged.
 
-Each peak call uses the task's requested CPU allocation. On Linux the launcher
-narrows the inherited CPU affinity mask and limits numerical-library threads to
-one before MACS3 starts. It never widens a scheduler allocation. Local calls
-rotate their starting CPU within that mask to avoid always selecting its first
-core; this does not reserve exclusive CPUs. The executable is selected from the
-same Python environment as the recorded package metadata. This matters
-because MACS3 derives its worker count from affinity, while a container CPU quota
-alone can leave more CPUs visible.
+Bulk ATAC and scATAC peak calls still use `genesis_tools/macs3_launch.py`. On
+Linux it narrows the inherited CPU affinity mask to the task's allocation and
+limits numerical-library threads to one; for MACS3 builds with a CPU budget it
+also sets `MACS3_NUM_THREADS`. It records `macs3.runtime.json` with the package
+version, source identity, launcher checksum, requested CPUs, effective affinity
+and thread budget. Bulk ATAC keeps its existing configured task limits, and
+scATAC products keep two CPUs and 8 GB.
 
-`macs3.runtime.json` records the package version, available source identity,
-launcher checksum, requested CPUs and effective affinity. DAP filenames begin
-with the sample ID. These receipts identify execution; they do not approve QC or
-model readiness. Released-package execution on non-Linux hosts is retained with
-resource enforcement reported as NOT_ASSESSED. The optimized source launcher
-requires Linux affinity support.
+## Earlier measurements
 
-Defaults remain one CPU and 1 GB for the DAP peak-calling process; bulk ATAC keeps
-its existing configured task limits, and scATAC products keep two CPUs and 8 GB.
-Use explicit Nextflow process overrides to change resources. Benchmark results
-at eight CPUs do not imply the same speedup at one CPU, and faster execution can
-use more memory. The caller's thresholds, controls, genome size, duplicate policy
-and input formats are unchanged.
-
-## Compare versions or roll back
-
-See the [measured results](../../validation/reports/macs3-optimization.md) for
-performance, output agreement and the limits of the acceptance tests.
-
-The [comparison recipe](../../benchmarks/experiments/macs3-optimization/README.md)
-uses the same existing inputs and scientific arguments for both builds, with
-1, 2 and 8 CPUs and three measured repetitions. It checks peak coordinates,
-summits and scientific XLS fields before interpreting speedups. Timings cover
-peak calling rather than the complete preprocessing pipeline.
-
-To use the released caller again, omit `macs3_optimized` and select an existing
-profile such as `local,conda` or `local,docker`, with a new run name. Historical
-benchmark environments and results remain version-specific; do not overwrite
-results from one caller build with those from another.
+The [measured results](../../validation/reports/macs3-optimization.md) and the
+[comparison recipe](../../benchmarks/experiments/macs3-optimization/README.md)
+compare the earlier revision `22eb40f7b51f5b20b635614ca0b1759dc5398c5c` with the
+released package, using the same inputs and scientific arguments, 1, 2 and 8
+CPUs and three measured repetitions. They describe that revision, not the current
+DAP pin. Benchmark environments and results remain version-specific; do not
+overwrite results from one caller build with those from another.

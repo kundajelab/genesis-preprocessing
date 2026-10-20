@@ -1,8 +1,6 @@
 nextflow.enable.dsl = 2
 
-include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
-include { dotenv } from 'plugin/nf-dotenv'
-include { VALIDATE_SHEET } from './modules/validate_sheet'
+include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
 include { CHROM_SIZES } from './modules/chrom_sizes'
 include { BWA_MEM2_INDEX } from './modules/bwa_mem2_index'
 include { DOWNLOAD } from './modules/download'
@@ -14,7 +12,37 @@ include { MULTIQC } from './modules/multiqc'
 include { TRACKS } from './modules/tracks'
 include { CALL_PEAKS } from './modules/call_peaks'
 include { QUANTIFY } from './modules/quantify'
-include { DAP_PROVENANCE } from './modules/dap_provenance'
+
+// Sheet rules a JSON schema cannot express: the exact columns, existing reference FASTAs,
+// distinct reference IDs and valid control assignments. Rows come from samplesheetToList.
+def checkSamples(sheet, rows, references) {
+    def header = ['sample_id', 'species', 'read1_url', 'read2_url', 'control_sample', 'reference_fasta']
+    def columns = sheet.withReader { reader -> reader.readLine() }?.split('\t')?.toList()
+    if (columns != header) {
+        error("${sheet}: expected header ${header.join(' ')}")
+    }
+    def referenceIds = [:]
+    rows.each { row ->
+        if (!references.resolve(row.reference_fasta).isFile()) {
+            error("${sheet}: reference missing: ${row.reference_fasta}")
+        }
+        def referenceId = row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, '')
+        def previous = referenceIds.putIfAbsent(referenceId, row.reference_fasta)
+        if (previous != null && previous != row.reference_fasta) {
+            error("${sheet}: reference ID collision: ${previous} and ${row.reference_fasta} " +
+                  "both use ${referenceId}; use distinct reference basenames")
+        }
+    }
+    def samples = rows.collectEntries { row -> [(row.id): row] }
+    rows.findAll { row -> row.control != '-' }.each { row ->
+        def control = samples[row.control]
+        if (control == null || row.control == row.id || control.control != '-' ||
+                control.species != row.species || control.reference_fasta != row.reference_fasta ||
+                (control.read2_url == '-') != (row.read2_url == '-')) {
+            error("${sheet}: invalid control ${row.control} for ${row.id}")
+        }
+    }
+}
 
 // Bowtie 1 modules deliberately have no imports or calls here.
 workflow {
@@ -29,35 +57,17 @@ workflow {
         max_seed_occurrences: params.bwa_max_seed_occurrences,
         score_threshold: params.bwa_score_threshold
     ]
-    def provenanceScript = file("${projectDir}/genesis_tools/src/genesis_tools/reference_cache.py")
-    def recipeHash = { module ->
-        def digest = java.security.MessageDigest.getInstance('SHA-256')
-        digest.update(file("${projectDir}/modules/${module}.nf").bytes)
-        digest.update(provenanceScript.bytes)
-        digest.digest().encodeHex().toString()
-    }
-    def generator = dotenv('DAP_SEQ_ALIGNMENT_IMAGE')
-    def sizesRecipe = recipeHash('chrom_sizes')
-    def indexRecipe = recipeHash('bwa_mem2_index')
-    def recipes = [
-        'chrom-sizes': [container: generator, recipe_sha256: sizesRecipe],
-        'bwa-mem2': [container: generator, recipe_sha256: indexRecipe]
-    ]
-    VALIDATE_SHEET(Channel.value(sheet), Channel.value(referencesDir), recipes,
-                   file("${projectDir}/genesis_tools/src"))
-    samples = VALIDATE_SHEET.out.sheet.splitCsv(header: true, sep: '\t')
-        .map { row ->
-            [id: row.sample_id, species: row.species, read1_url: row.read1_url,
-             read2_url: row.read2_url, control: row.control_sample,
-             reference_fasta: row.reference_fasta,
-             ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
-             layout: row.read2_url == '-' ? 'SE' : 'PE']
-        }
+    // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
+    def sheetRows = samplesheetToList(sheet, "${projectDir}/assets/schema_input.json")
+        .collect { row -> row[0] }
+    checkSamples(sheet, sheetRows, referencesDir)
+    samples = channel.fromList(sheetRows.collect { row ->
+        row + [ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
+               layout: row.read2_url == '-' ? 'SE' : 'PE']
+    })
     referenceInputs = samples.unique { sample -> sample.ref_id }
         .map { meta ->
-            def ref = [id: meta.ref_id, filename: meta.reference_fasta,
-                       generator_container: generator, sizes_recipe: sizesRecipe,
-                       index_recipe: indexRecipe]
+            def ref = [id: meta.ref_id, filename: meta.reference_fasta]
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true))
         }
     sizesBranches = referenceInputs.branch { ref, _fasta ->
@@ -65,7 +75,7 @@ workflow {
                 file("${referencesDir}/${ref.id}.chrom.sizes").size() > 0
         missing: true
     }
-    CHROM_SIZES(sizesBranches.missing, provenanceScript)
+    CHROM_SIZES(sizesBranches.missing)
     sizes_ch = sizesBranches.cached.map { ref, _fasta ->
             tuple(ref.id, ref, file("${referencesDir}/${ref.id}.chrom.sizes"))
         }
@@ -84,7 +94,7 @@ workflow {
     indexInputs = indexBranches.missing.map { ref, fasta -> tuple(ref.id, ref, fasta) }
         .join(genomeLengths, by: 0, failOnDuplicate: true)
         .map { _id, ref, fasta, length -> tuple(ref + [length: length], fasta) }
-    BWA_MEM2_INDEX(indexInputs, provenanceScript)
+    BWA_MEM2_INDEX(indexInputs)
     indexes = indexBranches.cached.map { ref, _fasta ->
             tuple(ref.id, ref, file("${referencesDir}/${ref.id}.bwa-mem2"))
         }
@@ -145,22 +155,38 @@ workflow {
         [id: meta.id, species: meta.species, ref_id: meta.ref_id,
          reference_fasta: meta.reference_fasta, layout: meta.layout, control: meta.control]
     }.collect().map { rows -> rows.sort { it.id } }
-    // Local Nextflow runs can have a null commitId. Git is needed only for provenance.
-    def gitSha = workflow.commitId ?: 'UNKNOWN'
-    def sourceStatus = 'UNKNOWN'
-    try {
-        def revision = ['git', '-C', projectDir.toString(), 'rev-parse', 'HEAD'].execute()
-        def revisionText = revision.text.trim()
-        if (revision.waitFor() == 0) {
-            gitSha = revisionText
-            def status = ['git', '-C', projectDir.toString(), 'status', '--porcelain',
-                          '--untracked-files=no'].execute()
-            def statusText = status.text.trim()
-            if (status.waitFor() == 0) sourceStatus = statusText ? 'dirty' : 'clean'
+    // Record what produced this run beside its outputs: the container image pins, and the
+    // checkout's branch, commit and uncommitted changes. Local runs can have a null commitId.
+    def git = { List args ->
+        try {
+            def process = (['git', '-C', projectDir.toString()] + args).execute()
+            // Trim only the end: porcelain status lines start with positional status columns.
+            def text = process.text.stripTrailing()
+            return process.waitFor() == 0 ? text : null
+        } catch (IOException ignored) {
+            return null
         }
-    } catch (IOException ignored) {
-        log.warn('Git unavailable: MultiQC source provenance may be UNKNOWN')
     }
+    def gitSha = git.call(['rev-parse', 'HEAD']) ?: workflow.commitId ?: 'UNKNOWN'
+    def branch = git.call(['rev-parse', '--abbrev-ref', 'HEAD'])
+    def changes = branch == null ? null : git.call(['status', '--porcelain'])
+    // MultiQC's source status ignores untracked files; git-status.txt lists them too.
+    def sourceStatus = changes == null ? 'UNKNOWN' :
+        (changes.readLines().any { line -> !line.startsWith('??') } ? 'dirty' : 'clean')
+    if (changes == null) {
+        log.warn('Git unavailable: git-status.txt and MultiQC source provenance are UNKNOWN')
+    }
+    // Curation treats a run as complete only from a clean checkout run in pinned containers.
+    def engine = "container engine: ${workflow.containerEngine ?: 'none'}\n"
+    def gitReport = changes == null ?
+        "git status unavailable: ${projectDir} is not a Git checkout, or git is not installed\n" +
+            engine :
+        "branch: ${branch}\ncommit: ${gitSha}\n" + engine +
+            (changes ? "dirty files:\n${changes}\n" : "dirty files: none\n")
+    def runOutput = file("${params.run_dir}/output")
+    runOutput.mkdirs()
+    file("${projectDir}/conf/dap-images.lock").copyTo(runOutput.resolve('dap-images.lock'))
+    runOutput.resolve('git-status.txt').text = gitReport
     def reportProvenance = [name: file(params.run_dir).name, git_sha: gitSha,
                            source_status: sourceStatus, pipeline_version: workflow.manifest.version]
     MULTIQC(multiqcFiles, multiqcSamples, reportProvenance,
@@ -175,7 +201,7 @@ workflow {
         .map { _controlId, meta, bam, bai, controlBam, controlBai ->
             tuple(meta, bam, bai, controlBam, controlBai)
         }
-    CALL_PEAKS(peakInputs, file("${projectDir}/genesis_tools/src/genesis_tools/macs3_launch.py"))
+    CALL_PEAKS(peakInputs)
     peaksBySample = CALL_PEAKS.out.peaks.map { meta, peaks -> tuple(meta.id, meta, peaks) }
     bamsBySample = mainBams.map { meta, bam, bai -> tuple(meta.id, bam, bai) }
     coverageBySample = TRACKS.out.rpkm.map { meta, coverage -> tuple(meta.id, coverage) }
@@ -189,68 +215,4 @@ workflow {
             tuple(meta, peaks, bam, coverage, path)
         }
     QUANTIFY(quantificationInputs)
-
-    // Feed completed channels, never an asynchronously published output directory.
-    def entries = { meta, paths, suffix = '' ->
-        (paths instanceof List ? paths : [paths]).collect { path ->
-            [relative: "${meta.species}/${meta.id}/${suffix}${path.name}".toString(), file: path]
-        }
-    }
-    provenanceProducts = DOWNLOAD.out.downloads.flatMap { batch, _reads, counts ->
-            (counts instanceof List ? counts : [counts]).collect { path ->
-                def meta = batch.find { "${it.id}.fastq.lines" == path.name }
-                entries(meta, path)[0]
-            }
-        }
-        .mix(FASTQC.out.reports.flatMap { meta, _mate, html, zip -> entries(meta, [html, zip], 'qc/fastqc/') })
-        .mix(FASTQC.out.version.flatMap { meta, _mate, path -> entries(meta, path, 'qc/fastqc/') })
-        .mix(METADATA.out.metadata.flatMap { meta, path -> entries(meta, path) })
-        .mix(BWA_MEM2_ALIGN.out.provenance.flatMap { meta, path -> entries(meta, path) })
-        .mix(QC.out.reports.flatMap { meta, paths -> entries(meta, paths) })
-        .mix(TRACKS.out.tracks.flatMap { meta, paths -> entries(meta, paths) })
-        .mix(CALL_PEAKS.out.results.flatMap { meta, paths -> entries(meta, paths) })
-        .mix(QUANTIFY.out.quantified.flatMap { meta, rpm, rpkm -> entries(meta, [rpm, rpkm]) })
-        .mix(MULTIQC.out.html.map { path -> [relative: 'multiqc/multiqc_report.html', file: path] })
-        .mix(MULTIQC.out.data.map { path -> [relative: 'multiqc/multiqc_data', file: path] })
-        .collect().map { rows ->
-            def ordered = rows.sort { it.relative }
-            tuple(ordered.collect { it.relative }, ordered.collect { it.file })
-        }
-    taskReceipts = DOWNLOAD.out.receipt.mix(FASTQC.out.receipt, METADATA.out.receipt,
-        BWA_MEM2_ALIGN.out.receipt, QC.out.receipt, TRACKS.out.receipt, CALL_PEAKS.out.receipt,
-        QUANTIFY.out.receipt, MULTIQC.out.receipt).collect().map { paths -> paths.sort { it.name } }
-    readReceipts = DOWNLOAD.out.checksums.collect().map { paths -> paths.sort { it.name } }
-    def digestFile = { path ->
-        java.security.MessageDigest.getInstance('SHA-256').digest(path.bytes).encodeHex().toString()
-    }
-    referenceReceipts = sizes_ch.combine(indexes, by: 0).map { id, ref, sizes, _indexRef, index ->
-        def parse = { path -> new groovy.json.JsonSlurper().parseText(path.text) }
-        [id: id, filename: ref.filename,
-         contigs: sizes.readLines().collectEntries { line ->
-             def fields = line.split('\t'); [(fields[0]): fields[1].toLong()]
-         },
-         contig_order: sizes.readLines().collect { it.split('\t')[0] },
-         sizes_sha256: digestFile(sizes),
-         sizes_cache: parse(file("${sizes}.provenance.json")),
-         index_cache: parse(index.resolve('provenance.json'))]
-    }.collect().map { rows -> rows.sort { it.id } }
-    // Hash the implementation and locked tool definitions, including dirty working copies.
-    // Clean Git identity is required for complete provenance; dirty runs remain inspectable.
-    def sourceFiles = [file("${projectDir}/main.nf"), file("${projectDir}/nextflow.config"),
-        file("${projectDir}/conf/dap-images.lock"), file("${projectDir}/multiqc_config.yaml"), file(params.spp_script)] +
-        file("${projectDir}/modules/*.nf") + [file("${projectDir}/workflows/dap_receipt.nf")] +
-        file("${projectDir}/environments/*.yaml") + file("${projectDir}/environments/*.lock") +
-        [provenanceScript, file("${projectDir}/genesis_tools/src/genesis_tools/dap_provenance.py"),
-         file("${projectDir}/genesis_tools/uv.lock")]
-    def runContext = [schema_version: 1, git_sha: gitSha, source_status: sourceStatus,
-        nextflow_version: nextflow.version.toString(), profile: workflow.profile,
-        source_hashes: sourceFiles.collectEntries { path -> [(path.toString()): digestFile(path)] },
-        parameters: [bwa: bwaOptions, spp_read_length: params.spp_read_length,
-            spp_script_sha256: digestFile(file(params.spp_script)), download_batch_size: params.download_batch_size,
-            mapq_filter: 'none', flag_exclude: 2308, alignment_duplicates: 'retain',
-            peak_duplicates: 'MACS3 default keep-dup=1', peak_format: 'SE:BAM;PE:BAMPE',
-            quantification_unit: 'primary mapped read ends', track_normalization: 'CPM',
-            track_bin_size: 1, strand_denominator: 'all retained mapped read ends']]
-    DAP_PROVENANCE(provenanceProducts, taskReceipts, readReceipts, referenceReceipts,
-        runContext, sheet, file("${projectDir}/genesis_tools/src/genesis_tools/dap_provenance.py"))
 }

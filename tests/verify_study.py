@@ -414,7 +414,7 @@ def workflow_checks(root: Path, bigwig_python: Path | None = None) -> None:
     assert blocked["data"]["status"] == "BLOCKED" and "path_map" in str(blocked["data"]["blockers"])
     remote["workers"]["a"]["path_map"] = {str(root / "raw"): "/worker/data"}
     remote_plan = planning.build(study, remote)
-    assert remote_plan["data"]["status"] == "READY"
+    assert remote_plan["data"]["status"] == "READY", remote_plan["data"].get("blockers")
     assert "/worker/data/" in str(remote_plan["data"]["campaign"]["jobs"])
     rejects(lambda: planning.validate_scan({**scan, "max_bytes": 0}), "positive")
     worker = plan["data"]["campaign"]["workers"][job["worker"]]

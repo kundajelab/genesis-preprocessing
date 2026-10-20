@@ -1,6 +1,6 @@
 [workspace]
 authors = ["Ted Brookings <ted.brookings@googlemail.com>"]
-channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/bioconda", "https://conda.anaconda.org/conda-forge"]
+channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/conda-forge"]
 name = "dap_seq_peaks"
 platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
 version = "0.1.0"
@@ -8,5 +8,12 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-macs3 = { version = ">=3.0.4,<4", channel = "bioconda" }
+python = { version = "3.12.*", channel = "conda-forge" }
+git = { channel = "conda-forge" }
+c-compiler = { channel = "conda-forge" }
+zlib = { version = ">=1.3,<2", channel = "conda-forge" }
 gzip = { version = ">=1.13,<2", channel = "conda-forge" }
+pip = { version = "26.2.1.*", channel = "conda-forge" }
+
+[pypi-dependencies]
+macs3 = { git = "https://github.com/macs3-project/MACS.git", rev = "da19e1dcbf3a2ff06ab906abc0658edb0c7e82d1" }

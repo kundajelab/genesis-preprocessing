@@ -33,16 +33,13 @@ export PATH="$HOME/.local/bin:$PATH"
 Place each sheet's gzipped reference FASTA under `references/`, using the exact
 basename in `reference_fasta`. Reference genomes are not downloaded automatically.
 Nextflow builds missing chromosome-size files and bwa-mem2 indexes once per
-reference and publishes checksum provenance beside them. Every invocation,
-including resume, verifies the decompressed FASTA, all derived-product hashes,
-and generator identity before downloads start. Existing products without valid
-provenance stop the run: preserve them and use a fresh reference directory
-containing the exact FASTA to regenerate products. Nothing is silently overwritten.
-Gzip metadata and mtime-only changes do not change FASTA identity. Distinct FASTA
-basenames must not collapse to the same reference ID after removing their suffix.
-The first resume after generating references can rerun downstream tasks as inputs
-move to published paths; subsequent resumes reuse computation. Reference validation
-intentionally runs again, even when all downstream tasks are cached.
+reference and publishes them beside the FASTA. A complete, nonempty
+`<id>.chrom.sizes` or `<id>.bwa-mem2/` index is reused whenever present, without
+checking it against the FASTA: if you replace a FASTA, delete its derived products
+(or use a fresh reference directory) so they are rebuilt. Distinct FASTA basenames
+must not collapse to the same reference ID after removing their suffix. The first
+resume after generating references can rerun downstream tasks as inputs move to
+published paths; subsequent resumes reuse computation.
 
 Run exactly one sheet per invocation:
 
@@ -115,7 +112,10 @@ Sample IDs must be unique within the sheet. Every assigned control must appear
 in the same sheet, have `control_sample = -`, and match the treatment's species,
 reference, and layout. Controls receive alignment, QC, and tracks; treatments
 also receive peaks and quantification. Multiple treatments can share a control.
-Validation completes before downloads start.
+The whole sheet is validated before any task starts: nf-schema checks it against
+`assets/schema_input.json` (required values, patterns, unique sample IDs), then
+`main.nf` checks the exact header, the reference FASTAs, reference IDs and control
+assignments.
 
 For interspecies DAP, distinguish the TF-source organism from the organism whose
 DNA was assayed. The alignment reference must describe that DNA. Preserve the
@@ -242,36 +242,31 @@ positive-count contigs visible. Three renderer-only fields (gzip timestamp, UUID
 and embedded creation date) are canonicalized for reproducible HTML; native JSON
 retains generation metadata. A stable resume caches the complete report/data set.
 
-### Versioned run provenance
+### Run records
 
-A completed DAP run publishes `output/provenance/dap-run.json`, including
-when launched directly with Nextflow. A final `DAP_PROVENANCE` task consumes completed
-output channels; it does not scan an asynchronously published directory. The installed
-[version 1 schema](../../genesis_tools/src/genesis_tools/contracts/schemas/dap-run-v1.json)
-is validated when curation imports the run.
+Each run writes two records to its output folder when it starts:
 
-The record binds the original sheet and sample/control assignments, compressed FASTQ
-checksums, exact reference/cache identities and contig lengths, effective scientific
-parameters, source hashes/Git revision, Nextflow version, and published output hashes.
-Analysis-task receipts record the actual container selected after site overrides,
-script checksum, attempt number and requested CPU/memory/time. Cached tasks retain their
-original receipts. Container digests identify the software environment; native alignment,
-reference and QC reports retain their reported versions.
+- `dap-images.lock`: a copy of `conf/dap-images.lock`, the container image pins
+  (by digest) used by container profiles. Conda runs use the locked
+  `environments/*.yaml` instead.
+- `git-status.txt`: the pipeline checkout's branch and commit, the container
+  engine (`docker`, `apptainer`, … or `none` for Conda), and every uncommitted or
+  untracked file reported by `git status --porcelain` (`dirty files: none` for a
+  clean checkout).
 
-Requested resources are not usage measurements. The receipt's `observed` value is null;
-use the run's Nextflow traces for measured task runtime/RSS. Neither establishes whole-host
-peak RAM or network traffic. FASTQ checksums survive intentional work-cache pruning; the
-record does not claim those intermediates still exist. Scientific outputs remain required.
+Curation reads both files. A run's provenance is complete only when it ran from a
+clean checkout with a container engine, using images that are all pinned by
+`@sha256` digest; otherwise the imported manifests list the reasons, and their
+datasets do not pass full structural validation.
 
-Curation derives completeness from validated evidence, never a supplied boolean.
-A clean pinned checkout, real tasks in digest-pinned containers, and complete input,
-reference and output bindings allow full validation and the default reviewed export.
-Stub runs, dirty/unknown source revisions, mutable images, conda/native tasks and historical
-reference caches lacking execution-engine evidence can be inspected but are incomplete.
-Runs without this sidecar are also incomplete. Curation rejects an invalid sidecar
-rather than ignoring it. If a cached reference's recipe hash differs from the
-installed recipe, keep the old cache and regenerate derived products in a fresh
-reference directory containing the same approved FASTAs.
+Per-sample `*.alignment.tsv` files record the aligner version and options, and
+the MultiQC report's provenance records the run name, Git commit and clean/dirty
+status. Use the run's Nextflow traces for measured task runtime and memory.
+
+Curation derives completeness from these records: a run from a clean checkout,
+with a container engine and digest-pinned images, allows full validation and the
+default reviewed export. Dirty or unknown checkouts, Conda runs and mutable images
+can be inspected but are incomplete.
 
 Full byte/format scans, scientific QC review and eligibility review are separate
 from successful execution.
@@ -344,8 +339,8 @@ pixi run validate-docker --keep
 
 The default suite runs ShellCheck, Ruff, ty, quantification and mocked Docker
 build regressions, sample-sheet and metadata cases, and actual Nextflow SE/PE
-stub workflows. It checks control fan-out, per-reference generation and cache
-reuse, `-resume`, invalid inputs, and publication boundaries. Mock builds cover
+stub workflows. It checks control fan-out, per-reference generation and reuse,
+`-resume`, invalid sheets and references, and publication boundaries. Mock builds cover
 both architectures and `--no-push` without contacting Docker or a registry.
 
 Docker validation runs the real download/staging, indexing, bwa-mem2, samtools,
@@ -363,8 +358,8 @@ focused cases independently with:
 pixi run uv run --frozen --project genesis_tools python tests/verify_fastqc.py --keep
 ```
 
-The five-library fixture expects 43 initial tasks and 39 tasks after reference
-reuse, including exactly one MULTIQC aggregation and one DAP_PROVENANCE publication.
+The five-library fixture expects 41 initial tasks and 37 tasks after reference
+reuse, including exactly one MULTIQC aggregation.
 Task counts depend on the workflow revision; inspect the trace for completion and
 cache status. Tool warnings are retained for inspection. MultiQC regressions require seven
 FastQC, ten samtools stats, five flagstat and five idxstats identities, with
@@ -399,9 +394,9 @@ assigned controls and DAP scientific defaults are compatible with that revision.
 | Area | What to check |
 | --- | --- |
 | Default execution | Omitting a profile selects `local,docker`. Select `-p local,conda` or `-p sherlock,apptainer` explicitly; the presence of `sbatch` does not select a cluster. |
-| Reference caches | Every invocation verifies FASTA identity, derived hashes and generator provenance before downloads, including on resume. Missing, stale or incomplete provenance stops execution. Keep old caches and regenerate in a new reference directory containing the exact approved FASTAs; do not copy unverifiable derived products or invent provenance. |
+| Reference caches | Complete derived products (`<id>.chrom.sizes`, `<id>.bwa-mem2/`) are reused when present, without verification. Delete them, or use a fresh reference directory, after replacing a FASTA. Provenance sidecars written by earlier revisions are ignored. |
 | Read QC | Raw-mate FastQC and one run-level MultiQC report require the images pinned in `conf/dap-images.lock`; the runtime may need to pull them. Quality WARN/FAIL labels are advisory. |
-| Resume | Keep the run folder and work directory. Reference validation reruns; switching to published reference paths or changing process definitions can rerun affected tasks. Use a new run name and workspace if you need to keep an earlier result unchanged. |
+| Resume | Keep the run folder and work directory. Switching to published reference paths or changing process definitions can rerun affected tasks. Use a new run name and workspace if you need to keep an earlier result unchanged. |
 
 Follow [installation and maintenance](../development.md#command-installation-and-maintenance)
 to update the environment. Keep references and run data separately from Git, and

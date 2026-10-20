@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from run_queue import require_free_space, stop_owned_tree
+from run_queue import process_table, require_free_space, stop_owned_tree
 
 
 def main() -> None:
@@ -44,13 +44,12 @@ def main() -> None:
                 raise AssertionError("Child fixture did not start")
             child = int(ready.read_text())
             assert os.getpgid(child) != os.getpgid(process.pid)
+            assert child in process_table(), "Process table cannot see the fixture grandchild"
             stop_owned_tree(process)
             assert process.returncode is not None
-            child_stat = Path(f"/proc/{child}/stat")
-            assert (
-                not child_stat.exists()
-                or child_stat.read_text().rsplit(")", 1)[1].split()[0] == "Z"
-            )
+            # The separately-sessioned grandchild must be gone (or an unreaped zombie).
+            remaining = process_table().get(child)
+            assert remaining is None or remaining[2].startswith("Z"), remaining
         finally:
             if process.poll() is None:
                 stop_owned_tree(process)

@@ -89,11 +89,12 @@ workspace above it. ATAC uses its runner directory containing `manifest.json`,
 raw source snapshots and available QC definitions. DAP controls have no required
 treatment peak outputs. ATAC provenance must match the stored run manifest digest.
 
-DAP runs publish a versioned `output/provenance/dap-run.json`; import checks its
-schema, sheet/control/reference bindings and complete task coverage. Full inspection
-checks the declared artifact digests and reference bytes. See
-[DAP run provenance](dapseq-reference.md#versioned-run-provenance) for the exact
-completeness requirements and resource-measurement limits.
+DAP runs record their image pins and Git status in `output/dap-images.lock` and
+`output/git-status.txt` (see [DAP run records](dapseq-reference.md#run-records)).
+Import treats a run's provenance as complete only for a clean checkout run with a
+container engine and digest-pinned images, and keeps the engine and image pins in
+each manifest. Full inspection checks the declared artifact digests and reference
+bytes.
 
 Historical DAP MultiQC provenance lacks complete input/resource/container evidence.
 These records are incomplete even when all surviving files are readable. The default

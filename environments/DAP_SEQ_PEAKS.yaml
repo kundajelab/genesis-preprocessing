@@ -4,5 +4,15 @@ channels:
   - bioconda
   - nodefaults
 dependencies:
-  - bioconda::macs3>=3.0.4,<4
+  # MACS3 is built from a pinned source commit (requires Python >= 3.12). This commit bounds its
+  # own threads and processes with one CPU budget (MACS3_NUM_THREADS; upstream PR #787). pip
+  # needs git to fetch it, and its C extensions need a compiler and zlib headers (fermi-lite
+  # includes zlib.h).
+  - conda-forge::python=3.12
+  - conda-forge::git
+  - conda-forge::c-compiler
+  - conda-forge::zlib>=1.3,<2
   - conda-forge::gzip>=1.13,<2
+  - conda-forge::pip=26.2.1
+  - pip:
+    - macs3 @ git+https://github.com/macs3-project/MACS.git@da19e1dcbf3a2ff06ab906abc0658edb0c7e82d1

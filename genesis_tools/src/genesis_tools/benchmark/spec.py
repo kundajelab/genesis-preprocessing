@@ -92,8 +92,11 @@ def source_identity() -> dict[str, Any]:
     from importlib.metadata import PackageNotFoundError, version
 
     root = Path(__file__).resolve().parents[4]
-    package = Path(__file__).resolve().parent.parent
-    paths = sorted(p for p in Path(__file__).parent.iterdir() if p.suffix in {".py", ".html"}) + [
+    # Resolve once and derive every path from it: relative_to fails when the package and its files
+    # are spelled through different symlinks (e.g. macOS /var and /private/var).
+    benchmark = Path(__file__).resolve().parent
+    package = benchmark.parent
+    paths = sorted(p for p in benchmark.iterdir() if p.suffix in {".py", ".html"}) + [
         package / "atac/fragments.py"
     ]
     identity: dict[str, Any] = {

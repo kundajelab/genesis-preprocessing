@@ -23,7 +23,6 @@ from ..contracts.records import (
     validate,
 )
 from ..curation.harmonize import source_record
-from ..reference_cache import verify_references
 from ..registry import store
 from ..samples import load_samples
 
@@ -84,7 +83,6 @@ def prepare(
             libraries.append((library["library_id"], rows, ref, library))
     elif assay == "DAP-seq":
         rows = load_samples(sheet, references)
-        verify_references(references, [r["reference_fasta"] for r in rows], None, "real")
         for row in rows:
             ref = {
                 "reference_id": re.sub(r"\.(fa|fasta|fna)\.gz$", "", row["reference_fasta"]),
