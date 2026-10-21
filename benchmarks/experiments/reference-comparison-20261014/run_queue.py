@@ -107,6 +107,18 @@ def require_free_space(destination: Path, reserve_bytes: int) -> None:
         )
 
 
+def queue_deadline(state: dict[str, Any], started_utc: str, hours: int) -> float:
+    """Persist the execution budget so a restart cannot extend a shorter campaign."""
+    if type(hours) is not int or not 1 <= hours <= 168:
+        raise ValueError("Queue hours must be an integer between 1 and 168")
+    previous = state.get("max_hours", 168 if "started_utc" in state else hours)
+    if hours > previous:
+        raise ValueError("Cannot extend an existing queue deadline")
+    state.setdefault("started_utc", started_utc)
+    state["max_hours"] = hours
+    return datetime.fromisoformat(state["started_utc"]).timestamp() + hours * 3600
+
+
 def run(
     queue: Path,
     checkout: Path,
@@ -114,6 +126,7 @@ def run(
     work: Path,
     wait_for: Path | None,
     scratch: list[Path],
+    max_hours: int = 168,
 ) -> None:
     work.mkdir(parents=True, exist_ok=True)
     with (work / ".experiment-queue.lock").open("a") as lock:
@@ -139,8 +152,7 @@ def run(
             raise ValueError("Reconcile the previous RUNNING process before restarting this queue")
         if state.get("frozen_runner", frozen) != frozen:
             raise ValueError("Queue runner identity changed")
-        state.setdefault("started_utc", started_utc)
-        deadline = datetime.fromisoformat(state["started_utc"]).timestamp() + 7 * 86400
+        deadline = queue_deadline(state, started_utc, max_hours)
         state["frozen_runner"] = frozen
         write_json(state_path, state)
         if wait_for:
@@ -150,7 +162,7 @@ def run(
                 time.sleep(5)
         while True:
             if time.time() >= deadline:
-                raise TimeoutError("Seven-day experiment queue limit reached")
+                raise TimeoutError("Experiment queue deadline reached")
             jobs = json.loads(queue.read_text())
             ready = [
                 j for j in jobs if j["id"] not in state["jobs"] and Path(j["experiment"]).is_file()
@@ -227,15 +239,25 @@ def run(
                             used, state.get("sampled_scratch_peak_bytes", 0)
                         )
                         if used > 150_000_000_000 or time.time() >= deadline:
-                            budget_error = "Scratch or seven-day execution budget exceeded"
+                            budget_error = "Scratch or execution deadline exceeded"
                             stop_owned_tree(process)
                             break
-                        if shutil.disk_usage(destination).free < 1_000_000_000:
+                        try:
+                            require_free_space(destination, 1_000_000_000)
+                        except ValueError:
                             budget_error = "Filesystem space fell below the 1 GB safety reserve"
                             stop_owned_tree(process)
                             break
                         write_json(state_path, state)
                         time.sleep(10)
+                except BaseException as error:
+                    row.update(
+                        status="INTERRUPTED",
+                        reason=f"Queue supervisor: {type(error).__name__}: {error}",
+                        ended_utc=datetime.now(UTC).isoformat(),
+                    )
+                    write_json(state_path, state)
+                    raise
                 finally:
                     if process.poll() is None:
                         stop_owned_tree(process)
@@ -280,6 +302,7 @@ if __name__ == "__main__":
     parser.add_argument("--python", type=Path, required=True)
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--wait-for", type=Path)
+    parser.add_argument("--max-hours", type=int, choices=range(1, 169), default=168)
     parser.add_argument(
         "--scratch",
         type=Path,
@@ -298,4 +321,5 @@ if __name__ == "__main__":
         args.work.resolve(),
         args.wait_for,
         args.scratch,
+        args.max_hours,
     )

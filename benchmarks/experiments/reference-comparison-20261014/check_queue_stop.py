@@ -11,10 +11,21 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from run_queue import process_table, require_free_space, stop_owned_tree
+from run_queue import process_table, queue_deadline, require_free_space, stop_owned_tree
 
 
 def main() -> None:
+    state = {}
+    deadline = queue_deadline(state, "2026-10-19T12:00:00+00:00", 24)
+    assert queue_deadline(state, "2026-10-20T12:00:00+00:00", 24) == deadline
+    for hours in (0, 169, 48, True):
+        try:
+            queue_deadline(state, "2026-10-20T12:00:00+00:00", hours)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Invalid or extended deadline accepted")
+    assert queue_deadline(state, "2026-10-20T12:00:00+00:00", 12) == deadline - 43200
     with tempfile.TemporaryDirectory() as temporary:
         destination = Path(temporary) / "missing-parent" / "result"
         with patch("run_queue.shutil.disk_usage", return_value=SimpleNamespace(free=99)):

@@ -80,7 +80,11 @@ def validate_methods(spec: dict[str, Any], base: Path) -> list[dict[str, Any]]:
             "adapter_r1",
             "adapter_r2",
         }
-        keys(method, fields, fields, "method")
+        keys(method, fields | {"bowtie2_mode"}, fields, "method")
+        if "bowtie2_mode" in method and (
+            method["aligner"] != "bowtie2" or method["bowtie2_mode"] not in {"local", "end-to-end"}
+        ):
+            raise ValueError("bowtie2_mode requires Bowtie2 and local or end-to-end")
         identifier(method["id"])
         choices = {
             "aligner": {"bwa-mem2", "bwa-mem2-2.2.1", "bwa", "bowtie2"},
@@ -106,10 +110,8 @@ def validate_methods(spec: dict[str, Any], base: Path) -> list[dict[str, Any]]:
             raise ValueError("Untrimmed method must use '-' adapters")
         if method["trimmer"] != "none" and "-" in (method["adapter_r1"], method["adapter_r2"]):
             raise ValueError("Trimmed methods require both declared adapters")
-        if spec["assay"] == "DAP-seq" and (
-            method["trimmer"] != "none" or method["caller"] == "genrich"
-        ):
-            raise ValueError("DAP trimming and Genrich DAP calling are outside this comparison")
+        if spec["assay"] == "DAP-seq" and method["caller"] == "genrich":
+            raise ValueError("Genrich DAP calling is outside this comparison")
         if spec["assay"] == "bulk-ATAC" and method["duplicate_tool"] == "none":
             raise ValueError("ATAC comparisons require a duplicate marker")
         if spec["parameters"]["duplicates"] == ["excluded"] and method["duplicate_tool"] == "none":
@@ -236,7 +238,7 @@ class Methods:
         if method["trimmer"] == "none":
             return reads
         target = folder / lib["id"] / "trim"
-        output = [target / "R1.fastq.gz", target / "R2.fastq.gz"]
+        output = [target / f"R{mate + 1}.fastq.gz" for mate in range(len(reads))]
         if method["trimmer"] == "cutadapt":
             command = [
                 self.tool("cutadapt"),
@@ -244,16 +246,14 @@ class Methods:
                 str(self.cpu),
                 "-a",
                 method["adapter_r1"],
-                "-A",
-                method["adapter_r2"],
                 "--json",
                 str(target / "trim.json"),
                 "-o",
                 str(output[0]),
-                "-p",
-                str(output[1]),
-                *map(str, reads),
             ]
+            if len(reads) == 2:
+                command += ["-A", method["adapter_r2"], "-p", str(output[1])]
+            command += list(map(str, reads))
         else:
             # Disable unrelated fastp filters/corrections. Overlap-based adapter
             # detection remains part of fastp's algorithm and is reported as such.
@@ -266,21 +266,24 @@ class Methods:
                 "--disable_trim_poly_g",
                 "--adapter_sequence",
                 method["adapter_r1"],
-                "--adapter_sequence_r2",
-                method["adapter_r2"],
                 "--in1",
                 str(reads[0]),
-                "--in2",
-                str(reads[1]),
                 "--out1",
                 str(output[0]),
-                "--out2",
-                str(output[1]),
                 "--json",
                 str(target / "trim.json"),
                 "--html",
                 str(target / "trim.html"),
             ]
+            if len(reads) == 2:
+                command += [
+                    "--adapter_sequence_r2",
+                    method["adapter_r2"],
+                    "--in2",
+                    str(reads[1]),
+                    "--out2",
+                    str(output[1]),
+                ]
         self.task(target, reads, [*output, target / "trim.json"], [command])
         return output
 
@@ -292,7 +295,9 @@ class Methods:
         if aligner == "bowtie2":
             command = [
                 self.tool(aligner),
-                "--very-sensitive-local",
+                "--very-sensitive"
+                if method.get("bowtie2_mode") == "end-to-end"
+                else "--very-sensitive-local",
                 "-p",
                 str(self.cpu),
                 "-x",

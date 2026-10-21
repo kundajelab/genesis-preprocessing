@@ -200,8 +200,9 @@ alone is not evidence that one method is better.
 The [plant comparison report](validation/reports/expanded-plant-comparison.md)
 contains 64 completed Arabidopsis method/depth cases, independent TF motif evidence,
 biological ATAC replicate measurements, and comparisons of reference assemblies
-and annotation releases. Tables distinguish completed results from the ongoing
-A. lyrata, sorghum and maize runs. The current evidence does not establish a better
+and annotation releases. The report records the evidence available at its stated
+revision; its A. lyrata, sorghum and maize entries are not evidence of completed
+comparisons or currently running jobs. The current evidence does not establish a better
 replacement for the BWA-MEM2/MACS3 defaults across assays.
 The [optimized MACS3 comparison](validation/reports/macs3-optimization.md) measures
 caller speed, memory use and output equivalence at matched CPU allocations.

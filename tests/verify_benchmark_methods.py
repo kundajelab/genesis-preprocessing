@@ -14,9 +14,10 @@ from urllib.request import Request
 
 from genesis_tools.benchmark.acquisition import acquire
 from genesis_tools.benchmark.fixture import create
-from genesis_tools.benchmark.methods import TOOLS, validate_methods
+from genesis_tools.benchmark.methods import TOOLS, Methods, validate_methods
 from genesis_tools.benchmark.reads import fastq, sample
 from genesis_tools.benchmark.runner import run
+from genesis_tools.benchmark.runtime import Runtime
 from genesis_tools.benchmark.spec import load, sha256, write_json
 from verify_benchmark_spec import rejects
 
@@ -179,6 +180,45 @@ def main() -> None:
         validate_methods(copy.deepcopy(changed), experiment.parent)
         write_json(record, {"version": "2.3"})
         rejects(lambda: validate_methods(copy.deepcopy(changed), experiment.parent))
+        dap_experiment = create(
+            root / "dap-fixture",
+            assay="DAP-seq",
+            small=True,
+            adapter="methods",
+            checkout=checkout,
+        )
+        dap_spec = json.loads(dap_experiment.read_text())
+        for trimmer in ("cutadapt", "fastp"):
+            changed = copy.deepcopy(dap_spec)
+            changed["methods"][0].update(
+                trimmer=trimmer, adapter_r1="AGATCGGAAGAGC", adapter_r2="AGATCGGAAGAGC"
+            )
+            validate_methods(changed, dap_experiment.parent)
+        changed = copy.deepcopy(dap_spec)
+        changed["methods"][0].update(aligner="bowtie2", bowtie2_mode="end-to-end")
+        validate_methods(changed, dap_experiment.parent)
+        changed["methods"][0]["bowtie2_mode"] = "unrecognized"
+        rejects(lambda: validate_methods(changed, dap_experiment.parent))
+        dap_plan = load(dap_experiment)
+        methods = Methods(Runtime(dap_plan, root / "trim-plan", resume=False))
+        for layout in ("SE", "PE"):
+            lib = next(r for r in dap_plan["dataset"]["libraries"] if r["layout"] == layout)
+            for trimmer in ("cutadapt", "fastp"):
+                method = dict(
+                    dap_plan["arms"][0],
+                    trimmer=trimmer,
+                    adapter_r1="AGATCGGAAGAGC",
+                    adapter_r2="AGATCGGAAGAGC",
+                )
+                with patch.object(methods, "task") as task:
+                    outputs = methods.reads(root / "trim-plan", lib, method)
+                command = task.call_args.args[3][0]
+                assert len(outputs) == (2 if layout == "PE" else 1)
+                mate_flag = "-A" if trimmer == "cutadapt" else "--in2"
+                assert (mate_flag in command) == (layout == "PE")
+                if trimmer == "fastp":
+                    assert "--disable_quality_filtering" in command
+                    assert "--disable_length_filtering" in command
     print(
         "PASS publisher verification/resume, short downloads, reserved paths, "
         "SE/PE nested sampling, method contracts"

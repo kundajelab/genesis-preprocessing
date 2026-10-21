@@ -5,6 +5,9 @@ records the settings, input hashes, commands, failures, measurements and resourc
 use for each method. Comparisons run separately from normal processing and do
 not change pipeline defaults.
 
+To compare DAP-seq methods in bounded steps, start with the
+[pilot-first DAP comparisons](experiments/dap-finalization/README.md).
+
 Start with a small synthetic comparison to check your installation. For a real
 study, choose the evaluation data and scientific questions before looking at
 results. More mapped reads, higher FRiP or more peaks alone does not establish

@@ -21,6 +21,7 @@ uv run --frozen --project "$root/genesis_tools" python "$root/tests/verify_bench
 uv run --frozen --project "$root/genesis_tools" python "$root/benchmarks/experiments/reference-comparison-20261014/check_reference_comparison.py"
 uv run --frozen --project "$root/genesis_tools" python "$root/benchmarks/experiments/reference-comparison-20261014/check_sra_sampling.py"
 uv run --frozen --project "$root/genesis_tools" python "$root/benchmarks/experiments/reference-comparison-20261014/check_queue_stop.py"
+uv run --frozen --project "$root/genesis_tools" python "$root/benchmarks/experiments/dap-finalization/check_pilot.py"
 uv run --frozen --project "$root/genesis_tools" python "$root/tests/verify_atac.py"
 uv run --frozen --project "$root/genesis_tools" python "$root/tests/verify_metro.py"
 
