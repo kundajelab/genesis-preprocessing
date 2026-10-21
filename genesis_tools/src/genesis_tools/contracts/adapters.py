@@ -328,6 +328,13 @@ def from_atac(root: Path, source_id: str, worker: str, study: str | None) -> lis
 
 
 CONTAINER_ENGINES = {"docker", "apptainer", "singularity", "podman"}
+# Git status and image pins identify the code and tools, not what they were run on. DAP runs
+# record none of these, so their provenance stays incomplete even from a clean pinned run.
+DAP_UNRECORDED = [
+    "DAP run records no input read checksums",
+    "DAP run records no reference FASTA identity",
+    "DAP run records no scientific parameters",
+]
 
 
 def dap_run_record(output: Path) -> tuple[str | None, dict[str, Any], list[str]]:
@@ -388,6 +395,7 @@ def from_dap(
     sources = [snapshot(path, worker)]
     # DAP runs record image pins and Git status beside their outputs, not per-task evidence.
     commit, run_evidence, limitations = dap_run_record(root / "output")
+    limitations = sorted(set(limitations + DAP_UNRECORDED))
     rows: dict[str, dict[str, str]] = {}
     if sheet:
         with sheet.open() as stream:

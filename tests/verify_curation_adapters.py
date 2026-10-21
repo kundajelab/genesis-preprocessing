@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from genesis_tools.contracts.adapters import dap_run_record, from_atac, from_dap
+from genesis_tools.contracts.adapters import DAP_UNRECORDED, dap_run_record, from_atac, from_dap
 from genesis_tools.contracts.records import dump, fingerprint, record
 from genesis_tools.contracts.validation import bundle
 from genesis_tools.curation.status_page import summary
@@ -123,7 +123,8 @@ def legacy(root: Path) -> None:
     # No git-status.txt or image-lock copy: incomplete, with the reasons recorded.
     assert all(m["data"]["run"]["provenance_complete"] is False for m in manifests)
     assert "DAP run has no git-status.txt" in tf1["metadata"]["provenance_limitations"]
-    # A clean checkout run in pinned containers is complete, and keeps its evidence.
+    # A clean checkout run in pinned containers keeps its evidence, but stays incomplete:
+    # code and image identity say nothing about the reads, reference or parameters used.
     output = dap / "output"
     commit = "a" * 40
     digest = "kundajelab/dap_seq_peaks@sha256:" + "b" * 64
@@ -131,9 +132,12 @@ def legacy(root: Path) -> None:
     (output / "git-status.txt").write_text(
         f"branch: main\ncommit: {commit}\ncontainer engine: docker\ndirty files: none\n"
     )
-    complete = from_dap(dap, "dap-study", "local", "study", None, None)
-    assert all(m["data"]["run"]["provenance_complete"] for m in complete)
-    run = complete[0]["data"]["run"]
+    clean = from_dap(dap, "dap-study", "local", "study", None, None)
+    assert all(m["data"]["run"]["provenance_complete"] is False for m in clean)
+    assert all(
+        m["data"]["metadata"]["provenance_limitations"] == sorted(DAP_UNRECORDED) for m in clean
+    )
+    run = clean[0]["data"]["run"]
     assert run["git_sha"] == commit
     assert run["parameters"]["images"] == {"DAP_SEQ_PEAKS_IMAGE": digest}
     assert run["parameters"]["container_engine"] == "docker"

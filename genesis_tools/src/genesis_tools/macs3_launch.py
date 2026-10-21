@@ -61,24 +61,32 @@ def explicit_threads(arguments: list[str]) -> int | None:
     """Return an explicit CPU budget from MACS3 arguments, if any.
 
     callvar also spells it -m/--multiple-processing; elsewhere -m means something else
-    (e.g. callpeak --mfold).
+    (e.g. callpeak --mfold). MACS3's argparse accepts abbreviated long options and keeps the
+    last of repeated ones, so every spelling counts, and more than one is refused rather than
+    validating a value MACS3 would not use.
     """
     options = ["--threads"]
     if arguments[:1] == ["callvar"]:
-        options += ["-m", "--multiple-processing"]
+        options.append("--multiple-processing")
+    values = []
     for index, argument in enumerate(arguments):
-        value = None
-        if argument in options and index + 1 < len(arguments):
-            value = arguments[index + 1]
-        elif argument.startswith(("--threads=", "--multiple-processing=")) and (
-            argument.split("=", 1)[0] in options
-        ):
-            value = argument.split("=", 1)[1]
-        if value is not None:
-            if not value.isdecimal():
-                raise ValueError("MACS3 --threads must be a positive integer")
-            return int(value)
-    return None
+        name, equals, value = argument.partition("=")
+        if name.startswith("--") and len(name) > 2 and any(o.startswith(name) for o in options):
+            # An abbreviation is either the budget option or ambiguous, which MACS3 rejects.
+            if not equals:
+                value = arguments[index + 1] if index + 1 < len(arguments) else ""
+            values.append(value)
+        elif options[1:] and argument.startswith("-m") and not argument.startswith("--"):
+            values.append(
+                argument[2:] or (arguments[index + 1] if index + 1 < len(arguments) else "")
+            )
+    if len(values) > 1:
+        raise ValueError("MACS3 CPU budget (--threads) may be given only once")
+    if not values:
+        return None
+    if not values[0].isdecimal():
+        raise ValueError("MACS3 --threads must be a positive integer")
+    return int(values[0])
 
 
 def executable() -> str:

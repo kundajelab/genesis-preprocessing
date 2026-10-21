@@ -790,9 +790,18 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         for p in (work / "references").rglob("*")
         if p.is_file()
     }
+    # Published caches record the FASTA they were built from.
+    for fasta in ("se.fa.gz", "pe.fa.gz"):
+        digest = hashlib.sha256((work / "references" / fasta).read_bytes()).hexdigest()
+        stem = fasta.removesuffix(".fa.gz")
+        for identity in (f"{stem}.chrom.sizes.sha256", f"{stem}.bwa-mem2/fasta.sha256"):
+            assert (work / "references" / identity).read_text() == f"{digest}  {fasta}\n"
     for scenario, diagnostic in (
         ("id-collision", "reference ID collision"),
         ("missing-reference", "reference missing: absent.fa.gz"),
+        # A replaced FASTA, or a cache without a recorded identity, must not reuse old caches.
+        ("replaced-fasta", "se.chrom.sizes: built from a different FASTA than se.fa.gz"),
+        ("unverified-index", "se.bwa-mem2: no recorded identity for se.fa.gz"),
     ):
         case = parent / scenario
         case.mkdir()
@@ -804,8 +813,13 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         if scenario == "id-collision":
             shutil.copy2(references / "se.fa.gz", references / "se.fna.gz")
             samples.append({**control, "sample_id": "collision", "reference_fasta": "se.fna.gz"})
-        else:
+        elif scenario == "missing-reference":
             samples.append({**control, "sample_id": "orphan", "reference_fasta": "absent.fa.gz"})
+        elif scenario == "replaced-fasta":
+            with gzip.open(references / "se.fa.gz", "wt") as stream:
+                stream.write(">chr1\n" + "ACGT" * 1000 + "\n")
+        else:
+            (references / "se.bwa-mem2/fasta.sha256").unlink()
         candidate = case / "samples.tsv"
         write_sheet(candidate, samples)
         assert run_pipeline(case, candidate, docker=docker, expect_failure=True).returncode != 0

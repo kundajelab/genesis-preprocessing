@@ -33,10 +33,12 @@ export PATH="$HOME/.local/bin:$PATH"
 Place each sheet's gzipped reference FASTA under `references/`, using the exact
 basename in `reference_fasta`. Reference genomes are not downloaded automatically.
 Nextflow builds missing chromosome-size files and bwa-mem2 indexes once per
-reference and publishes them beside the FASTA. A complete, nonempty
-`<id>.chrom.sizes` or `<id>.bwa-mem2/` index is reused whenever present, without
-checking it against the FASTA: if you replace a FASTA, delete its derived products
-(or use a fresh reference directory) so they are rebuilt. Distinct FASTA basenames
+reference and publishes them beside the FASTA, each with the SHA-256 of the FASTA
+it was built from (`<id>.chrom.sizes.sha256`, `<id>.bwa-mem2/fasta.sha256`). A
+complete `<id>.chrom.sizes` or `<id>.bwa-mem2/` index is reused only when that
+recorded digest matches the current FASTA. A run stops before any task if a cache
+records a different FASTA, or none (for example, one built by an older version):
+delete that cache so it is rebuilt. Distinct FASTA basenames
 must not collapse to the same reference ID after removing their suffix. The first
 resume after generating references can rerun downstream tasks as inputs move to
 published paths; subsequent resumes reuse computation.

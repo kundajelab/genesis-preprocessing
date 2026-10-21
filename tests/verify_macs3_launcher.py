@@ -64,6 +64,25 @@ def check_thread_budget() -> None:
         pass
     else:
         raise AssertionError("Non-numeric --threads accepted")
+    # MACS3 accepts abbreviations and the short -m4 form; these must be checked too.
+    assert launcher.explicit_threads(["pileup", "--thr", "3"]) == 3
+    assert launcher.explicit_threads(["callpeak", "--thread=2"]) == 2
+    assert launcher.explicit_threads(["callvar", "-m4"]) == 4
+    assert launcher.explicit_threads(["callvar", "--multiple=5"]) == 5
+    # MACS3 uses the last of repeated budgets, and callvar refuses conflicting spellings, so
+    # validating only the first would let a later override exceed the allocation.
+    for repeated in (
+        ["callpeak", "--threads", "2", "--threads", "64"],
+        ["callpeak", "--threads=2", "--thr", "64"],
+        ["callvar", "--threads", "2", "-m", "64"],
+        ["callvar", "-m", "2", "--multiple-processing=2"],
+    ):
+        try:
+            launcher.explicit_threads(repeated)
+        except ValueError as error:
+            assert "only once" in str(error), repeated
+        else:
+            raise AssertionError(f"Repeated CPU budget accepted: {repeated}")
     arguments = ["callpeak", "-f", "BAMPE"]
     with tempfile.TemporaryDirectory() as directory:
         folder = Path(directory)
@@ -93,6 +112,15 @@ def check_thread_budget() -> None:
             revision="1" * 40,
         )
         assert status == 2 and argv is None and not (folder / "over.json").exists()
+        # ...including through a later override of an in-budget value.
+        status, argv, _ = launch(
+            folder / "override.json",
+            [*arguments, "--threads", "1", "--threads", "4"],
+            budget=True,
+            affinity=True,
+            revision="1" * 40,
+        )
+        assert status == 2 and argv is None and not (folder / "override.json").exists()
         # A source build without a budget is still refused without affinity...
         status, argv, _ = launch(
             folder / "refused.json", arguments, budget=False, affinity=False, revision="1" * 40

@@ -25,6 +25,8 @@ process BWA_MEM2_INDEX {
     for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
         test -s '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
+    # Identify the FASTA this index came from; main.nf reuses it only for that FASTA.
+    printf '%s  %s\\n' '${ref.fasta_sha256}' '${ref.filename}' > '${ref.id}.bwa-mem2/fasta.sha256'
     """
     stub:
     """
@@ -32,5 +34,6 @@ process BWA_MEM2_INDEX {
     for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
         printf 'stub\\n' > '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
+    printf '%s  %s\\n' '${ref.fasta_sha256}' '${ref.filename}' > '${ref.id}.bwa-mem2/fasta.sha256'
     """
 }

@@ -44,6 +44,40 @@ def checkSamples(sheet, rows, references) {
     }
 }
 
+def fastaSha256(path) {
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    path.withInputStream { stream ->
+        def buffer = new byte[1 << 20]
+        def count
+        while ((count = stream.read(buffer)) > 0) {
+            digest.update(buffer, 0, count)
+        }
+    }
+    return digest.digest().encodeHex().toString()
+}
+
+// Each reference cache records the SHA-256 of the FASTA it was built from. Refuse a cache that
+// records a different FASTA, or none, so a replaced FASTA cannot silently reuse an old index.
+// Return each reference ID's FASTA digest, for the caches built in this run to record.
+def checkReferenceCaches(rows, references) {
+    return rows.collectEntries { row -> [(row.ref_id): row.reference_fasta] }
+        .collectEntries { id, filename ->
+            def digest = fastaSha256(references.resolve(filename))
+            [["${id}.chrom.sizes", "${id}.chrom.sizes.sha256"],
+             ["${id}.bwa-mem2", "${id}.bwa-mem2/fasta.sha256"]].each { cache, identity ->
+                def recorded = references.resolve(identity).with { path ->
+                    path.isFile() ? path.text.tokenize()[0] : null
+                }
+                if (references.resolve(cache).exists() && recorded != digest) {
+                    error("${references.resolve(cache)}: " +
+                          (recorded ? 'built from a different FASTA than' : 'no recorded identity for') +
+                          " ${filename}; delete it so it is rebuilt")
+                }
+            }
+            [(id): digest]
+        }
+}
+
 // Bowtie 1 modules deliberately have no imports or calls here.
 workflow {
     // nextflow_schema.json checks the input sheet, paths, resources, and BWA options.
@@ -61,13 +95,16 @@ workflow {
     def sheetRows = samplesheetToList(sheet, "${projectDir}/assets/schema_input.json")
         .collect { row -> row[0] }
     checkSamples(sheet, sheetRows, referencesDir)
-    samples = channel.fromList(sheetRows.collect { row ->
+    sheetRows = sheetRows.collect { row ->
         row + [ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
                layout: row.read2_url == '-' ? 'SE' : 'PE']
-    })
+    }
+    def fastaDigests = checkReferenceCaches(sheetRows, referencesDir)
+    samples = channel.fromList(sheetRows)
     referenceInputs = samples.unique { sample -> sample.ref_id }
         .map { meta ->
-            def ref = [id: meta.ref_id, filename: meta.reference_fasta]
+            def ref = [id: meta.ref_id, filename: meta.reference_fasta,
+                       fasta_sha256: fastaDigests[meta.ref_id]]
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true))
         }
     sizesBranches = referenceInputs.branch { ref, _fasta ->
