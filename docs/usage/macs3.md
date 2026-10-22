@@ -52,14 +52,14 @@ bulk ATAC; two CPUs and 8 GB for scATAC products). On the archived A. thaliana
 ATAC inputs (two libraries at 1M and 5M templates), this build gave peak, summit
 and XLS outputs identical to released MACS3 3.0.5 at two and four CPUs.
 
-`genesis_tools/macs3_launch.py` remains only for the benchmark harness, which runs
-released MACS3 3.0.5 natively; that release has no `--threads` option, so the
-launcher bounds it to the benchmark's CPU allocation.
+The benchmark harness in [genesis-curation](https://github.com/kundajelab/genesis-curation) still runs released MACS3 3.0.5
+natively. That release has no `--threads` option, so the harness bounds it with its own
+launcher.
 
 ## Earlier measurements
 
 The [measured results](../../validation/reports/macs3-optimization.md) and the
-[comparison recipe](../../benchmarks/experiments/macs3-optimization/README.md)
+[comparison recipe](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/experiments/macs3-optimization/README.md)
 compare the earlier revision `22eb40f7b51f5b20b635614ca0b1759dc5398c5c` with the
 released package, using the same inputs and scientific arguments, 1, 2 and 8
 CPUs and three measured repetitions. They describe that revision, not the current

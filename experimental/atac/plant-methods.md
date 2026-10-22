@@ -2,7 +2,7 @@
 
 This page describes the frozen experimental workflow. For current behavior, see
 the [bulk ATAC guide](../../docs/usage/bulk-atac.md); for package comparisons, see
-the [benchmark guide](../../benchmarks/README.md).
+the [benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md).
 
 The integrated prototype preserves the scientific behavior of commit
 `0b8850207e94a3d4909bf4ab99d18c03cd010cc2`. Its input is one synthetic,

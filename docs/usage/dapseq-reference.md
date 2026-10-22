@@ -26,8 +26,7 @@ controls. Use one sheet per analysis.
 Install [Pixi](https://pixi.sh/), then install the project and its Python tools:
 
 ```bash
-pixi run install-all --install-cli
-export PATH="$HOME/.local/bin:$PATH"
+pixi run install-all
 ```
 
 Place each sheet's gzipped reference FASTA under `references/`, using the exact
@@ -125,7 +124,7 @@ assignments.
 For interspecies DAP, distinguish the TF-source organism from the organism whose
 DNA was assayed. The alignment reference must describe that DNA. Preserve the
 original sheet labels, and record the separate biological identities in the
-[curation metadata](curation.md); do not infer both from a single species label.
+[curation metadata](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md); do not infer both from a single species label.
 
 Reference names are gzipped FASTA basenames ending in `.fa.gz`, `.fasta.gz`, or
 `.fna.gz`. Identifiers and filenames may contain letters, digits, underscores,
@@ -275,8 +274,8 @@ can be inspected but are incomplete.
 
 Full byte/format scans, scientific QC review and eligibility review are separate
 from successful execution.
-See the [curation guide](curation.md#validate-existing-inputs-and-published-runs) and
-[study acceptance recipe](studies.md#real-tool-acceptance-on-synthetic-inputs).
+See the [curation guide](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md#validate-existing-inputs-and-published-runs) and
+[study acceptance recipe](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/studies.md#real-tool-acceptance-on-synthetic-inputs).
 
 **FASTQs, BAMs, BAM indexes, and bedGraphs are excluded from published results.** Derived reference files
 are published separately under the reference directory.
@@ -382,10 +381,11 @@ See [docs/nextflow-style.md](../../docs/nextflow-style.md) for module convention
 
 ## Opt-in method benchmarks
 
-Use `genesis benchmark` to compare processing packages on matched inputs or to
-test explicit policy changes. Start with the synthetic fixtures, then use the
-verified public plant recipes. See the [benchmark guide](../../benchmarks/README.md)
-for commands, metric definitions, measured results and limitations.
+The benchmark tools in [genesis-curation](https://github.com/kundajelab/genesis-curation) compare processing packages on
+matched inputs or test explicit policy changes. Start with the synthetic fixtures,
+then use the verified public plant recipes. See its
+[benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) for commands, metric
+definitions, measured results and limitations.
 Running a comparison does not change production defaults.
 
 <a id="upgrade-from-the-dap-only-release"></a>
@@ -403,6 +403,6 @@ assigned controls and DAP scientific defaults are compatible with that revision.
 | Read QC | Raw-mate FastQC and one run-level MultiQC report require the images pinned in `conf/dap-images.lock`; the runtime may need to pull them. Quality WARN/FAIL labels are advisory. |
 | Resume | Keep the run folder and work directory. Switching to published reference paths or changing process definitions can rerun affected tasks. Use a new run name and workspace if you need to keep an earlier result unchanged. |
 
-Follow [installation and maintenance](../development.md#command-installation-and-maintenance)
-to update the environment. Keep references and run data separately from Git, and
-back up catalogs with the [registry backup/restore commands](curation.md#read-only-status-backup-and-rollback).
+Rerun `pixi run install-all` after updating the checkout
+([setup](../development.md#set-up-a-fresh-checkout)) to update the environment. Keep references and run data separately from Git, and
+back up catalogs with the [registry backup/restore commands](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md#read-only-status-backup-and-rollback).

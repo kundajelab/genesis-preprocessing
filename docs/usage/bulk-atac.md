@@ -4,9 +4,11 @@ Complete the [one-time installation](../../README.md#install-and-check-your-envi
 first. Pixi supplies the scientific runtime internally.
 
 ```bash
-genesis pipeline-atac samples.tsv --references references.json --outdir results/atac
-genesis pipeline-atac samples.tsv --references references.json --outdir results/atac --resume
+pixi run pipeline-atac /path/to/samples.tsv --references /path/to/references.json --outdir /path/to/results/atac
+pixi run pipeline-atac /path/to/samples.tsv --references /path/to/references.json --outdir /path/to/results/atac --resume
 ```
+
+Pixi runs from the checkout folder, so give absolute paths.
 
 Each row describes one paired-end lane. Repeated `library_id` values concatenate
 technical lanes before alignment; all library metadata and analysis choices must
@@ -117,11 +119,9 @@ commands, Git SHA, source checksums, image digests, exit code and elapsed time.
 
 The entry point is `workflows/atac.nf`; reusable tasks are in `modules/atac/`,
 execution profiles in `conf/`, and typed helpers in `genesis_tools/atac/`.
-The benchmark prototype in `experimental/atac/` is separate from `pipeline-atac`.
-To reproduce that prototype's regression, use
-`pixi run validate-atac-legacy --keep`.
+The historical prototype in `experimental/atac/` is separate from `pipeline-atac`.
 
-Use the [execution guide](execution.md) for clusters and isolated dataset
-campaigns. Large genomes need substantial index memory and scratch space;
+For clusters and isolated dataset campaigns, see the execution guide in
+[genesis-curation](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/execution.md). Large genomes need substantial index memory and scratch space;
 Nextflow requests reference-dependent resources before starting indexing.
 Computational validation and biological dataset quality are separate decisions.

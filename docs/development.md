@@ -13,10 +13,8 @@ Install Git and [Pixi](https://pixi.sh/) for your server, then run:
 git clone --branch main https://github.com/kundajelab/genesis-preprocessing.git
 cd genesis-preprocessing
 git log -1 --oneline
-pixi run install-all --install-cli
-export PATH="$HOME/.local/bin:$PATH"
-genesis --help
-genesis doctor
+pixi run install-all
+pixi run pipeline --help
 ```
 
 `install-all` uses the committed `pixi.lock`, `genesis_tools/uv.lock` and Python
@@ -24,49 +22,14 @@ selection in `genesis_tools/.python-version` (currently Python 3.14.5 with the G
 It creates environments for the checkout. Initial installation needs network
 access or populated package caches. Recreate `.pixi/` and `.venv/` when moving a
 checkout: environment paths and binaries are machine-specific. The supported Pixi
-platforms are Linux x86_64 and macOS x86_64/ARM64; private vLLM deployment requires
-an authorized Linux node and its separate serving environment.
+platforms are Linux x86_64 and macOS x86_64/ARM64.
 
-`doctor` reports the selected checkout, tools on the host and in Pixi, and Docker access.
-Docker, a GPU and API credentials are not prerequisites for the core development checks or mock tutorial;
-scientific-container and live-model acceptance have their own prerequisites.
+Docker is needed for the default container profile; the core checks run without it.
 
-### Command installation and maintenance
-
-`--install-cli` links `~/.local/bin/genesis` to this checkout's
-`genesis_tools/.venv/bin/genesis`. Once its directory is on PATH, commands work from
-any directory. Add the PATH export above to your shell startup file if necessary;
-the installer does not edit it. A custom location uses
-`pixi run install-all --install-cli --bin-dir /your/bin`. Check `command -v genesis`
-if another installation is selected earlier on PATH. For a temporary session, you
-can instead activate `genesis_tools/.venv/bin/activate`; plain `pixi run install-all`
-installs environments without creating a user-level command.
-
-After updating this checkout with Git, rerun `pixi run install-all --install-cli`
-to synchronize locked dependencies. Reinstalling the same link is safe. Keep the
-checkout in place: the link refers to its environment. If moving the checkout,
-recreate its environments using the instructions above.
-
-To uninstall just the exposed command, inspect `ls -l "$HOME/.local/bin/genesis"`
-and remove that symlink with `rm "$HOME/.local/bin/genesis"` (adjust for a custom
-bin directory). This retains the checkout, environments and all analysis data.
-To switch checkouts, remove the previous link explicitly and run the installation
-command in the new checkout. The installer refuses to replace a different link,
-file or directory.
-
-An installed wheel supports core commands independently. To use a wheel's
-scientific launch commands, set `GENESIS_REPO=/absolute/path/to/genesis-preprocessing`
-to a checkout with installed environments. This overrides editable-source discovery;
-an invalid override fails explicitly. Scientific launchers execute the selected
-checkout's code with its own Python and locked Pixi environment. They preserve
-the caller's working directory until the existing pipeline wrapper selects its
-run directory. No workflow is downloaded or chosen from the current directory.
-The pipeline commands also need that checkout to show their workflow-specific
-`--help`. General `genesis --help` and core curation commands work without it.
-
-If `genesis doctor` reports an unavailable managed runtime, put Pixi on PATH and
-run `pixi run install-all` in that checkout. Core curation works without
-Pixi. Developer checks and image builds use Pixi tasks.
+<a id="command-installation-and-maintenance"></a>
+The `genesis` command (study management, curation, review, AI assistance and benchmarks)
+is in [genesis-curation](https://github.com/kundajelab/genesis-curation). Its pipeline launchers use this checkout through
+`GENESIS_REPO`.
 
 Read [AGENTS.md](../AGENTS.md) before editing. Create a branch for the next change:
 
@@ -158,8 +121,8 @@ copying explicitly. Neither warning is a failed scientific check.
 
 Keep scientific settings explicit. A change to alignment, filtering, peak calling
 or count definitions needs a comparison of the affected outputs, not just a
-successful exit code. Use the [benchmark guide](../benchmarks/README.md) to design
-that comparison. Curation and AI changes should leave ordinary preprocessing usable.
+successful exit code. Use the [benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) to design
+that comparison.
 
 | Area | Implementation | Focused check |
 | --- | --- | --- |
@@ -202,9 +165,9 @@ Review the output before committing it. This targeted check is included in
 binary data or every credential format is safe to publish. Keep private originals,
 environment files and assistant configuration outside Git.
 
-Real-tool acceptance is opt-in. The [study guide](usage/studies.md#real-tool-acceptance-on-synthetic-inputs)
-describes Docker-based scientific acceptance; the [provider](usage/ai-providers.md#opt-in-live-acceptance)
-and [model-service](usage/llm-deployment.md#opt-in-real-local-or-ssh-acceptance) guides describe
+Real-tool acceptance is opt-in. The [study guide](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/studies.md#real-tool-acceptance-on-synthetic-inputs)
+describes Docker-based scientific acceptance; the [provider](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/ai-providers.md#opt-in-live-acceptance)
+and [model-service](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/llm-deployment.md#opt-in-real-local-or-ssh-acceptance) guides describe
 live API/GPU checks. Mock tests do not establish acceptance on a remote site.
 
 ## Data and configuration
@@ -217,10 +180,10 @@ for DAP and `conf/atac-images.json` for ATAC. These files contain image referenc
 Keep `.env`, `.env.*`, `.envrc`, `.claude/` and `.codex/` local. Git and Docker build
 contexts ignore them. Genesis reads DAP image pins from `conf/dap-images.lock`;
 it does not load a local `.env`. Configure credentials through the environment-variable
-or protected-file references described in the [provider guide](usage/ai-providers.md).
+or protected-file references described in the [provider guide](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/ai-providers.md).
 Check staged files with `git diff --cached --name-only` before committing.
 
-For a catalog, use [registry backup/restore](usage/curation.md#read-only-status-backup-and-rollback).
+For a catalog, use [registry backup/restore](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md#read-only-status-backup-and-rollback).
 With orchestration stopped, preserve study state and worker attempt/output directories
 through your normal storage workflow. Keep worker-qualified paths accurate: a new
 checkout does not relocate data or reconnect jobs under a different identity.
@@ -240,7 +203,7 @@ immutability. To include binary readability with an existing track environment:
 pixi run uv run --frozen --project genesis_tools python tests/verify_scatac_inspection.py --bigwig-python /path/to/existing/track-env/bin/python
 ```
 
-No reader is installed automatically. The [offline inspection example](usage/scatac-model-handoff.md#offline-inspection-example)
+No reader is installed automatically. The [offline inspection example](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac-model-handoff.md#offline-inspection-example)
 is synthetic and cannot establish loader or training acceptance. Keep meeting
 notes, local audit receipts and candidate handoff decisions under the ignored
 `workspace/meeting-prep/` directory. Public documentation describes scientific
