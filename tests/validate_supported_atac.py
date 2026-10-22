@@ -12,9 +12,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+from atac_fixture import create
 from genesis_tools.atac.inputs import FIELDS, digest
 from genesis_tools.atac.run import execute, prepare
-from genesis_tools.benchmark.fixture import create
 
 ROOT = Path(__file__).resolve().parents[1]
 
