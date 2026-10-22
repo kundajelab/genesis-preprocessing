@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..benchmark.metrics import intersection, intervals, merged
 from .inputs import digest
+from .metrics import intersection, intervals, merged
 
 
 def summarize(manifest: dict[str, Any], output: Path) -> None:

@@ -14,8 +14,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from ..benchmark.reads import paired
 from .inputs import digest
+from .reads import paired
 
 
 class TemporaryDownloadError(RuntimeError):
@@ -124,7 +124,7 @@ def finish_fragments(policy: dict[str, Any]) -> None:
 
 
 def enrichment() -> None:
-    from ..benchmark.metrics import Regions, tss_enrichment
+    from .metrics import Regions, tss_enrichment
 
     regions = []
     for line in Path("atac_peaks.narrowPeak").read_text().splitlines():
