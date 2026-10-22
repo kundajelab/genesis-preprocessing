@@ -1,33 +1,34 @@
-"""Deterministic synthetic policy fixtures; assigned MAPQ is not aligner calibration."""
+"""Deterministic synthetic SE/PE reads, reference and annotations for the ATAC checks.
+
+Adapted from the benchmark fixture generator (now in genesis-curation): data files only.
+"""
 
 from __future__ import annotations
 
 import gzip
 import hashlib
+import json
 import random
-import subprocess
 from pathlib import Path
 from typing import Any
 
 import pysam
 
-from .spec import sha256, write_json
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
-def create(
-    out: Path,
-    *,
-    assay: str = "DAP-seq",
-    small: bool = False,
-    adapter: str = "postalign",
-    checkout: Path | None = None,
-) -> Path:
-    if adapter == "methods":
-        from .methods import fixture
+def write_json(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n")
 
-        return fixture(out, assay=assay, small=small, checkout=checkout)
-    if adapter != "postalign" and (assay != "bulk-ATAC" or checkout is None):
-        raise ValueError("Workflow fixtures require bulk-ATAC and an explicit checkout")
+
+def create(out: Path, *, assay: str = "bulk-ATAC", small: bool = False) -> Path:
     out = out.resolve()
     out.mkdir(parents=True, exist_ok=False)
     generator = random.Random(60141)
@@ -181,68 +182,4 @@ def create(
         ),
     }
     write_json(out / "dataset.json", dataset)
-    manifest = out / "experiment.toml"
-    text = f'''schema_version = 1
-id = "synthetic-policy"
-assay = "{assay}"
-adapter = "postalign"
-dataset = "dataset.json"
-baseline = "mapq0-retained"
-comparison = "matched-stage"
-seed = 60141
-[parameters]
-mapq = [0, 10, 30]
-duplicates = ["retained", "marked", "excluded"]
-keep_dup = "{"1" if assay == "DAP-seq" else "all"}"
-qvalue = {0.05 if assay == "DAP-seq" else 0.01}
-spp = false
-quantify = true
-[limits]
-cpus = 2
-memory_gb = 4
-seconds = 1800
-disk_bytes = 2000000000
-download_bytes = 0
-max_arms = 9
-'''
-    if adapter != "postalign":
-        assert checkout is not None
-        checkout = checkout.resolve()
-        commit = subprocess.check_output(
-            ["git", "-C", str(checkout), "rev-parse", "HEAD"], text=True
-        ).strip()
-        lock_name = (
-            "genesis-atac-prototype.json" if adapter == "genesis-atac" else "nfcore-atac-2.1.2.json"
-        )
-        lock = Path(__file__).resolve().parents[4] / "benchmarks" / "locks" / lock_name
-        cutoff = 30 if adapter == "genesis-atac" else 1
-        text = text.replace('adapter = "postalign"', f'adapter = "{adapter}"')
-        text = text.replace('comparison = "matched-stage"', 'comparison = "workflow-configured"')
-        text = text.replace('baseline = "mapq0-retained"', f'baseline = "mapq{cutoff}-excluded"')
-        text = text.replace("mapq = [0, 10, 30]", f"mapq = [{cutoff}]")
-        text = text.replace(
-            'duplicates = ["retained", "marked", "excluded"]', 'duplicates = ["excluded"]'
-        )
-        text = text.replace("quantify = true", "quantify = false")
-        text += (
-            f"[workflow]\n"
-            f'checkout = "{checkout}"\n'
-            f'git_sha = "{commit}"\n'
-            f'container_lock = "{lock}"\n'
-            f'container_lock_sha256 = "{sha256(lock)}"\n'
-            f"[workflow.parameters]\n"
-        )
-        if adapter == "nfcore-atac":
-            text += (
-                'aligner = "bwa"\n'
-                "narrow_peak = true\n"
-                "macs_fdr = 0.01\n"
-                "skip_trimming = true\n"
-                "keep_dups = false\n"
-                "keep_multi_map = false\n"
-                "read_length = 75\n"
-                'custom_config_version = "cd307e66da1fa765329b12615292e90846e1d2ec"\n'
-                'mito_name = "mitochondria"\n'
-            )
-    manifest.write_text(text)
-    return manifest
+    return out
