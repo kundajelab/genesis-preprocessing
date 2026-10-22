@@ -327,24 +327,16 @@ def from_atac(root: Path, source_id: str, worker: str, study: str | None) -> lis
     return result
 
 
-CONTAINER_ENGINES = {"docker", "apptainer", "singularity", "podman"}
-# Git status and image pins identify the code and tools, not what they were run on. DAP runs
-# record none of these, so their provenance stays incomplete even from a clean pinned run.
-DAP_UNRECORDED = [
-    "DAP run records no input read checksums",
-    "DAP run records no reference FASTA identity",
-    "DAP run records no scientific parameters",
-]
+# The Nextflow run records its own provenance (trace, report, git-status.txt, dap-images.lock).
+# Carry that record into each manifest as-is; assessing it is not this adapter's job.
+DAP_PROVENANCE_NOTE = (
+    "DAP provenance is recorded by the Nextflow run (trace, report, git-status.txt, "
+    "dap-images.lock) and is not assessed by this adapter"
+)
 
 
-def dap_run_record(output: Path) -> tuple[str | None, dict[str, Any], list[str]]:
-    """Read a DAP run's git-status.txt and dap-images.lock copy.
-
-    Return the recorded commit, the evidence to keep with each manifest, and the reasons the
-    run's provenance is incomplete. It is complete only for a clean checkout run with a
-    container engine, using images pinned by digest.
-    """
-    limitations: list[str] = []
+def dap_run_record(output: Path) -> tuple[str | None, dict[str, Any]]:
+    """Copy a DAP run's recorded commit, container engine, image pins and dirty files."""
     status_path, lock_path = output / "git-status.txt", output / "dap-images.lock"
     fields: dict[str, str] = {}
     dirty: list[str] = []
@@ -357,29 +349,21 @@ def dap_run_record(output: Path) -> tuple[str | None, dict[str, Any], list[str]]
                 break
             if separator:
                 fields[key] = value
-    else:
-        limitations.append("DAP run has no git-status.txt")
     commit = fields.get("commit")
-    if commit is None or not re.fullmatch(r"[0-9a-f]{40}", commit):
+    if commit is not None and not re.fullmatch(r"[0-9a-f]{40}", commit):
         commit = None
-        limitations.append("DAP run lacks a recorded Git commit")
-    if commit is not None and (dirty or fields.get("dirty files") != "none"):
-        limitations.append("DAP run used a checkout with uncommitted or untracked files")
-    engine = fields.get("container engine")
-    if engine not in CONTAINER_ENGINES:
-        limitations.append("DAP run did not use a container engine")
     images: dict[str, str] = {}
     if lock_path.is_file():
         for line in lock_path.read_text().splitlines():
             name, separator, image = line.strip().partition("=")
             if separator and not name.startswith("#"):
                 images[name] = image
-    if not images:
-        limitations.append("DAP run has no recorded image pins")
-    elif any(not re.search(r"@sha256:[0-9a-f]{64}$", image) for image in images.values()):
-        limitations.append("DAP run image pins are not all immutable digests")
-    evidence = {"container_engine": engine, "images": images, "dirty_files": dirty}
-    return commit, evidence, sorted(set(limitations))
+    evidence = {
+        "container_engine": fields.get("container engine"),
+        "images": images,
+        "dirty_files": dirty,
+    }
+    return commit, evidence
 
 
 def from_dap(
@@ -394,8 +378,8 @@ def from_dap(
     provenance = load(path)
     sources = [snapshot(path, worker)]
     # DAP runs record image pins and Git status beside their outputs, not per-task evidence.
-    commit, run_evidence, limitations = dap_run_record(root / "output")
-    limitations = sorted(set(limitations + DAP_UNRECORDED))
+    commit, run_evidence = dap_run_record(root / "output")
+    limitations = [DAP_PROVENANCE_NOTE]
     rows: dict[str, dict[str, str]] = {}
     if sheet:
         with sheet.open() as stream:
@@ -544,7 +528,7 @@ def from_dap(
                     "execution_state": "UNKNOWN",
                     "git_sha": commit or provenance.get("run", {}).get("git_sha"),
                     "parameters": run_evidence,
-                    "provenance_complete": not limitations,
+                    "provenance_complete": False,
                     "root": str(root),
                 },
                 {

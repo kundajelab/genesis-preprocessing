@@ -12,7 +12,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from genesis_tools.contracts.adapters import DAP_UNRECORDED, dap_run_record, from_atac, from_dap
+from genesis_tools.contracts.adapters import (
+    DAP_PROVENANCE_NOTE,
+    dap_run_record,
+    from_atac,
+    from_dap,
+)
 from genesis_tools.contracts.records import dump, fingerprint, record
 from genesis_tools.contracts.validation import bundle
 from genesis_tools.curation.status_page import summary
@@ -120,66 +125,32 @@ def legacy(root: Path) -> None:
     assert sum(a["role"] == "fastqc" for a in tf1["artifacts"]) == 2
     assert sum(a["role"] == "fastqc" for a in tf2["artifacts"]) == 1
     assert tf1["measurements"][0]["data"]["value"] == 100
-    # No git-status.txt or image-lock copy: incomplete, with the reasons recorded.
+    # Provenance is the Nextflow run's record; the adapter never marks DAP runs complete.
+    note = [DAP_PROVENANCE_NOTE]
     assert all(m["data"]["run"]["provenance_complete"] is False for m in manifests)
-    assert "DAP run has no git-status.txt" in tf1["metadata"]["provenance_limitations"]
-    # A clean checkout run in pinned containers keeps its evidence, but stays incomplete:
-    # code and image identity say nothing about the reads, reference or parameters used.
+    assert all(m["data"]["metadata"]["provenance_limitations"] == note for m in manifests)
+    # The run's recorded commit, engine, image pins and dirty files are carried over as-is.
     output = dap / "output"
     commit = "a" * 40
     digest = "kundajelab/dap_seq_peaks@sha256:" + "b" * 64
     (output / "dap-images.lock").write_text(f"DAP_SEQ_PEAKS_IMAGE={digest}\n")
     (output / "git-status.txt").write_text(
-        f"branch: main\ncommit: {commit}\ncontainer engine: docker\ndirty files: none\n"
+        f"branch: main\ncommit: {commit}\ncontainer engine: docker\n"
+        "dirty files:\n M main.nf\n?? notes.txt\n"
     )
-    clean = from_dap(dap, "dap-study", "local", "study", None, None)
-    assert all(m["data"]["run"]["provenance_complete"] is False for m in clean)
-    assert all(
-        m["data"]["metadata"]["provenance_limitations"] == sorted(DAP_UNRECORDED) for m in clean
-    )
-    run = clean[0]["data"]["run"]
+    recorded = from_dap(dap, "dap-study", "local", "study", None, None)
+    assert all(m["data"]["run"]["provenance_complete"] is False for m in recorded)
+    assert all(m["data"]["metadata"]["provenance_limitations"] == note for m in recorded)
+    run = recorded[0]["data"]["run"]
     assert run["git_sha"] == commit
-    assert run["parameters"]["images"] == {"DAP_SEQ_PEAKS_IMAGE": digest}
-    assert run["parameters"]["container_engine"] == "docker"
-    dap_run_cases(output, commit, digest)
-
-
-def dap_run_cases(output: Path, commit: str, digest: str) -> None:
-    """Each departure from a clean, containerized, digest-pinned run is reported."""
-    clean = f"branch: main\ncommit: {commit}\ncontainer engine: docker\ndirty files: none\n"
-    cases = [
-        (
-            f"branch: main\ncommit: {commit}\ncontainer engine: docker\n"
-            "dirty files:\n M main.nf\n?? notes.txt\n",
-            f"DAP_SEQ_PEAKS_IMAGE={digest}\n",
-            ["DAP run used a checkout with uncommitted or untracked files"],
-        ),
-        (
-            clean.replace("container engine: docker", "container engine: none"),
-            f"DAP_SEQ_PEAKS_IMAGE={digest}\n",
-            ["DAP run did not use a container engine"],
-        ),
-        (
-            clean,
-            "DAP_SEQ_PEAKS_IMAGE=kundajelab/dap_seq_peaks:latest\n",
-            ["DAP run image pins are not all immutable digests"],
-        ),
-        (clean, "", ["DAP run has no recorded image pins"]),
-        (
-            "git status unavailable: /x is not a Git checkout, or git is not installed\n"
-            "container engine: docker\n",
-            f"DAP_SEQ_PEAKS_IMAGE={digest}\n",
-            ["DAP run lacks a recorded Git commit"],
-        ),
-    ]
-    for status, lock, expected in cases:
-        (output / "git-status.txt").write_text(status)
-        (output / "dap-images.lock").write_text(lock)
-        recorded, evidence, limitations = dap_run_record(output)
-        assert limitations == expected, (status, lock, limitations)
-        assert recorded == (None if "unavailable" in status else commit)
-    (output / "git-status.txt").write_text(cases[0][0])
-    assert dap_run_record(output)[1]["dirty_files"] == [" M main.nf", "?? notes.txt"]
+    assert run["parameters"] == {
+        "container_engine": "docker",
+        "images": {"DAP_SEQ_PEAKS_IMAGE": digest},
+        "dirty_files": [" M main.nf", "?? notes.txt"],
+    }
+    # A malformed or missing commit is not recorded as one.
+    (output / "git-status.txt").write_text("git status unavailable: not a checkout\n")
+    assert dap_run_record(output)[0] is None
 
 
 def observations(root: Path) -> None:
