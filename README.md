@@ -2,11 +2,10 @@
 
 Genesis turns plant DAP-seq and paired-end bulk ATAC-seq reads into peaks, signal
 tracks and quality-control reports. It runs on a single server or through
-Nextflow on a cluster. You can also organize results in a local catalog, review
-metadata and QC, and export a selected dataset collection.
+Nextflow on a cluster.
 
-Start with the standalone pipeline for your assay. Study management, the catalog
-and AI assistance are optional.
+Study management, metadata curation and review, single-cell ATAC and method
+benchmarks are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
 
 <a id="architecture-and-current-capabilities"></a>
 
@@ -17,21 +16,15 @@ sequence-to-function prediction and experimentally testable sequence design**.
 The chain is data → declared measurement → model input → downstream test.
 It is not a validated plant foundation model or an MPRA platform.
 
-Nextflow runs the supported scientific workflows. Optional LLMs assist metadata
-curation and explanation; they do not grant scientific approval.
+Nextflow runs the supported scientific workflows.
 
 | Implemented capability | Evidence scope | Evidence revision/source | Remaining acceptance |
 | --- | --- | --- | --- |
 | DAP and bulk ATAC workflows | Real tools on synthetic inputs; selected public subsets | [Study acceptance](validation/reports/real-study-validation.md); [public comparisons](validation/reports/expanded-plant-comparison.md), archived in `b9d0cf7` | Full-depth biological and task-specific acceptance |
-| scATAC fragment ingestion, pseudobulks and model exports | Synthetic contracts and real tools/loaders on synthetic inputs | [scATAC record](validation/reports/scatac-delivery-validation.md), dated 2026-10-10 with baseline and implementation revisions | Reviewed real-data bundles, plant bias evidence and exact-bundle loader acceptance; no scATAC FASTQ processing |
-| Read-only model-bundle inspection | Bounded artifact, convention and context-window checks | [Inspection guide](docs/usage/scatac-model-handoff.md#inspect-a-bundle); report records inspector and bundle hashes | Structural checks do not approve training |
-| Registry/review and optional workers/AI services | Offline/local-worker fixtures and mock HTTP/lifecycle tests | [Validation records](validation/README.md), each with its own tested revision | Site-specific SSH/scheduler/API/GPU acceptance and biological curation accuracy |
 
 Read the [scientific overview](docs/scientific-overview.md) for measurement
 semantics, three evidence-backed observations, and what remains between files,
-model training and experimental validation. Use the
-[offline inspection example](docs/usage/scatac-model-handoff.md#offline-inspection-example)
-to examine a clearly labelled synthetic bundle.
+model training and experimental validation.
 
 ## Pipeline workflow maps
 
@@ -61,16 +54,8 @@ cd genesis-preprocessing
 pixi run install-all
 ```
 
-This installs everything the DAP-seq pipeline needs; run it with `pixi run pipeline`
-(see [DAP-seq](#dap-seq) below).
-
-The bulk ATAC, validation and curation commands below use the `genesis` command.
-To install it, run `pixi run install-all --install-cli` instead, keep
-`~/.local/bin` on your PATH (`export PATH="$HOME/.local/bin:$PATH"`), and check it
-with `genesis doctor`. The installer links `genesis` to this checkout; keep the
-checkout in place, or add `--bin-dir /your/bin` to use another command directory.
-See [installation and upgrades](docs/development.md#command-installation-and-maintenance)
-for moving a checkout, using a Python wheel or removing the command.
+This installs everything both pipelines need: run DAP-seq with `pixi run pipeline`
+and bulk ATAC with `pixi run pipeline-atac` (see below).
 
 ## Run your first analysis
 
@@ -133,10 +118,14 @@ the FASTA, annotation-derived TSS positions, organellar contigs and checksums.
 The [ATAC guide](docs/usage/bulk-atac.md) explains the columns and reference fields.
 
 ```bash
-genesis validate inputs atac.tsv --assay bulk-ATAC --references references.json
-genesis pipeline-atac atac.tsv --references references.json --outdir /scratch/atac-run
-genesis pipeline-atac atac.tsv --references references.json --outdir /scratch/atac-run --resume
+pixi run pipeline-atac /path/to/atac.tsv --references /path/to/references.json \
+    --outdir /scratch/atac-run
+# Continue the same analysis after an interruption.
+pixi run pipeline-atac /path/to/atac.tsv --references /path/to/references.json \
+    --outdir /scratch/atac-run --resume
 ```
+
+The sheet and reference registry are checked before any task starts.
 
 Results appear under `/scratch/atac-run/output/`. Each library has QC reports,
 fragments, Tn5 cut-count tracks and peaks. Technical lanes are combined within a
@@ -174,28 +163,23 @@ between tools or studies.
 | --- | --- |
 | Run DAP-seq or understand its scientific settings | [DAP-seq guide](docs/usage/dapseq-reference.md) |
 | Run paired-end bulk ATAC | [Bulk ATAC guide](docs/usage/bulk-atac.md) |
-| Run on a cluster or independent servers | [Execution guide](docs/usage/execution.md) |
-| Manage a study from inputs through reviewed export | [Study workflow](docs/usage/studies.md) |
-| Validate results, search a catalog or review QC | [Curation guide](docs/usage/curation.md) |
-| Import single-cell fragments and build pseudobulks | [Single-cell ATAC guide](docs/usage/scatac.md) |
-| Prepare scATAC outputs for model loaders | [Model handoff](docs/usage/scatac-model-handoff.md) |
-| Propose metadata or explain a failure with an LLM | [AI providers](docs/usage/ai-providers.md) |
-| Host a private model on an existing node | [Model services](docs/usage/llm-deployment.md) |
-| Compare processing methods and inspect benchmark evidence | [Benchmarks](benchmarks/README.md) |
+| Manage studies, curate metadata or work with single-cell ATAC | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
+| Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |
 
 The [documentation index](docs/README.md) also links to reference material and
-validation records. Core processing, catalog queries and manual review work
-without AI, a GPU or an API account.
+validation records.
 
 <a id="verification"></a>
 
 ## Benchmarks and tool choices
 
-Use [the benchmark guide](benchmarks/README.md) for the experiment matrix, metric
-definitions, results and reproduction commands. It distinguishes package comparisons
-from parameter sensitivity and software tests. A higher mapping rate or more peaks
-alone is not evidence that one method is better.
+The [benchmark
+guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md)
+in genesis-curation has the experiment matrix, metric definitions and reproduction
+commands. It distinguishes package comparisons from parameter sensitivity and software
+tests. A higher mapping rate or more peaks alone is not evidence that one method is
+better.
 
 The [plant comparison report](validation/reports/expanded-plant-comparison.md)
 contains 64 completed Arabidopsis method/depth cases, independent TF motif evidence,
@@ -213,10 +197,7 @@ scores Genesis and nf-core ATAC using common metric definitions.
 | Problem | First step |
 | --- | --- |
 | `Missing input TSV` from `pixi run pipeline` | Pixi runs from the checkout folder: give absolute paths, or call `scripts/run-pipeline.sh` directly. |
-| `genesis: command not found` | Complete installation with `--install-cli` and check your PATH. |
-| Docker or Nextflow is unavailable | Run `genesis doctor`; check the selected runtime and installation. |
+| Docker or Nextflow is unavailable | Rerun `pixi run install-all` and check that Docker works for your user. |
 | Reference or input checksum differs | Check which file changed. Preserve the old run and use a new input/run version. |
 | A resumed run repeats some tasks | Check changed inputs, code and reference-cache paths in the Nextflow trace. |
 | No peaks or unexpected QC values | Inspect depth, reference, assay settings and control assignment before changing parameters. |
-| A reviewed export is empty | Read its exclusions; validation or current review decisions may be missing. |
-| A worker is unreachable | Inspect worker status and reconnect before authorizing another attempt. |

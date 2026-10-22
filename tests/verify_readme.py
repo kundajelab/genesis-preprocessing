@@ -17,8 +17,6 @@ from unittest.mock import patch
 from urllib.parse import unquote
 
 from genesis_tools.atac import run as atac
-from genesis_tools.benchmark import __main__ as benchmark
-from genesis_tools.execution import controller
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = [
@@ -29,8 +27,6 @@ DOCS = [
     ROOT / "docs/nextflow-style.md",
     ROOT / "docs/diagrams/README.md",
     ROOT / "genesis_tools/README.md",
-    ROOT / "benchmarks/README.md",
-    ROOT / "examples/scatac/README.md",
     *sorted((ROOT / "docs/usage").glob("*.md")),
 ]
 ARCHIVE = ROOT / "docs/history/dapseq-readme-fb60096.md"
@@ -61,13 +57,34 @@ def anchors(text: str) -> set[str]:
     return result
 
 
+# Moved to genesis-curation in October 2026. Dated validation reports keep their original
+# links; current documentation links to the new repository instead.
+MOVED = (
+    "benchmarks/",
+    "docs/curation/",
+    "docs/usage/ai-providers.md",
+    "docs/usage/curation.md",
+    "docs/usage/execution.md",
+    "docs/usage/llm-deployment.md",
+    "docs/usage/scatac.md",
+    "docs/usage/scatac-model-handoff.md",
+    "docs/usage/studies.md",
+    "tests/study_pipeline_fixture.py",
+    "tests/verify_study.py",
+)
+
+
 def check_links(document: Path) -> None:
     prose = re.sub(r"^```.*?^```[^\n]*$", "", document.read_text(), flags=re.M | re.S)
+    historical = document.resolve().is_relative_to(ROOT / "validation")
     for target in re.findall(r"\]\(([^)]+)\)", prose):
         if "://" in target or target.startswith("mailto:"):
             continue
         relative, separator, fragment = unquote(target).partition("#")
         path = (document.parent / relative).resolve() if relative else document
+        if not path.exists() and historical and path.is_relative_to(ROOT):
+            if str(path.relative_to(ROOT)).startswith(MOVED):
+                continue
         if not path.exists():
             raise AssertionError(f"Broken documentation link in {document.name}: {target}")
         if separator and path.suffix == ".md" and fragment not in anchors(path.read_text()):
@@ -152,19 +169,13 @@ def main() -> None:
                     # uv is an installed dependency, rather than a named Pixi task.
                     assert command in tasks or command == "uv", (document, line)
                     task_count += 1
-                if not line.strip().startswith(
-                    ("genesis ", "pixi run genesis ", "pixi run benchmark ")
-                ):
+                if not line.strip().startswith("pixi run pipeline-atac "):
                     continue
-                argv = shlex.split(line, comments=True)
-                if argv[:2] == ["pixi", "run"]:
-                    argv = argv[2:]
-                entry = controller.main if argv[0] == "genesis" else benchmark.main
-                # Parse delegated Python options with the actual destination parser.
-                if argv[:2] == ["genesis", "pipeline-atac"]:
-                    entry, argv = atac.main, ["genesis pipeline-atac", *argv[2:]]
-                elif argv[:2] == ["genesis", "benchmark"]:
-                    entry, argv = benchmark.main, ["genesis benchmark", *argv[2:]]
+                # Parse documented ATAC options with the runner's own parser.
+                entry, argv = (
+                    atac.main,
+                    ["pixi run pipeline-atac", *shlex.split(line, comments=True)[3:]],
+                )
                 with (
                     patch.object(sys, "argv", argv),
                     patch.object(argparse.ArgumentParser, "parse_args", parse_only),

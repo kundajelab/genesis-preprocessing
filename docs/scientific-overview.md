@@ -8,8 +8,7 @@ models discussed below, or provide an MPRA processing/experimental platform.
 A useful handoff connects **data → declared measurement → model input → downstream
 test**. File readability is one step in that chain. A successful pipeline, a
 checksum match and a successful model loader answer different questions.
-Nextflow executes supported scientific workflows. Optional LLMs propose metadata
-and explanations; deterministic checks and accountable review remain separate.
+Nextflow executes supported scientific workflows.
 
 ## What does a signal measure?
 
@@ -20,11 +19,12 @@ and explanations; deterministic checks and accountable review remain separate.
 | scATAC accessibility | Existing 10x fragments, already offset +4/−5; selected fragment rows count once, independent of supporting read-pair count. Biological replicates stay separate. | The audited `chrombpnet-atac-v1` conversion puts cuts at `s` and `e` for source `[s,e)`. One unstranded raw-count channel, no normalization or further shift; separate pinned ChromBPNet/Cherimoya adapters. |
 | TSS / RNA / WGBS / MPRA | Contextual or future prediction targets, not implemented assay workflows here. Annotation-derived TSS QC in bulk ATAC is not TSS-assay processing. | Initiation, expression, methylation and reporter activity require distinct measurement definitions and acceptance criteria. |
 
-Identical bigWig or BED formats do not make targets interchangeable. Preserve
-count unit, strand, normalization, coordinates and shift provenance. The
-[DAP](usage/dapseq-reference.md#analysis-choices),
-[bulk ATAC](usage/bulk-atac.md#analysis-and-metrics) and
-[scATAC](usage/scatac.md#process-known-libraries) guides specify the actual policies.
+Identical bigWig or BED formats do not make targets interchangeable. Preserve count
+unit, strand, normalization, coordinates and shift provenance. The
+[DAP](usage/dapseq-reference.md#analysis-choices), [bulk
+ATAC](usage/bulk-atac.md#analysis-and-metrics) and
+[scATAC](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac.md#process-known-libraries)
+guides specify the actual policies.
 
 Sequence-source organism, assayed DNA organism, TF-source organism and experimental
 host/context are distinct concepts. This matters for interspecies DAP and for
@@ -40,9 +40,9 @@ do not invent values or interpret a single species field as all four.
 | Scientific pipeline integration | Actual DAP/ATAC tools on synthetic inputs | [Real-study validation](../validation/reports/real-study-validation.md), exact revisions/commands in linked receipts | Representative biological cohorts; synthetic peaks are not biological truth |
 | Public-data component comparisons | Six Arabidopsis matrices, 1M/5M template caps; seeded nested sampling, seed 60141 | [Results and definitions](../validation/reports/expanded-plant-comparison.md); structured archives in snapshot `b9d0cf7` | Broader species, full-depth tests and independent accuracy evidence |
 | Full real-data analysis | Historical full fragment scans exist for the Arabidopsis scATAC candidate; they are not a full pseudobulk/model release | [Candidate audit](../validation/reports/scatac-delivery-validation.md#real-data-acceptance-gates), 2026-10-10; source paths are historical | Re-establish accessible inputs, labels and reference/annotation evidence; reviewed release absent |
-| A model loader reads data | Both pinned loaders read synthetic positive/background windows in three folds | [Loader acceptance](usage/scatac-model-handoff.md#reproduce-loader-acceptance); historical scripts/receipts | Exact-bundle, exact-model real-data loading; no transfer of fixture PASS |
+| A model loader reads data | Both pinned loaders read synthetic positive/background windows in three folds | [Loader acceptance](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac-model-handoff.md#reproduce-loader-acceptance); historical scripts/receipts | Exact-bundle, exact-model real-data loading; no transfer of fixture PASS |
 | Model training and independent experimental validation | Not demonstrated by these results | No training/design-validation receipt in the cited evidence | Training evaluation and independent biological/experimental tests |
-| Live SSH, scheduler, API or GPU operation | Local-worker, parsed-profile, fake-HTTP and lifecycle tests have narrower scope | [Execution](usage/execution.md), [AI](usage/ai-providers.md), [service](usage/llm-deployment.md) guides | Explicit site/provider/hardware acceptance; no inference from mocks |
+| Live SSH, scheduler, API or GPU operation | Local-worker, parsed-profile, fake-HTTP and lifecycle tests have narrower scope | [Execution](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/execution.md), [AI](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/ai-providers.md), [service](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/llm-deployment.md) guides | Explicit site/provider/hardware acceptance; no inference from mocks |
 
 The six archived `results.json` records reconcile to **64 method/repetition
 cases**: SE DAP 12 + 4, PE DAP 12 + 4, bulk ATAC 24 + 8 at the 1M/5M caps.
@@ -96,6 +96,8 @@ ChromBPNet revision. Select the cell type, resolve reference/annotation evidence
 agree on raw-cut and background/bias acceptance, then test each exact bundle with
 the model loader. This is a proposed handoff, not a released or approved dataset.
 
-Use [model inspection](usage/scatac-model-handoff.md#inspect-a-bundle) to distinguish
-observed structure, declarations and missing acceptance. The modeling team still
-needs to define the held-out prediction task and evidence required before training.
+Use [model
+inspection](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac-model-handoff.md#inspect-a-bundle)
+to distinguish observed structure, declarations and missing acceptance. The modeling
+team still needs to define the held-out prediction task and evidence required before
+training.

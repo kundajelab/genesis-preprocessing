@@ -23,10 +23,7 @@ a GitHub source archive: it omits the submodule. Native macOS and ARM builds
 require their own acceptance tests; resolving their lock entries does not
 validate them.
 
-The bulk ATAC and scATAC workflows pin the released peak-calling image separately
-and are unchanged. The scATAC workflow ingests existing fragments and calls peaks
-from BEDPE pseudobulks; it does not process scATAC FASTQs or switch to MACS3's
-FRAG mode.
+Bulk ATAC uses the same pinned peak-calling image as DAP-seq.
 
 ## CPU limits
 
@@ -46,22 +43,23 @@ four. Use explicit Nextflow process overrides to change resources; faster
 execution can use more memory. The caller's thresholds, controls, genome size,
 duplicate policy and input formats are unchanged.
 
-Bulk ATAC and scATAC use the same pinned MACS3 image and call `macs3 callpeak`
-directly with `--threads` set to the task's CPU allocation (`${task.cpus}` for
-bulk ATAC; two CPUs and 8 GB for scATAC products). On the archived A. thaliana
-ATAC inputs (two libraries at 1M and 5M templates), this build gave peak, summit
-and XLS outputs identical to released MACS3 3.0.5 at two and four CPUs.
+Bulk ATAC also calls `macs3 callpeak` directly with `--threads ${task.cpus}`. On
+the archived A. thaliana ATAC inputs (two libraries at 1M and 5M templates), this
+build gave peak, summit and XLS outputs identical to released MACS3 3.0.5 at two
+and four CPUs.
 
-`genesis_tools/macs3_launch.py` remains only for the benchmark harness, which runs
-released MACS3 3.0.5 natively; that release has no `--threads` option, so the
-launcher bounds it to the benchmark's CPU allocation.
+The benchmark harness in
+[genesis-curation](https://github.com/kundajelab/genesis-curation) still runs released
+MACS3 3.0.5 natively. That release has no `--threads` option, so the harness bounds it
+with its own launcher.
 
 ## Earlier measurements
 
 The [measured results](../../validation/reports/macs3-optimization.md) and the
-[comparison recipe](../../benchmarks/experiments/macs3-optimization/README.md)
+[comparison
+recipe](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/experiments/macs3-optimization/README.md)
 compare the earlier revision `22eb40f7b51f5b20b635614ca0b1759dc5398c5c` with the
-released package, using the same inputs and scientific arguments, 1, 2 and 8
-CPUs and three measured repetitions. They describe that revision, not the current
-DAP pin. Benchmark environments and results remain version-specific; do not
-overwrite results from one caller build with those from another.
+released package, using the same inputs and scientific arguments, 1, 2 and 8 CPUs and
+three measured repetitions. They describe that revision, not the current DAP pin.
+Benchmark environments and results remain version-specific; do not overwrite results
+from one caller build with those from another.

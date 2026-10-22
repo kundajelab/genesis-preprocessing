@@ -1,15 +1,7 @@
 # Genesis tools
 
-Python tools for Genesis plant sequencing workflows: sample validation, metadata,
-peak quantification, benchmarks, execution monitoring and dataset curation.
+Python helpers that the Genesis pipelines call: sample-sheet validation, metadata,
+peak quantification, MultiQC reporting and the bulk ATAC stages.
 
-From the repository root, run `pixi run install-all --install-cli` and add
-`~/.local/bin` to your PATH. List the available commands and check your environment:
-
-```bash
-genesis --help
-genesis doctor
-```
-
-See [the project documentation](../docs/README.md) for processing, catalog and
-benchmark commands.
+`pixi run install-all` from the repository root installs them. See
+[the project documentation](../docs/README.md) for running the pipelines.

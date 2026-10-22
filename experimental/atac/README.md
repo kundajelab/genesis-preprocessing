@@ -2,11 +2,11 @@
 
 This directory preserves the frozen prototype for reproducing earlier benchmarks.
 For new analyses, use the [supported bulk ATAC guide](../../docs/usage/bulk-atac.md).
-The current `genesis pipeline-atac` command runs that supported workflow.
+`pixi run pipeline-atac` runs that supported workflow.
 
-To rerun the historical fixture, use `pixi run validate-atac-legacy --keep`.
-Its runner supplies synthetic reads, the toy reference, TSS positions, explicit
-MAPQ/duplicate choices and the adapter-free fixture policy.
+The real-tool regression of this prototype ran through the benchmark runner, which is now
+in [genesis-curation](https://github.com/kundajelab/genesis-curation).
+`tests/verify_atac.py` still runs its known-answer checks.
 
 The fixture path performs per-mate raw FastQC, bwa-mem2 alignment, samtools fixmate/markdup, both-mate MAPQ filtering, marked-duplicate exclusion, organellar exclusion/accounting, fragment generation, explicit +4/-5 cut representation, MACS3 BAMPE peaks, fragment FRiP, a defined toy TSS profile, fragment lengths/NRF/PBC, MultiQC and SHA256 provenance. Original reads/BAM are not altered. Biological thresholds are UNSPECIFIED. The TSS metric is not claimed to be numerically equivalent to ENCODE or ataqv.
 
