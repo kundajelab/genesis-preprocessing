@@ -314,7 +314,10 @@ def run_pipeline(
         "-log",
         str(work / f"nextflow-{suffix}.log"),
         "run",
-        str(ROOT / "main.nf"),
+        str(ROOT / "workflows/dap-seq.nf"),
+        # The workflow lives in workflows/, so pass its config explicitly, as the launcher does.
+        "-c",
+        str(ROOT / "nextflow.config"),
         "-profile",
         "local,test,docker" if docker else "local,test",
         "--input",
@@ -382,8 +385,8 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     counts = Counter(row["name"].split(" ")[0] for row in rows)
     assert all(row["status"] == "COMPLETED" for row in rows), rows
     assert counts == {
-        "CHROM_SIZES": 2,
-        "BWA_MEM2_INDEX": 2,
+        "GET_REFERENCES:CHROM_SIZES": 2,
+        "GET_REFERENCES:BWA_MEM2_INDEX": 2,
         "DOWNLOAD": 3,
         "FASTQC": 7,
         "MULTIQC": 1,
@@ -592,7 +595,9 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
     assert run_pipeline(work, sheet, docker=docker, resume=True).returncode == 0
     rows = trace_rows(work, "resume")
     names = {row["name"].split(" ")[0] for row in rows}
-    assert not names.intersection({"CHROM_SIZES", "BWA_MEM2_INDEX"}), names
+    assert not names.intersection(
+        {"GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM2_INDEX"}
+    ), names
     fastqc_tasks = [row for row in rows if row["name"].split(" ")[0] == "FASTQC"]
     assert len(fastqc_tasks) == 7 and all(row["status"] == "CACHED" for row in fastqc_tasks)
     # Newly published references change staged input paths on the first resume.
@@ -790,18 +795,9 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         for p in (work / "references").rglob("*")
         if p.is_file()
     }
-    # Published caches record the FASTA they were built from.
-    for fasta in ("se.fa.gz", "pe.fa.gz"):
-        digest = hashlib.sha256((work / "references" / fasta).read_bytes()).hexdigest()
-        stem = fasta.removesuffix(".fa.gz")
-        for identity in (f"{stem}.chrom.sizes.sha256", f"{stem}.bwa-mem2/fasta.sha256"):
-            assert (work / "references" / identity).read_text() == f"{digest}  {fasta}\n"
     for scenario, diagnostic in (
         ("id-collision", "reference ID collision"),
         ("missing-reference", "reference missing: absent.fa.gz"),
-        # A replaced FASTA, or a cache without a recorded identity, must not reuse old caches.
-        ("replaced-fasta", "se.chrom.sizes: built from a different FASTA than se.fa.gz"),
-        ("unverified-index", "se.bwa-mem2: no recorded identity for se.fa.gz"),
     ):
         case = parent / scenario
         case.mkdir()
@@ -813,13 +809,8 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         if scenario == "id-collision":
             shutil.copy2(references / "se.fa.gz", references / "se.fna.gz")
             samples.append({**control, "sample_id": "collision", "reference_fasta": "se.fna.gz"})
-        elif scenario == "missing-reference":
-            samples.append({**control, "sample_id": "orphan", "reference_fasta": "absent.fa.gz"})
-        elif scenario == "replaced-fasta":
-            with gzip.open(references / "se.fa.gz", "wt") as stream:
-                stream.write(">chr1\n" + "ACGT" * 1000 + "\n")
         else:
-            (references / "se.bwa-mem2/fasta.sha256").unlink()
+            samples.append({**control, "sample_id": "orphan", "reference_fasta": "absent.fa.gz"})
         candidate = case / "samples.tsv"
         write_sheet(candidate, samples)
         assert run_pipeline(case, candidate, docker=docker, expect_failure=True).returncode != 0
@@ -830,6 +821,52 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         for p in (work / "references").rglob("*")
         if p.is_file()
     }
+
+
+def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
+    """Rebuild a reference's products only when its saved FASTA hash or a product is off."""
+    parent = work / "reference-rebuild"
+    parent.mkdir()
+    built = work / "references"
+    expected = hashlib.sha256((built / "se.fa.gz").read_bytes()).hexdigest()
+    assert (built / "se.fa.gz.sha256").read_text() == f"{expected}  se.fa.gz\n"
+
+    def changed_fasta(references: Path) -> None:
+        fasta = references / "se.fa.gz"
+        content = gzip.decompress(fasta.read_bytes())
+        fasta.write_bytes(gzip.compress(content.replace(b"A", b"T", 1), mtime=0))
+
+    cases: list[tuple[str, Callable[[Path], object] | None, bool]] = [
+        ("unchanged", None, False),
+        ("changed-fasta", changed_fasta, True),
+        ("missing-hash", lambda r: (r / "se.fa.gz.sha256").unlink(), True),
+        ("empty-index", lambda r: (r / "se.bwa-mem2/genome.ann").write_bytes(b""), True),
+        (
+            "stale-hash",
+            lambda r: (r / "se.fa.gz.sha256").write_text("0" * 64 + "  se.fa.gz\n"),
+            True,
+        ),
+    ]
+    for scenario, change, rebuilt in cases:
+        case = parent / scenario
+        case.mkdir()
+        references = case / "references"
+        shutil.copytree(built, references)
+        shutil.copy2(work / "limits.config", case / "limits.config")
+        if change:
+            change(references)
+        assert run_pipeline(case, sheet, docker=docker).returncode == 0, scenario
+        names = [row["name"] for row in trace_rows(case)]
+        for process in ("GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM2_INDEX"):
+            # Only the altered SE reference is rebuilt; the PE reference is always reused.
+            assert (f"{process} (se)" in names) == rebuilt, (scenario, names)
+            assert f"{process} (pe)" not in names, (scenario, names)
+        fasta_hash = hashlib.sha256((references / "se.fa.gz").read_bytes()).hexdigest()
+        assert (references / "se.fa.gz.sha256").read_text() == f"{fasta_hash}  se.fa.gz\n"
+        assert all(
+            (references / f"se.bwa-mem2/genome{suffix}").stat().st_size > 0
+            for suffix in (".0123", ".amb", ".ann", ".bwt.2bit.64", ".pac")
+        ), scenario
 
 
 def main() -> None:
@@ -871,6 +908,7 @@ def main() -> None:
                 check_bams(work)
             check_resume(work, sheet, docker=args.docker)
             check_reference_failures(work, sheet, docker=args.docker)
+            check_reference_rebuild(work, sheet, docker=args.docker)
             assert raw_before == {
                 path: hashlib.sha256(Path(path).read_bytes()).hexdigest() for path in raw_before
             }

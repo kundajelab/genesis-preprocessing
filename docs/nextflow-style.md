@@ -8,7 +8,7 @@ the [DAP](usage/dapseq-reference.md) or [bulk ATAC](usage/bulk-atac.md) guide.
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 
 - Each process declares its resources, conda YAML, and nf-dotenv container image.
-- QC and tracks take configurable resources from main.nf through a resources input;
+- QC and tracks take configurable resources from workflows/dap-seq.nf through a resources input;
   bwa-mem2 indexing and alignment size their own from the genome and read sizes.
 - BWA options and the pinned SPP script are also explicit inputs.
 - Pure tool environments live in environments/*.yaml. Docker builds derive matching

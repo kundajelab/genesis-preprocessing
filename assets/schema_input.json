@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Genesis DAP-seq sample sheet",
-  "description": "One row per library. main.nf also checks the exact header, reference files, reference IDs and control assignments.",
+  "description": "One row per library. workflows/dap-seq.nf also checks the exact header, reference files, reference IDs and control assignments.",
   "type": "array",
   "minItems": 1,
   "uniqueEntries": ["sample_id"],

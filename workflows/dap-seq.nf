@@ -1,17 +1,16 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
-include { CHROM_SIZES } from './modules/chrom_sizes'
-include { BWA_MEM2_INDEX } from './modules/bwa_mem2_index'
-include { DOWNLOAD } from './modules/download'
-include { FASTQC } from './modules/fastqc'
-include { METADATA } from './modules/metadata'
-include { BWA_MEM2_ALIGN } from './modules/bwa_mem2_align'
-include { QC } from './modules/qc'
-include { MULTIQC } from './modules/multiqc'
-include { TRACKS } from './modules/tracks'
-include { CALL_PEAKS } from './modules/call_peaks'
-include { QUANTIFY } from './modules/quantify'
+include { GET_REFERENCES } from '../modules/get_references'
+include { DOWNLOAD } from '../modules/download'
+include { FASTQC } from '../modules/fastqc'
+include { METADATA } from '../modules/metadata'
+include { BWA_MEM2_ALIGN } from '../modules/bwa_mem2_align'
+include { QC } from '../modules/qc'
+include { MULTIQC } from '../modules/multiqc'
+include { TRACKS } from '../modules/tracks'
+include { CALL_PEAKS } from '../modules/call_peaks'
+include { QUANTIFY } from '../modules/quantify'
 
 // Sheet rules a JSON schema cannot express: the exact columns, existing reference FASTAs,
 // distinct reference IDs and valid control assignments. Rows come from samplesheetToList.
@@ -44,42 +43,37 @@ def checkSamples(sheet, rows, references) {
     }
 }
 
-def fastaSha256(path) {
-    def digest = java.security.MessageDigest.getInstance('SHA-256')
-    path.withInputStream { stream ->
-        def buffer = new byte[1 << 20]
-        def count
-        while ((count = stream.read(buffer)) > 0) {
-            digest.update(buffer, 0, count)
-        }
-    }
-    return digest.digest().encodeHex().toString()
-}
-
-// Each reference cache records the SHA-256 of the FASTA it was built from. Refuse a cache that
-// records a different FASTA, or none, so a replaced FASTA cannot silently reuse an old index.
-// Return each reference ID's FASTA digest, for the caches built in this run to record.
-def checkReferenceCaches(rows, references) {
-    return rows.collectEntries { row -> [(row.ref_id): row.reference_fasta] }
-        .collectEntries { id, filename ->
-            def digest = fastaSha256(references.resolve(filename))
-            [["${id}.chrom.sizes", "${id}.chrom.sizes.sha256"],
-             ["${id}.bwa-mem2", "${id}.bwa-mem2/fasta.sha256"]].each { cache, identity ->
-                def recorded = references.resolve(identity).with { path ->
-                    path.isFile() ? path.text.tokenize()[0] : null
-                }
-                if (references.resolve(cache).exists() && recorded != digest) {
-                    error("${references.resolve(cache)}: " +
-                          (recorded ? 'built from a different FASTA than' : 'no recorded identity for') +
-                          " ${filename}; delete it so it is rebuilt")
-                }
-            }
-            [(id): digest]
-        }
-}
-
 // Bowtie 1 modules deliberately have no imports or calls here.
 workflow {
+    // This script lives in workflows/; everything else it uses is relative to the repository.
+    def repoDir = projectDir.parent
+    // Print an unmistakable banner as the last thing in the log. The submission script should set
+    // NXF_ANSI_LOG=false so the log stays readable in a file, which leaves it as a flat stream of
+    // process notices: without this it is hard to tell a run that finished from one that died, or
+    // one that is still going.
+    // NOTE: assigned here inside the entry workflow rather than declared in nextflow.config, where
+    // workflow handlers are deprecated, or as a top-level "workflow.onComplete {}" statement, which
+    // nextflow lint rejects as a statement mixed with script declarations. The "onComplete:" entry
+    // workflow section would be tidier still, but it only compiles under NXF_SYNTAX_PARSER=v2, and
+    // v2 cannot resolve the nf-dotenv "dotenv()" calls that every module uses to pick its container.
+    workflow.onComplete = {
+        def rule = '=' * 78
+        def report = [
+            rule,
+            "PIPELINE ${workflow.success ? 'SUCCEEDED' : 'FAILED'}  (${workflow.runName})",
+            "  duration: ${workflow.duration}",
+            "  tasks:    ${workflow.stats.succeedCount} succeeded, ${workflow.stats.cachedCount} cached, " +
+                "${workflow.stats.failedCount} failed, ${workflow.stats.ignoredCount} ignored",
+            "  exit:     ${workflow.exitStatus}",
+            "  output:   ${params.run_dir}/output",
+            rule,
+        ]
+        // NOTE: deliberately no workflow.errorMessage here. process.shell sets -x, so for a failed
+        // task that field holds the whole shell trace and would bury this summary. Nextflow already
+        // prints the failing process, its exit status and its work dir immediately above.
+        log.info(report.join('\n'))
+    }
+
     // nextflow_schema.json checks the input sheet, paths, resources, and BWA options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
@@ -92,50 +86,22 @@ workflow {
         score_threshold: params.bwa_score_threshold
     ]
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
-    def sheetRows = samplesheetToList(sheet, "${projectDir}/assets/schema_input.json")
+    def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/schema_input.json")
         .collect { row -> row[0] }
     checkSamples(sheet, sheetRows, referencesDir)
-    sheetRows = sheetRows.collect { row ->
+    samples = channel.fromList(sheetRows.collect { row ->
         row + [ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
                layout: row.read2_url == '-' ? 'SE' : 'PE']
-    }
-    def fastaDigests = checkReferenceCaches(sheetRows, referencesDir)
-    samples = channel.fromList(sheetRows)
-    referenceInputs = samples.unique { sample -> sample.ref_id }
+    })
+    // Check each reference once; downstream steps rejoin samples to it by ref_id.
+    references = samples.unique { sample -> sample.ref_id }
         .map { meta ->
-            def ref = [id: meta.ref_id, filename: meta.reference_fasta,
-                       fasta_sha256: fastaDigests[meta.ref_id]]
+            def ref = [id: meta.ref_id, filename: meta.reference_fasta]
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true))
         }
-    sizesBranches = referenceInputs.branch { ref, _fasta ->
-        cached: file("${referencesDir}/${ref.id}.chrom.sizes").exists() &&
-                file("${referencesDir}/${ref.id}.chrom.sizes").size() > 0
-        missing: true
-    }
-    CHROM_SIZES(sizesBranches.missing)
-    sizes_ch = sizesBranches.cached.map { ref, _fasta ->
-            tuple(ref.id, ref, file("${referencesDir}/${ref.id}.chrom.sizes"))
-        }
-        .mix(CHROM_SIZES.out.sizes.map { ref, path -> tuple(ref.id, ref, path) })
-    indexBranches = referenceInputs.branch { ref, _fasta ->
-        cached: ['.0123', '.amb', '.ann', '.bwt.2bit.64', '.pac'].every { suffix ->
-            def path = file("${referencesDir}/${ref.id}.bwa-mem2/genome${suffix}")
-            path.exists() && path.size() > 0
-        }
-        missing: true
-    }
-    // Indexing sizes its memory and time from the reference length.
-    genomeLengths = sizes_ch.map { id, _ref, path ->
-        tuple(id, path.readLines().sum { line -> line.tokenize('\t')[1].toLong() })
-    }
-    indexInputs = indexBranches.missing.map { ref, fasta -> tuple(ref.id, ref, fasta) }
-        .join(genomeLengths, by: 0, failOnDuplicate: true)
-        .map { _id, ref, fasta, length -> tuple(ref + [length: length], fasta) }
-    BWA_MEM2_INDEX(indexInputs)
-    indexes = indexBranches.cached.map { ref, _fasta ->
-            tuple(ref.id, ref, file("${referencesDir}/${ref.id}.bwa-mem2"))
-        }
-        .mix(BWA_MEM2_INDEX.out.index.map { ref, path -> tuple(ref.id, ref, path) })
+    GET_REFERENCES(references, referencesDir)
+    sizes_ch = GET_REFERENCES.out.sizes
+    indexes = GET_REFERENCES.out.indexes
     DOWNLOAD(samples.collate(params.download_batch_size))
     // Split each batch back into one tuple per sample: a single read path for SE, a list for PE.
     downloaded = DOWNLOAD.out.downloads.flatMap { batch, reads, _counts ->
@@ -196,7 +162,7 @@ workflow {
     // checkout's branch, commit and uncommitted changes. Local runs can have a null commitId.
     def git = { List args ->
         try {
-            def process = (['git', '-C', projectDir.toString()] + args).execute()
+            def process = (['git', '-C', repoDir.toString()] + args).execute()
             // Trim only the end: porcelain status lines start with positional status columns.
             def text = process.text.stripTrailing()
             return process.waitFor() == 0 ? text : null
@@ -216,19 +182,19 @@ workflow {
     // Curation treats a run as complete only from a clean checkout run in pinned containers.
     def engine = "container engine: ${workflow.containerEngine ?: 'none'}\n"
     def gitReport = changes == null ?
-        "git status unavailable: ${projectDir} is not a Git checkout, or git is not installed\n" +
+        "git status unavailable: ${repoDir} is not a Git checkout, or git is not installed\n" +
             engine :
         "branch: ${branch}\ncommit: ${gitSha}\n" + engine +
             (changes ? "dirty files:\n${changes}\n" : "dirty files: none\n")
     def runOutput = file("${params.run_dir}/output")
     runOutput.mkdirs()
-    file("${projectDir}/conf/dap-images.lock").copyTo(runOutput.resolve('dap-images.lock'))
+    file("${repoDir}/conf/dap-images.lock").copyTo(runOutput.resolve('dap-images.lock'))
     runOutput.resolve('git-status.txt').text = gitReport
     def reportProvenance = [name: file(params.run_dir).name, git_sha: gitSha,
                            source_status: sourceStatus, pipeline_version: workflow.manifest.version]
     MULTIQC(multiqcFiles, multiqcSamples, reportProvenance,
-            file("${projectDir}/multiqc_config.yaml"),
-            file("${projectDir}/genesis_tools/src/genesis_tools/multiqc_reporting.py"))
+            file("${repoDir}/multiqc_config.yaml"),
+            file("${repoDir}/genesis_tools/src/genesis_tools/multiqc_reporting.py"))
     TRACKS(aligned, resources)
     treatments = mainBams.filter { meta, _bam, _bai -> meta.control != '-' }
         .map { meta, bam, bai -> tuple(meta.control, meta, bam, bai) }

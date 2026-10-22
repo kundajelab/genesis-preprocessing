@@ -90,7 +90,7 @@ def check_public_configuration(work: Path) -> None:
             "Image lock requires a registry image with an immutable SHA256 digest"
         )
         pins[key] = value
-    sources = [ROOT / "main.nf", *sorted((ROOT / "modules").glob("*.nf"))]
+    sources = [ROOT / "workflows/dap-seq.nf", *sorted((ROOT / "modules").glob("*.nf"))]
     required = {
         key for path in sources for key in re.findall(r"dotenv\('([^']+)'\)", path.read_text())
     }
@@ -289,10 +289,15 @@ def main() -> None:
     for path in modules:
         source = path.read_text()
         assert "WorkflowSupport" not in source, path
+        assert "with-environment.sh" not in source and "uv run" not in source, path
+        if re.search(r"^process \w+", source, re.M) is None:
+            # Subworkflows only compose process modules, which declare tools and resources.
+            assert re.search(r"^workflow \w+", source, re.M), path
+            assert "    conda " not in source and "container " not in source, path
+            continue
         assert "include { dotenv } from 'plugin/nf-dotenv'" in source, path
         assert "    cpus " in source and "    memory " in source and "    time " in source, path
         assert source.count("    conda ") == 1, path
-        assert "with-environment.sh" not in source and "uv run" not in source, path
     interpreters = list(dict.fromkeys(["/bin/bash", shutil.which("bash") or "/bin/bash"]))
     with tempfile.TemporaryDirectory(prefix="genesis-style-") as temporary:
         work = Path(temporary)

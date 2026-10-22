@@ -1,11 +1,11 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
-// Available for future comparison workflows; not called by main.nf.
+// Available for future comparison workflows; not called by workflows/dap-seq.nf.
 process BOWTIE1_INDEX {
     cpus { resources.cpus }
     memory { resources.memory }
     time { resources.time }
-    conda "environments/DAP_SEQ_ALIGNMENT.yaml"
+    conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"
     publishDir params.references, mode: 'copy', pattern: '*.bowtie1'

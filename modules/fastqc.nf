@@ -4,7 +4,7 @@ process FASTQC {
     cpus 1
     memory '1 GB'
     time '4h'
-    conda "environments/DAP_SEQ_FASTQC.yaml"
+    conda "${moduleDir}/../environments/DAP_SEQ_FASTQC.yaml"
     container "${dotenv('DAP_SEQ_FASTQC_IMAGE')}"
     tag "${meta.id}:${mate}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc/fastqc", mode: 'copy', pattern: '*fastqc*'

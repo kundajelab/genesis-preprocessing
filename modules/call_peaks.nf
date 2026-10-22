@@ -11,7 +11,7 @@ process CALL_PEAKS {
     // retry with more memory and time when killed (OOM, walltime, or preemption)
     errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
     maxRetries 2
-    conda "environments/DAP_SEQ_PEAKS.yaml"
+    conda "${moduleDir}/../environments/DAP_SEQ_PEAKS.yaml"
     container "${dotenv('DAP_SEQ_PEAKS_IMAGE')}"
     tag "${meta.id}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',

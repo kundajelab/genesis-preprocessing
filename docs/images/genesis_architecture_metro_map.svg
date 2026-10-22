@@ -82,4 +82,4 @@
 <text class="note" x="48" y="798">Solid: available assay processing. Dashed: contracts or planned integration.</text>
 <text class="note" x="48" y="823">RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.</text>
 <text class="note" x="48" y="848">Plant biological thresholds remain UNSPECIFIED. Barcode processing and model export are not production workflows.</text>
-<metadata>Genesis diagram schema 2; main.nf SHA256 56813b35e7ac76814659eb699b63a42521499708a31328a4a7a8adb25213b616; workflows/atac.nf SHA256 6d079955dff04b89163aa40e6c2cbcdcb63d48c42cccdeac34da5a3078b18b16; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 e98074a4ae71d23b3ac0103fae9acafea2b3d8b3b72d66d5f7b0af899b55479a; workflows/atac.nf SHA256 6d079955dff04b89163aa40e6c2cbcdcb63d48c42cccdeac34da5a3078b18b16; schematic animation.</metadata></svg>

@@ -100,7 +100,7 @@ DAP_NODES = [
     ("CHROM_SIZES", 140, 510, "Chromosome sizes", "Verified products", "reference"),
     ("METADATA", 600, 510, "Metadata", "Genome + read length", "reads"),
     ("spp", 830, 510, "SPP", "Separate 50-bp R1", "spp"),
-    ("reference", 140, 690, "Exact FASTA", "Explicit assembly", "reference"),
+    ("GET_REFERENCES", 140, 690, "Reference FASTA", "Hash-checked reuse", "reference"),
     ("BWA_MEM2_INDEX", 370, 690, "bwa-mem2 index", "Verified products", "reference"),
     ("TRACKS", 1060, 690, "deepTools tracks", "BigWig signal", "tracks"),
 ]
@@ -211,7 +211,7 @@ def main() -> None:
          ["QC is diagnostic. FastQC warnings do not reject a dataset; SPP is reported separately.",
           "Controls receive QC and tracks; treatments receive peaks and quantification. FASTQs and BAMs stay intermediate.",
           "Routes summarize data dependencies, not runtime. Crossings without a station do not join channels."],
-         ["main.nf"]),
+         ["workflows/dap-seq.nf"]),
         ("_atac", "GENESIS / BULK ATAC", "Paired-end plant libraries · explicit policies · separate biological replicates",
          ATAC_NODES, ATAC_EDGES,
          ["Duplicate marking measures duplication. The sample sheet explicitly selects retention or exclusion.",
@@ -228,7 +228,7 @@ def main() -> None:
         ["Solid: available assay processing. Dashed: contracts or planned integration.",
          "RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.",
          "Plant biological thresholds remain UNSPECIFIED. Barcode processing and model export are not production workflows."],
-        ["main.nf", "workflows/atac.nf"]))
+        ["workflows/dap-seq.nf", "workflows/atac.nf"]))
     for animated, suffix in [(False, ""), (True, "_animated")]:
         (out / f"genesis_execution{suffix}.svg").write_text(document(
             "GENESIS / RUN AND REVIEW", "Start on one Linux server. Add managed clusters or independent workers when needed.",

@@ -163,7 +163,7 @@ that comparison. Curation and AI changes should leave ordinary preprocessing usa
 
 | Area | Implementation | Focused check |
 | --- | --- | --- |
-| DAP | `main.nf`, `modules/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
+| DAP | `workflows/dap-seq.nf`, `modules/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
 | Bulk ATAC | `workflows/atac.nf`, `modules/atac/`, `genesis_tools/atac/` | `tests/verify_supported_atac.py` |
 | Worker execution | `genesis_tools/execution/` | `tests/verify_execution.py` |
 | Study registration and collection | `genesis_tools/study/` | `tests/verify_study.py` |

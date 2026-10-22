@@ -7,7 +7,7 @@ process DOWNLOAD {
     cpus 2
     memory '1 GB'
     time { 1.h * samples.size() }
-    conda "environments/DAP_SEQ_ALIGNMENT.yaml"
+    conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${samples.size() == 1 ? samples[0].id : "${samples[0].id} +${samples.size() - 1} more"}"
     publishDir "${params.run_dir}/output", mode: 'copy', pattern: '*.fastq.lines',

@@ -30,7 +30,7 @@ def checkout() -> Path:
     required = (
         "pixi.toml",
         "pixi.lock",
-        "main.nf",
+        "workflows/dap-seq.nf",
         "workflows/atac.nf",
         "scripts/run-pipeline.sh",
         "genesis_tools/pyproject.toml",
