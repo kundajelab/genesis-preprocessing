@@ -105,10 +105,10 @@
 <circle class="station" cx="830" cy="510" r="9" stroke="#bd527d"/>
 <text class="label" text-anchor="middle" x="830" y="470">SPP</text>
 <text class="detail" text-anchor="middle" x="830" y="493">Separate 50-bp R1</text></g>
-<g id="reference"><title>Exact FASTA: Explicit assembly</title>
+<g id="GET_REFERENCES"><title>Reference FASTA: Hash-checked reuse</title>
 <circle class="station" cx="140" cy="690" r="9" stroke="#4169b1"/>
-<text class="label" text-anchor="middle" x="140" y="650">Exact FASTA</text>
-<text class="detail" text-anchor="middle" x="140" y="673">Explicit assembly</text></g>
+<text class="label" text-anchor="middle" x="140" y="650">Reference FASTA</text>
+<text class="detail" text-anchor="middle" x="140" y="673">Hash-checked reuse</text></g>
 <g id="BWA_MEM2_INDEX"><title>bwa-mem2 index: Verified products</title>
 <circle class="station" cx="370" cy="690" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="370" y="650">bwa-mem2 index</text>
@@ -121,4 +121,4 @@
 <text class="note" x="48" y="798">QC is diagnostic. FastQC warnings do not reject a dataset; SPP is reported separately.</text>
 <text class="note" x="48" y="823">Controls receive QC and tracks; treatments receive peaks and quantification. FASTQs and BAMs stay intermediate.</text>
 <text class="note" x="48" y="848">Routes summarize data dependencies, not runtime. Crossings without a station do not join channels.</text>
-<metadata>Genesis diagram schema 2; main.nf SHA256 c6bd78ac45ec7fbc8f0fac0e1f3c47d6750f580297631db29f784a8c0c3fef22; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 e98074a4ae71d23b3ac0103fae9acafea2b3d8b3b72d66d5f7b0af899b55479a; schematic animation.</metadata></svg>

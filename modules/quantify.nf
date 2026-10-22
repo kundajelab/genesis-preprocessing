@@ -6,7 +6,7 @@ process QUANTIFY {
     cpus 2
     memory '2 GB'
     time { 1.h * (1 + bam.size() / 1e9) }
-    conda "environments/GENESIS_TOOLS.yaml"
+    conda "${moduleDir}/../environments/GENESIS_TOOLS.yaml"
     container "${dotenv('GENESIS_TOOLS_IMAGE')}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
         pattern: '*.peaks.*.tsv'

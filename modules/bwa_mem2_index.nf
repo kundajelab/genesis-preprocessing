@@ -9,14 +9,16 @@ process BWA_MEM2_INDEX {
     // retry with more memory and time when killed (OOM, walltime, or preemption)
     errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
     maxRetries 2
-    conda "environments/DAP_SEQ_ALIGNMENT.yaml"
+    conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"
-    publishDir params.references, mode: 'copy', pattern: '*.bwa-mem2'
+    // The FASTA hash is published with the index; GET_REFERENCES reuses products only while it matches.
+    publishDir params.references, mode: 'copy', pattern: '{*.bwa-mem2,*.sha256}'
     input:
     tuple val(ref), path(fasta)
     output:
     tuple val(ref), path("${ref.id}.bwa-mem2"), emit: index
+    path "${ref.filename}.sha256", emit: sha256
     script:
     """
     mkdir '${ref.id}.bwa-mem2'
@@ -25,6 +27,8 @@ process BWA_MEM2_INDEX {
     for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
         test -s '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
+    # Written last, so a reference is recorded as built only once its index exists.
+    printf '%s  %s\\n' '${ref.sha256}' '${ref.filename}' > '${ref.filename}.sha256'
     """
     stub:
     """
@@ -32,5 +36,6 @@ process BWA_MEM2_INDEX {
     for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
         printf 'stub\\n' > '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
+    printf '%s  %s\\n' '${ref.sha256}' '${ref.filename}' > '${ref.filename}.sha256'
     """
 }

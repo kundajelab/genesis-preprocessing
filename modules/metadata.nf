@@ -4,7 +4,7 @@ process METADATA {
     cpus 1
     memory '1 GB'
     time '1h'
-    conda "environments/GENESIS_TOOLS.yaml"
+    conda "${moduleDir}/../environments/GENESIS_TOOLS.yaml"
     container "${dotenv('GENESIS_TOOLS_IMAGE')}"
     tag "${meta.id}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',

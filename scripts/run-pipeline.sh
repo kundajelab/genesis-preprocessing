@@ -77,8 +77,11 @@ run_folder="$workspace/$run_name"
 mkdir -p -- "$run_folder"
 # Launch from the run folder so .nextflow/ history and .nextflow.log are kept with the run.
 cd -- "$run_folder"
+# The workflow lives in workflows/, so pass the repository's config explicitly: Nextflow only
+# looks for nextflow.config beside the script and in the launch folder.
 exec pixi run --manifest-path "$repo_dir" \
-    nextflow run "$repo_dir/main.nf" \
+    nextflow run "$repo_dir/workflows/dap-seq.nf" \
+    -c "$repo_dir/nextflow.config" \
     --input "$sheet" \
     -profile "$profile" \
     --workspace "$workspace" \

@@ -1,5 +1,5 @@
 [workspace]
-authors = ["Yaoxiang Li <liyaoxiang@outlook.com>"]
+authors = ["Ted Brookings <ted.brookings@googlemail.com>"]
 channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/bioconda"]
 name = "dap_seq_multiqc"
 platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
