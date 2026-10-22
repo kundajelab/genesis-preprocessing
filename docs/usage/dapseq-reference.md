@@ -34,11 +34,13 @@ Place each sheet's gzipped reference FASTA under `references/`, using the exact
 basename in `reference_fasta`. Reference genomes are not downloaded automatically.
 The `GET_REFERENCES` subworkflow (`modules/get_references.nf`) builds each
 reference's chromosome sizes and bwa-mem2 index and publishes them beside the FASTA,
-with `<fasta>.sha256`, the SHA-256 of the compressed FASTA (in `sha256sum` format).
-Every run, including resume, rehashes each FASTA. It reuses `<id>.chrom.sizes` and
-`<id>.bwa-mem2/` only when the saved hash matches and every product is nonempty;
-otherwise it rebuilds both and saves the new hash. Replacing or re-compressing a
-FASTA therefore rebuilds its products automatically. Distinct FASTA basenames
+with `<fasta>.sha256`. Its first line is the SHA-256 of the compressed FASTA (in
+`sha256sum` format); each further line records a product's size in bytes. Every run,
+including resume, rehashes each FASTA. It reuses `<id>.chrom.sizes` and
+`<id>.bwa-mem2/` only when the hash matches and every product is present at its
+recorded size; otherwise it rebuilds both and saves a new record. Replacing or
+re-compressing a FASTA, or a replaced or partly copied product, therefore rebuilds
+automatically. Stub runs (`-stub-run`) never publish into the references folder. Distinct FASTA basenames
 must not collapse to the same reference ID after removing their suffix. The first
 resume after generating references can rerun downstream tasks as inputs move to
 published paths; subsequent resumes reuse computation.
@@ -399,7 +401,7 @@ assigned controls and DAP scientific defaults are compatible with that revision.
 | Area | What to check |
 | --- | --- |
 | Default execution | Omitting a profile selects `local,docker`. Select `-p local,conda` or `-p sherlock,apptainer` explicitly; the presence of `sbatch` does not select a cluster. |
-| Reference caches | Derived products are reused only while `<fasta>.sha256` matches the compressed FASTA and every product is nonempty. Products from earlier revisions have no hash file, so the first run rebuilds them once. Provenance sidecars written by earlier revisions are ignored. |
+| Reference caches | Derived products are reused only while `<fasta>.sha256` matches the compressed FASTA and records every product's current size. Products from earlier revisions have no such record, so the first run rebuilds them once. Provenance sidecars written by earlier revisions are ignored. |
 | Read QC | Raw-mate FastQC and one run-level MultiQC report require the images pinned in `conf/dap-images.lock`; the runtime may need to pull them. Quality WARN/FAIL labels are advisory. |
 | Resume | Keep the run folder and work directory. Switching to published reference paths or changing process definitions can rerun affected tasks. Use a new run name and workspace if you need to keep an earlier result unchanged. |
 

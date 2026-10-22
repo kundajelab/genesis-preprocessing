@@ -7,7 +7,8 @@ process CHROM_SIZES {
     conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"
-    publishDir params.references, mode: 'copy', pattern: '*.chrom.sizes'
+    // Stub runs never publish into the shared references folder: their fake products would be reused.
+    publishDir params.references, mode: 'copy', pattern: '*.chrom.sizes', enabled: !workflow.stubRun
     input:
     tuple val(ref), path(fasta)
     output:
