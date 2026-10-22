@@ -17,7 +17,7 @@ workflow {
         .combine(ATAC_REFERENCE.out.index, by: 0).map { ref, meta, r1, r2, index -> tuple(meta, r1, r2, index) }
     ATAC_ALIGN(alignmentInputs)
     ATAC_FRAGMENTS(ATAC_ALIGN.out.bam.map { meta, bam -> tuple(meta, bam, file(meta.manifest)) }, code, params.source_digest)
-    ATAC_PEAKS(ATAC_FRAGMENTS.out.bam, file("${params.source}/genesis_tools/macs3_launch.py"))
+    ATAC_PEAKS(ATAC_FRAGMENTS.out.bam)
     ATAC_TRACKS(ATAC_FRAGMENTS.out.cuts)
     def enrichmentInputs = ATAC_FRAGMENTS.out.bam.map { meta, bam -> tuple(meta.library_id, meta, bam) }
         .join(ATAC_FRAGMENTS.out.fragments.map { meta, bed, tbi, sizes -> tuple(meta.library_id, bed, sizes) })

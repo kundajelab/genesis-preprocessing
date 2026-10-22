@@ -128,17 +128,16 @@ process ATAC_FRAGMENTS {
 process ATAC_PEAKS {
     tag "${meta.library_id}"
     container params.images.peaks
-    publishDir "${params.outdir}/${meta.library_id}/peaks", mode: 'copy', pattern: '{atac*,macs3.version.txt,macs3.runtime.json}'
+    publishDir "${params.outdir}/${meta.library_id}/peaks", mode: 'copy', pattern: '{atac*,macs3.version.txt}'
     input:
     tuple val(meta), path(bam)
-    path launcher
     output:
     tuple val(meta), path('atac_peaks.narrowPeak'), emit: peaks
     path 'macs3.version.txt'
-    path 'macs3.runtime.json'
     script:
     """
-    python '${launcher}' --cpus ${task.cpus} -- callpeak -t '${bam}' -f BAMPE -g ${meta.reference.genome_size} -q 0.01 --keep-dup all -n atac
+    macs3 callpeak -t '${bam}' -f BAMPE -g ${meta.reference.genome_size} -q 0.01 --keep-dup all -n atac \\
+        --threads ${task.cpus}
     macs3 --version > macs3.version.txt
     """
 }

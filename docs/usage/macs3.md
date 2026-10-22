@@ -46,13 +46,15 @@ four. Use explicit Nextflow process overrides to change resources; faster
 execution can use more memory. The caller's thresholds, controls, genome size,
 duplicate policy and input formats are unchanged.
 
-Bulk ATAC and scATAC peak calls still use `genesis_tools/macs3_launch.py`. On
-Linux it narrows the inherited CPU affinity mask to the task's allocation and
-limits numerical-library threads to one; for MACS3 builds with a CPU budget it
-also sets `MACS3_NUM_THREADS`. It records `macs3.runtime.json` with the package
-version, source identity, launcher checksum, requested CPUs, effective affinity
-and thread budget. Bulk ATAC keeps its existing configured task limits, and
-scATAC products keep two CPUs and 8 GB.
+Bulk ATAC and scATAC use the same pinned MACS3 image and call `macs3 callpeak`
+directly with `--threads` set to the task's CPU allocation (`${task.cpus}` for
+bulk ATAC; two CPUs and 8 GB for scATAC products). On the archived A. thaliana
+ATAC inputs (two libraries at 1M and 5M templates), this build gave peak, summit
+and XLS outputs identical to released MACS3 3.0.5 at two and four CPUs.
+
+`genesis_tools/macs3_launch.py` remains only for the benchmark harness, which runs
+released MACS3 3.0.5 natively; that release has no `--threads` option, so the
+launcher bounds it to the benchmark's CPU allocation.
 
 ## Earlier measurements
 

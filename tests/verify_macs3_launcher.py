@@ -261,14 +261,14 @@ def main() -> None:
         ) as run:
             products.command(products.IMAGES["peaks"], scientific, folder, "peaks")
             argv = run.call_args.args[0]
-            assert argv[-len(scientific[1:]) :] == scientific[1:]
-            assert "/genesis-macs3.py" in argv
-            assert any(arg.endswith(":/genesis-macs3.py:ro") for arg in argv)
+            # scATAC calls MACS3 directly, with --threads equal to the container's CPU quota.
+            assert argv[-len(scientific) - 2 :] == [*scientific, "--threads", "2"]
+            assert argv[argv.index("--cpus") + 1] == "2"
             assert argv[argv.index("--memory") + 1] == "8g"
             assert argv[argv.index("--network") + 1] == "none"
-            assert argv.count("--cpus") == 2  # Docker quota and the affinity launcher.
+            assert not any("genesis-macs3" in arg for arg in argv)
             products.command(products.IMAGES["peaks"], ["macs3", "--version"], folder, "version")
-            assert "/genesis-macs3.py" not in run.call_args.args[0]
+            assert "--threads" not in run.call_args.args[0]
     print(
         "PASS MACS3 launcher: restricted affinity, MACS3 thread budget, inherited limits, "
         "thread caps, unchanged arguments and exclusive provenance"

@@ -13,11 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from ..contracts.records import dump, fingerprint, load
-from .common import complete, digest, publication, software, text_file, verify_output
+from .common import complete, publication, software, text_file, verify_output
 
 IMAGES = {
     "peaks": "kundajelab/dap_seq_peaks@sha256:"
-    "10467dd29e3d25ce7769f76f57402bd1a5a582006e911d06479bfcc3e3325df3",
+    "985743417265eebc6bac16a984cd1a9f7dd405668c4a06e68b8cd3e1d334ec1b",
     "tracks": "kundajelab/dap_seq_tracks@sha256:"
     "e6dd6ceb79e50fc6db83e9346a920e51fd2bf0dcffbc18c9305b1b6e8c806390",
 }
@@ -61,10 +61,8 @@ def command(image: str, argv: list[str], directory: Path, label: str) -> None:
         *argv,
     ]
     if argv[:2] == ["macs3", "callpeak"]:
-        launcher = Path(__file__).parents[1] / "macs3_launch.py"
-        position = args.index(image)
-        args[position:position] = ["-v", f"{launcher}:/genesis-macs3.py:ro"]
-        args = args[: -len(argv)] + ["python", "/genesis-macs3.py", "--cpus", "2", "--", *argv[1:]]
+        # MACS3 uses exactly the container's CPU allocation; it does not detect cores itself.
+        args += ["--threads", "2"]
     started = time.monotonic()
     with (
         (directory / (label + ".stdout")).open("w") as out,
@@ -140,7 +138,6 @@ def run(core: Path, output: Path, *, resume: bool = False) -> dict[str, Any]:
             "core": previous["version"],
             "images": IMAGES,
             "software": software(),
-            "macs3_launcher": digest(Path(__file__).parents[1] / "macs3_launch.py"),
         }
     )
     if output.exists() and resume:
