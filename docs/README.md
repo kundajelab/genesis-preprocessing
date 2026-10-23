@@ -9,7 +9,7 @@ measurement definitions and evidence boundaries, read the
 
 - [DAP-seq](usage/dapseq-reference.md): sample sheets, controls, references, execution and scientific settings.
 - [MACS3 builds and resources](usage/macs3.md): select the optimized source build and inspect caller provenance.
-- [Bulk ATAC-seq](usage/bulk-atac.md): paired lanes, adapter/duplicate policies, fragments, peaks and QC.
+- [Bulk ATAC-seq](usage/bulk-atac.md): sample sheets, trimming, filtering, fragments, peaks and QC.
 
 ## Related repository
 

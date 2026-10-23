@@ -14,7 +14,8 @@ The DAP scaffold follows igvf_pseudobulking_pipeline:
 - Pure tool environments live in environments/*.yaml. Docker builds derive matching
   *.toml/*.lock files with Pixi and use dockers/pixi-yaml.Dockerfile.
 - The environments are dap_seq_alignment, dap_seq_peaks (MACS3),
-  dap_seq_qc, and dap_seq_tracks.
+  dap_seq_qc, and dap_seq_tracks. Bulk ATAC reuses them and adds atac_trimming
+  (cutadapt); its own modules are in modules/atac/.
 - genesis_tools/ is a Python 3.14.5 uv project on standard, not free-threaded, CPython:
   pysam has no free-threaded wheels and re-enables the GIL. .python-version pins
   3.14.5+gil so uv never selects an installed free-threaded build; uv cannot download
