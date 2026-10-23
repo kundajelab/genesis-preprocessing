@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 870" role="img" aria-labelledby="title description">
 <title id="title">GENESIS / BULK ATAC</title>
-<desc id="description">Paired-end plant libraries · explicit policies · separate biological replicates. Duplicate marking measures duplication. The sample sheet explicitly selects retention or exclusion. BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; TSS profiles use strand-aware windows. Adapter handling is explicit. No biological replicate pooling or automatic plant QC thresholds.</desc>
+<desc id="description">Paired-end libraries · ENCODE-style filtering · separate biological replicates. Adapters are trimmed first. Usable pairs need both mates at MAPQ ≥ 30 on nuclear contigs; duplicates are removed. BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; the TSS profile uses strand-aware windows. QC is diagnostic, with no plant thresholds. Libraries and biological replicates are never pooled.</desc>
 <style>
     svg{--bg:#fbfcfe;--text:#172c3d;--muted:#536779;--panel:#e2e8ef;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
     .title{font-size:32px;font-weight:700;letter-spacing:1px;fill:var(--text)}
@@ -18,72 +18,79 @@
     </style>
 <rect width="1480" height="870" fill="var(--bg)"/>
 <text class="title" x="48" y="52">GENESIS / BULK ATAC</text>
-<text class="subtitle" x="48" y="85">Paired-end plant libraries · explicit policies · separate biological replicates</text>
-<path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 830 330"><title>Acquire, apply adapter policy, align and select fragments</title></path>
-<path id="route-1" class="line" stroke="#ce6030" d="M 830 330 L 1290 330"><title>Unshifted fragments feed BAMPE peaks and enrichment</title></path>
-<path id="route-2" class="line" stroke="#9260b7" d="M 140 330 L 241 330 Q 255 330 255 316 L 255 194 Q 255 180 241 180 L 154 180 Q 140 180 154 180 L 1290 180"><title>FastQC on each raw mate</title></path>
-<path id="route-3" class="line" stroke="#9260b7" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 194 Q 715 180 729 180 L 1290 180"><title>Raw samtools metrics</title></path>
-<path id="route-4" class="line" stroke="#9260b7" d="M 830 330 L 931 330 Q 945 330 945 316 L 945 194 Q 945 180 959 180 L 1290 180"><title>Usable samtools metrics</title></path>
-<path id="route-5" class="line" stroke="#9260b7" d="M 1290 330 L 1391 330 Q 1405 330 1405 316 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>Report includes enrichment completion</title></path>
-<path id="route-6" class="line" stroke="#4169b1" d="M 370 690 L 471 690 Q 485 690 485 676 L 485 344 Q 485 330 499 330 L 600 330"><title>Checksum-identified reference index</title></path>
-<path id="route-7" class="line" stroke="#9260b7" d="M 830 330 L 729 330 Q 715 330 715 344 L 715 496 Q 715 510 701 510 L 600 510"><title>Separate organellar counts before exclusion</title></path>
-<path id="route-8" class="line" stroke="#438362" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 496 Q 945 510 931 510 L 830 510"><title>Shifted cut sites remain separate from fragment peaks</title></path>
-<path id="route-9" class="line" stroke="#9260b7" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1161 690 L 1060 690"><title>Compare independently called library peaks</title></path>
-<path id="route-10" class="line" stroke="#4169b1" d="M 1290 690 L 1391 690 Q 1405 690 1405 676 L 1405 344 Q 1405 330 1391 330 L 1290 330"><title>Annotation defines strand-aware TSS windows</title></path>
-<g id="ATAC_ACQUIRE"><title>Raw reads: Verified PE lanes</title>
+<text class="subtitle" x="48" y="85">Paired-end libraries · ENCODE-style filtering · separate biological replicates</text>
+<path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 1060 330"><title>Libraries download, trim, align and filter</title></path>
+<path id="route-1" class="line" stroke="#ce6030" d="M 1060 330 L 1290 330"><title>Usable fragments feed BAMPE peaks</title></path>
+<path id="route-2" class="line" stroke="#9260b7" d="M 370 330 L 370 180"><title>Raw mates independently feed FastQC</title></path>
+<path id="route-3" class="line" stroke="#9260b7" d="M 370 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
+<path id="route-4" class="line" stroke="#9260b7" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 264 Q 715 250 729 250 L 1391 250 Q 1405 250 1405 236 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>Trimming, alignment and filter reports feed MultiQC</title></path>
+<path id="route-5" class="line" stroke="#438362" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1161 690 L 1060 690"><title>Usable reads give shifted cut sites</title></path>
+<path id="route-6" class="line" stroke="#9260b7" d="M 1290 330 L 1290 510"><title>Peaks give FRiP</title></path>
+<path id="route-7" class="line" stroke="#9260b7" d="M 1060 690 L 1276 690 Q 1290 690 1290 676 L 1290 510"><title>Cut sites give the TSS profile</title></path>
+<path id="route-8" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>ATAC QC table and TSS profile feed MultiQC</title></path>
+<path id="route-9" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path id="route-10" class="line" stroke="#4169b1" d="M 140 690 L 370 690"><title>Build or verify index</title></path>
+<path id="route-11" class="line" stroke="#4169b1" d="M 370 690 L 370 614 Q 370 600 384 600 L 816 600 Q 830 600 830 586 L 830 330"><title>Verified index feeds alignment</title></path>
+<path id="route-12" class="line" stroke="#4169b1" d="M 140 510 L 931 510 Q 945 510 945 496 L 945 344 Q 945 330 959 330 L 1060 330"><title>Chromosome sizes give nuclear contigs and genome size</title></path>
+<path id="route-13" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 721 Q 715 735 729 735 L 1336 735 Q 1350 735 1350 721 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Gene starts define strand-aware TSS windows</title></path>
+<g id="samples"><title>Sample sheet: Paired-end libraries</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
-<text class="label" text-anchor="middle" x="140" y="290">Raw reads</text>
-<text class="detail" text-anchor="middle" x="140" y="313">Verified PE lanes</text></g>
-<g id="ATAC_ADAPTERS"><title>Adapter policy: Explicit per library</title>
+<text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
+<text class="detail" text-anchor="middle" x="140" y="313">Paired-end libraries</text></g>
+<g id="DOWNLOAD"><title>Download: Unmodified raw mates</title>
 <circle class="station" cx="370" cy="330" r="9" stroke="#087f8c"/>
-<text class="label" text-anchor="middle" x="370" y="290">Adapter policy</text>
-<text class="detail" text-anchor="middle" x="370" y="313">Explicit per library</text></g>
-<g id="ATAC_ALIGN"><title>Align + mark: bwa-mem2 / samtools</title>
+<text class="label" text-anchor="middle" x="370" y="290">Download</text>
+<text class="detail" text-anchor="middle" x="370" y="313">Unmodified raw mates</text></g>
+<g id="ATAC_TRIM"><title>cutadapt: Nextera adapters</title>
 <circle class="station" cx="600" cy="330" r="9" stroke="#087f8c"/>
-<text class="label" text-anchor="middle" x="600" y="290">Align + mark</text>
-<text class="detail" text-anchor="middle" x="600" y="313">bwa-mem2 / samtools</text></g>
-<g id="ATAC_FRAGMENTS"><title>Fragments: MAPQ / duplicates</title>
+<text class="label" text-anchor="middle" x="600" y="290">cutadapt</text>
+<text class="detail" text-anchor="middle" x="600" y="313">Nextera adapters</text></g>
+<g id="ATAC_ALIGN"><title>bwa-mem2: Align + mark duplicates</title>
 <circle class="station" cx="830" cy="330" r="9" stroke="#087f8c"/>
-<text class="label" text-anchor="middle" x="830" y="290">Fragments</text>
-<text class="detail" text-anchor="middle" x="830" y="313">MAPQ / duplicates</text></g>
-<g id="ATAC_PEAKS"><title>MACS3 peaks: Unshifted BAMPE</title>
-<circle class="station" cx="1060" cy="330" r="9" stroke="#ce6030"/>
-<text class="label" text-anchor="middle" x="1060" y="290">MACS3 peaks</text>
-<text class="detail" text-anchor="middle" x="1060" y="313">Unshifted BAMPE</text></g>
-<g id="ATAC_ENRICHMENT"><title>Enrichment: FRiP + TSS profile</title>
+<text class="label" text-anchor="middle" x="830" y="290">bwa-mem2</text>
+<text class="detail" text-anchor="middle" x="830" y="313">Align + mark duplicates</text></g>
+<g id="ATAC_FILTER"><title>Filter: MAPQ, organelles, duplicates</title>
+<circle class="station" cx="1060" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="1060" y="290">Filter</text>
+<text class="detail" text-anchor="middle" x="1060" y="313">MAPQ, organelles, duplicates</text></g>
+<g id="ATAC_PEAKS"><title>MACS3 peaks: BAMPE fragments</title>
 <circle class="station" cx="1290" cy="330" r="9" stroke="#ce6030"/>
-<text class="label" text-anchor="middle" x="1290" y="290">Enrichment</text>
-<text class="detail" text-anchor="middle" x="1290" y="313">FRiP + TSS profile</text></g>
-<g id="ATAC_FASTQC"><title>FastQC × 2: Raw mates unchanged</title>
-<circle class="station" cx="140" cy="180" r="9" stroke="#9260b7"/>
-<text class="label" text-anchor="middle" x="140" y="140">FastQC × 2</text>
-<text class="detail" text-anchor="middle" x="140" y="163">Raw mates unchanged</text></g>
-<g id="ATAC_REPORT"><title>MultiQC: Raw + usable QC</title>
+<text class="label" text-anchor="middle" x="1290" y="290">MACS3 peaks</text>
+<text class="detail" text-anchor="middle" x="1290" y="313">BAMPE fragments</text></g>
+<g id="FASTQC"><title>FastQC: One report per mate</title>
+<circle class="station" cx="370" cy="180" r="9" stroke="#9260b7"/>
+<text class="label" text-anchor="middle" x="370" y="140">FastQC</text>
+<text class="detail" text-anchor="middle" x="370" y="163">One report per mate</text></g>
+<g id="ATAC_MULTIQC"><title>MultiQC: HTML + parsed data</title>
 <circle class="station" cx="1290" cy="180" r="9" stroke="#9260b7"/>
 <text class="label" text-anchor="middle" x="1290" y="140">MultiQC</text>
-<text class="detail" text-anchor="middle" x="1290" y="163">Raw + usable QC</text></g>
-<g id="ATAC_REFERENCE"><title>Exact reference: FASTA SHA256 + index</title>
+<text class="detail" text-anchor="middle" x="1290" y="163">HTML + parsed data</text></g>
+<g id="ATAC_QC"><title>ATAC QC: FRiP, TSS, complexity</title>
+<circle class="station" cx="1290" cy="510" r="9" stroke="#9260b7"/>
+<text class="label" text-anchor="middle" x="1290" y="470">ATAC QC</text>
+<text class="detail" text-anchor="middle" x="1290" y="493">FRiP, TSS, complexity</text></g>
+<g id="CHROM_SIZES"><title>Chromosome sizes: Verified products</title>
+<circle class="station" cx="140" cy="510" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="140" y="470">Chromosome sizes</text>
+<text class="detail" text-anchor="middle" x="140" y="493">Verified products</text></g>
+<g id="GET_REFERENCES"><title>Reference FASTA: Hash-checked reuse</title>
+<circle class="station" cx="140" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="140" y="650">Reference FASTA</text>
+<text class="detail" text-anchor="middle" x="140" y="673">Hash-checked reuse</text></g>
+<g id="BWA_MEM2_INDEX"><title>bwa-mem2 index: Verified products</title>
 <circle class="station" cx="370" cy="690" r="9" stroke="#4169b1"/>
-<text class="label" text-anchor="middle" x="370" y="650">Exact reference</text>
-<text class="detail" text-anchor="middle" x="370" y="673">FASTA SHA256 + index</text></g>
-<g id="organelles"><title>Organelle counts: Mitochondria / plastids</title>
-<circle class="station" cx="600" cy="510" r="9" stroke="#9260b7"/>
-<text class="label" text-anchor="middle" x="600" y="470">Organelle counts</text>
-<text class="detail" text-anchor="middle" x="600" y="493">Mitochondria / plastids</text></g>
-<g id="ATAC_TRACKS"><title>Tn5 cut sites: BEDGraph + bigWig</title>
-<circle class="station" cx="830" cy="510" r="9" stroke="#438362"/>
-<text class="label" text-anchor="middle" x="830" y="470">Tn5 cut sites</text>
-<text class="detail" text-anchor="middle" x="830" y="493">BEDGraph + bigWig</text></g>
-<g id="replicates"><title>Library comparison: Replicates stay separate</title>
-<circle class="station" cx="1060" cy="690" r="9" stroke="#9260b7"/>
-<text class="label" text-anchor="middle" x="1060" y="650">Library comparison</text>
-<text class="detail" text-anchor="middle" x="1060" y="673">Replicates stay separate</text></g>
-<g id="tss"><title>TSS positions: Versioned annotation</title>
-<circle class="station" cx="1290" cy="690" r="9" stroke="#4169b1"/>
-<text class="label" text-anchor="middle" x="1290" y="650">TSS positions</text>
-<text class="detail" text-anchor="middle" x="1290" y="673">Versioned annotation</text></g>
+<text class="label" text-anchor="middle" x="370" y="650">bwa-mem2 index</text>
+<text class="detail" text-anchor="middle" x="370" y="673">Verified products</text></g>
+<g id="genes"><title>Gene starts: Optional BED6</title>
+<circle class="station" cx="600" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="600" y="650">Gene starts</text>
+<text class="detail" text-anchor="middle" x="600" y="673">Optional BED6</text></g>
+<g id="ATAC_TRACKS"><title>Tn5 cut sites: +4 / −5 shifted bigWig</title>
+<circle class="station" cx="1060" cy="690" r="9" stroke="#438362"/>
+<text class="label" text-anchor="middle" x="1060" y="650">Tn5 cut sites</text>
+<text class="detail" text-anchor="middle" x="1060" y="673">+4 / −5 shifted bigWig</text></g>
 <path d="M48 762 H1432" stroke="var(--panel)" stroke-width="2"/>
-<text class="note" x="48" y="798">Duplicate marking measures duplication. The sample sheet explicitly selects retention or exclusion.</text>
-<text class="note" x="48" y="823">BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; TSS profiles use strand-aware windows.</text>
-<text class="note" x="48" y="848">Adapter handling is explicit. No biological replicate pooling or automatic plant QC thresholds.</text>
-<metadata>Genesis diagram schema 2; workflows/atac.nf SHA256 69e481774f2ba0f1345a9e0a958ff07654f90e76abe7b03d2c447e1553f9d948; modules/atac/processes.nf SHA256 2356e21e07c5271c56d09199a0375893202417bc8b0e9374c562b35522baffbc; schematic animation.</metadata></svg>
+<text class="note" x="48" y="798">Adapters are trimmed first. Usable pairs need both mates at MAPQ ≥ 30 on nuclear contigs; duplicates are removed.</text>
+<text class="note" x="48" y="823">BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; the TSS profile uses strand-aware windows.</text>
+<text class="note" x="48" y="848">QC is diagnostic, with no plant thresholds. Libraries and biological replicates are never pooled.</text>
+<metadata>Genesis diagram schema 2; workflows/atac.nf SHA256 04d6093e8e57bbab4b0e667cde9f2139127f74b8be06349a43065f53bcdce920; schematic animation.</metadata></svg>

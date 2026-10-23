@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Genesis DAP-seq pipeline",
+  "title": "Genesis pipelines",
   "type": "object",
   "$defs": {
     "input_output_options": {
@@ -136,6 +136,27 @@
           "description": "workspace/run_name. Set automatically; use --workspace and --run_name instead."
         }
       }
+    },
+    "atac_options": {
+      "title": "Bulk ATAC options",
+      "type": "object",
+      "description": "Used only by workflows/atac.nf.",
+      "properties": {
+        "atac_mapq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 254,
+          "default": 30,
+          "description": "Minimum MAPQ for both mates of a usable fragment."
+        },
+        "atac_adapter": {
+          "type": "string",
+          "pattern": "^[ACGTN]+$",
+          "default": "CTGTCTCTTATACACATCT",
+          "errorMessage": "Parameter --atac_adapter must be a DNA sequence",
+          "description": "Adapter trimmed from both mates by cutadapt."
+        }
+      }
     }
   },
   "allOf": [
@@ -147,6 +168,9 @@
     },
     {
       "$ref": "#/$defs/analysis_options"
+    },
+    {
+      "$ref": "#/$defs/atac_options"
     },
     {
       "$ref": "#/$defs/internal_options"

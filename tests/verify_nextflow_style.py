@@ -90,11 +90,14 @@ def check_public_configuration(work: Path) -> None:
             "Image lock requires a registry image with an immutable SHA256 digest"
         )
         pins[key] = value
-    sources = [ROOT / "workflows/dap-seq.nf", *sorted((ROOT / "modules").glob("*.nf"))]
+    sources = [
+        *sorted((ROOT / "workflows").glob("*.nf")),
+        *sorted((ROOT / "modules").rglob("*.nf")),
+    ]
     required = {
         key for path in sources for key in re.findall(r"dotenv\('([^']+)'\)", path.read_text())
     }
-    assert pins.keys() == required, "Image pins must cover exactly the DAP workflow's images"
+    assert pins.keys() == required, "Image pins must cover exactly the workflows' images"
 
     work.mkdir()
     subprocess.run(["git", "init", "--quiet", str(work)], check=True)
@@ -113,7 +116,7 @@ def check_public_configuration(work: Path) -> None:
             ".codex/rules/default.rules",
         )
     ]
-    public_paths = ["conf/dap-images.lock", "conf/atac-images.json", "AGENTS.md"]
+    public_paths = ["conf/dap-images.lock", "AGENTS.md"]
     ignored = subprocess.check_output(
         ["git", "check-ignore", "--no-index", "--stdin"],
         cwd=work,
@@ -284,7 +287,7 @@ def main() -> None:
     """Run focused checks without external services, Docker, or genomic data."""
     assert not (ROOT / "lib" / "WorkflowSupport.groovy").exists()
     assert not (ROOT / "custom_tools").exists()
-    modules = list((ROOT / "modules").glob("*.nf"))
+    modules = list((ROOT / "modules").rglob("*.nf"))
     assert modules
     for path in modules:
         source = path.read_text()
