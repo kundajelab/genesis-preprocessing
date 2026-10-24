@@ -43,8 +43,8 @@ pixi run checks
 git status --short
 ```
 
-`checks` includes lint, formatting checks, types, Nextflow stubs, ATAC known-answer
-checks, the evidence publication check and README command checks. Its initial Nextflow
+`checks` includes lint, formatting checks, types, DAP and ATAC Nextflow stubs, the
+evidence publication check and README command checks. Its initial Nextflow
 run needs access to the pinned plugin registry or a verified cache containing
 `nf-schema@2.4.2` and `nf-dotenv@1.0.0`. If plugin resolution fails, restore registry
 access or configure an approved cache with `NXF_PLUGINS_DIR`; only enable
@@ -118,8 +118,9 @@ guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/READM
 
 | Area | Implementation | Focused check |
 | --- | --- | --- |
-| DAP | `workflows/dap-seq.nf`, `modules/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
-| Bulk ATAC | `workflows/atac.nf`, `modules/atac/`, `genesis_tools/atac/` | `tests/verify_supported_atac.py` |
+| DAP | `workflows/dap-seq.nf`, `conf/dap-seq.config`, `modules/dap-seq/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
+| Bulk ATAC | `workflows/atac-seq.nf`, `conf/atac-seq.config`, `modules/atac-seq/` | `tests/verify_atac.py` |
+| Shared steps | `nextflow.config`, `modules/common/` (download, references, FastQC) | both of the above |
 | Documentation | README and task guides | `tests/verify_readme.py` |
 
 Python package paths in this table are relative to `genesis_tools/src/`.
@@ -153,18 +154,19 @@ Review the output before committing it. This targeted check is included in
 binary data or every credential format is safe to publish. Keep private originals,
 environment files and assistant configuration outside Git.
 
-Real-tool acceptance is opt-in: `pixi run validate-docker` runs DAP-seq and
-`pixi run validate-atac` runs bulk ATAC with their pinned containers on synthetic inputs.
+Real-tool acceptance is opt-in: `pixi run validate-docker` runs DAP-seq with its pinned
+containers on synthetic inputs. For bulk ATAC, run `tests/verify_atac.py --docker`, or
+`--conda` to build the tools from `environments/*.yaml` where Docker is unavailable.
 
 ## Data and configuration
 
 Git transfers code, locks, small fixtures, schemas, templates and validation reports.
 It does not transfer references, reads, analysis outputs, caches, live databases,
-model weights or credentials. Public container pins are in `conf/dap-images.lock`
-for DAP and `conf/atac-images.json` for ATAC. These files contain image references only.
+model weights or credentials. Public container pins for both workflows are in
+`conf/dap-images.lock`. It contains image references only.
 
 Keep `.env`, `.env.*`, `.envrc`, `.claude/` and `.codex/` local. Git and Docker build
-contexts ignore them. Genesis reads DAP image pins from `conf/dap-images.lock`; it
+contexts ignore them. Genesis reads image pins from `conf/dap-images.lock`; it
 does not load a local `.env`. Check staged files with `git diff --cached --name-only`
 before committing.
 

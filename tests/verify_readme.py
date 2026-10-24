@@ -1,22 +1,14 @@
-"""Parse published CLI recipes without executing network, pipelines or model deployment."""
+"""Check published Pixi recipes and links without running network, pipelines or models."""
 
 from __future__ import annotations
 
-import argparse
-import contextlib
 import hashlib
-import io
 import re
 import shlex
 import subprocess
-import sys
 import tomllib
-from collections.abc import Sequence
 from pathlib import Path
-from unittest.mock import patch
 from urllib.parse import unquote
-
-from genesis_tools.atac import run as atac
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = [
@@ -118,22 +110,6 @@ def check_preserved_dap_readme() -> None:
         assert "https://github.com/kundajelab/genesis-preprocessing.git" in path.read_text()
 
 
-class Parsed(Exception):
-    pass
-
-
-ORIGINAL_PARSE = argparse.ArgumentParser.parse_args
-
-
-def parse_only(
-    self: argparse.ArgumentParser,
-    args: Sequence[str] | None = None,
-    namespace: argparse.Namespace | None = None,
-) -> argparse.Namespace:
-    ORIGINAL_PARSE(self, args, namespace)
-    raise Parsed
-
-
 def main() -> None:
     check_preserved_dap_readme()
     # Historical commands describe the archived revision; check its links only.
@@ -158,7 +134,6 @@ def main() -> None:
     for document in all_documents:
         check_links(document)
     tasks = tomllib.loads((ROOT / "pixi.toml").read_text())["tasks"]
-    count = 0
     task_count = 0
     for document in DOCS:
         text = document.read_text()
@@ -169,30 +144,8 @@ def main() -> None:
                     # uv is an installed dependency, rather than a named Pixi task.
                     assert command in tasks or command == "uv", (document, line)
                     task_count += 1
-                if not line.strip().startswith("pixi run pipeline-atac "):
-                    continue
-                # Parse documented ATAC options with the runner's own parser.
-                entry, argv = (
-                    atac.main,
-                    ["pixi run pipeline-atac", *shlex.split(line, comments=True)[3:]],
-                )
-                with (
-                    patch.object(sys, "argv", argv),
-                    patch.object(argparse.ArgumentParser, "parse_args", parse_only),
-                    contextlib.redirect_stdout(io.StringIO()),
-                ):
-                    try:
-                        entry()
-                    except Parsed:
-                        count += 1
-                    except SystemExit as error:
-                        if error.code not in (None, 0):
-                            raise AssertionError(f"Invalid documented command: {line}") from error
-                        count += 1
-                    else:
-                        raise AssertionError("Documentation parser reached an executable action")
     print(
-        f"PASS {count} documented CLI commands parse; {task_count} Pixi recipes resolve; "
+        f"PASS {task_count} Pixi recipes resolve; "
         f"links/anchors in {len(all_documents)} documents resolve; original DAP README preserved"
     )
 

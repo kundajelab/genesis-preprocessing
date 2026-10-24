@@ -1,16 +1,16 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
-include { GET_REFERENCES } from '../modules/get_references'
-include { DOWNLOAD } from '../modules/download'
-include { FASTQC } from '../modules/fastqc'
-include { METADATA } from '../modules/metadata'
-include { BWA_MEM2_ALIGN } from '../modules/bwa_mem2_align'
-include { QC } from '../modules/qc'
-include { MULTIQC } from '../modules/multiqc'
-include { TRACKS } from '../modules/tracks'
-include { CALL_PEAKS } from '../modules/call_peaks'
-include { QUANTIFY } from '../modules/quantify'
+include { GET_REFERENCES } from '../modules/common/get_references'
+include { DOWNLOAD } from '../modules/common/download'
+include { FASTQC } from '../modules/common/fastqc'
+include { METADATA } from '../modules/dap-seq/metadata'
+include { BWA_MEM2_ALIGN } from '../modules/dap-seq/bwa_mem2_align'
+include { QC } from '../modules/dap-seq/qc'
+include { MULTIQC } from '../modules/dap-seq/multiqc'
+include { TRACKS } from '../modules/dap-seq/tracks'
+include { CALL_PEAKS } from '../modules/dap-seq/call_peaks'
+include { QUANTIFY } from '../modules/dap-seq/quantify'
 
 // Sheet rules a JSON schema cannot express: the exact columns, existing reference FASTAs,
 // distinct reference IDs and valid control assignments. Rows come from samplesheetToList.
@@ -74,7 +74,7 @@ workflow {
         log.info(report.join('\n'))
     }
 
-    // nextflow_schema.json checks the input sheet, paths, resources, and BWA options.
+    // assets/dap-seq.params.schema.json checks the sheet, paths, resources and BWA options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
@@ -86,7 +86,7 @@ workflow {
         score_threshold: params.bwa_score_threshold
     ]
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
-    def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/schema_input.json")
+    def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/dap-seq.samples.schema.json")
         .collect { row -> row[0] }
     checkSamples(sheet, sheetRows, referencesDir)
     samples = channel.fromList(sheetRows.collect { row ->

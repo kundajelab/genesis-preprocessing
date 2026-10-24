@@ -317,7 +317,7 @@ def run_pipeline(
         str(ROOT / "workflows/dap-seq.nf"),
         # The workflow lives in workflows/, so pass its config explicitly, as the launcher does.
         "-c",
-        str(ROOT / "nextflow.config"),
+        str(ROOT / "conf/dap-seq.config"),
         "-profile",
         "local,test,docker" if docker else "local,test",
         "--input",

@@ -1,9 +1,0 @@
-{
-  "alignment": "kundajelab/dap_seq_alignment@sha256:4764008ba8fbb5d831bd6f9ed6a720fd494062b39f0bae63ff2e4efd316ad842",
-  "tools": "kundajelab/genesis_tools@sha256:31458d4a6a83541f463ea4b0e692a0afc65c6df441f70c3f71fc4ccf1a11eb59",
-  "peaks": "kundajelab/dap_seq_peaks@sha256:985743417265eebc6bac16a984cd1a9f7dd405668c4a06e68b8cd3e1d334ec1b",
-  "fastqc": "quay.io/biocontainers/fastqc@sha256:e194048df39c3145d9b4e0a14f4da20b59d59250465b6f2a9cb698445fd45900",
-  "multiqc": "quay.io/biocontainers/multiqc@sha256:ceace1ca5329886d92600c225d34a523020c163b1599403e44c8d895d2dfb2a2",
-  "cutadapt": "quay.io/biocontainers/cutadapt@sha256:741216fb9a56cdac2a61e93c64f857bc5b3e1f9f2c123cf7ae2c6ea5c97702d8",
-  "tracks": "kundajelab/dap_seq_tracks@sha256:e6dd6ceb79e50fc6db83e9346a920e51fd2bf0dcffbc18c9305b1b6e8c806390"
-}
