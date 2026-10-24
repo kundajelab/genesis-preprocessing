@@ -283,6 +283,39 @@ def check_builds(work: Path, bash: str) -> None:
     assert private_env.read_text() == "LOCAL_SETTING=private-test-fixture\n"
 
 
+def config_params(path: Path) -> set[str]:
+    """Names assigned in a config file's params block."""
+    block = re.search(r"^params \{\n(.*?)^\}", path.read_text(), re.M | re.S)
+    assert block, path
+    return set(re.findall(r"^    (\w+) = ", block.group(1), re.M))
+
+
+def check_workflow_configs() -> None:
+    """Each workflow has its own config and parameter schema; the shared sections stay identical."""
+    workflows = sorted(path.stem for path in (ROOT / "workflows").glob("*.nf"))
+    assert workflows == ["atac-seq", "dap-seq"], workflows
+    shared = config_params(ROOT / "nextflow.config") | {"run_dir"}
+    schemas = {}
+    for name in workflows:
+        config = ROOT / "conf" / f"{name}.config"
+        text = config.read_text()
+        assert "includeConfig '../nextflow.config'" in text, config
+        schema_path = f"assets/{name}.params.schema.json"
+        assert f'parametersSchema = "${{projectDir.parent}}/{schema_path}"' in text, config
+        schema = json.loads((ROOT / schema_path).read_text())
+        declared = {key for group in schema["$defs"].values() for key in group["properties"]}
+        expected = shared | config_params(config)
+        assert declared == expected, (name, declared ^ expected)
+        assert schema["allOf"] == [{"$ref": f"#/$defs/{key}"} for key in schema["$defs"]], name
+        schemas[name] = schema["$defs"]
+    # nf-schema cannot $ref another file, so each schema repeats the shared sections verbatim.
+    common = set.intersection(*(set(defs) for defs in schemas.values()))
+    sections = {"input_output_options", "resource_options", "alignment_options", "internal_options"}
+    assert sections <= common, sections - common
+    for key in common:
+        assert len({json.dumps(defs[key], sort_keys=True) for defs in schemas.values()}) == 1, key
+
+
 def main() -> None:
     """Run focused checks without external services, Docker, or genomic data."""
     assert not (ROOT / "lib" / "WorkflowSupport.groovy").exists()
@@ -301,6 +334,7 @@ def main() -> None:
         assert "include { dotenv } from 'plugin/nf-dotenv'" in source, path
         assert "    cpus " in source and "    memory " in source and "    time " in source, path
         assert source.count("    conda ") == 1, path
+    check_workflow_configs()
     interpreters = list(dict.fromkeys(["/bin/bash", shutil.which("bash") or "/bin/bash"]))
     with tempfile.TemporaryDirectory(prefix="genesis-style-") as temporary:
         work = Path(temporary)

@@ -5,7 +5,7 @@ process BOWTIE1_ALIGN {
     cpus 2
     memory '8 GB'
     time '4h'
-    conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
+    conda "${moduleDir}/../../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${meta.id}"
     input:

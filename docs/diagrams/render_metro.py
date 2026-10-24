@@ -221,7 +221,7 @@ def main() -> None:
          ["Adapters are trimmed first. Usable pairs need both mates at MAPQ ≥ 30 on nuclear contigs; duplicates are removed.",
           "BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; the TSS profile uses strand-aware windows.",
           "QC is diagnostic, with no plant thresholds. Libraries and biological replicates are never pooled."],
-         ["workflows/atac.nf"]),
+         ["workflows/atac-seq.nf"]),
     ]:
         for animated, suffix in [(False, ""), (True, "_animated")]:
             (out / f"genesis{assay}_metro_map{suffix}.svg").write_text(
@@ -232,7 +232,7 @@ def main() -> None:
         ["Solid: available assay processing. Dashed: contracts or planned integration.",
          "RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.",
          "Plant biological thresholds remain UNSPECIFIED. Barcode processing and model export are not production workflows."],
-        ["workflows/dap-seq.nf", "workflows/atac.nf"]))
+        ["workflows/dap-seq.nf", "workflows/atac-seq.nf"]))
     for animated, suffix in [(False, ""), (True, "_animated")]:
         (out / f"genesis_execution{suffix}.svg").write_text(document(
             "GENESIS / RUN AND REVIEW", "Start on one Linux server. Add managed clusters or independent workers when needed.",

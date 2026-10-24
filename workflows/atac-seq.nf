@@ -1,16 +1,16 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
-include { GET_REFERENCES } from '../modules/get_references'
-include { DOWNLOAD } from '../modules/download'
-include { FASTQC } from '../modules/fastqc'
-include { ATAC_TRIM } from '../modules/atac/atac_trim'
-include { ATAC_ALIGN } from '../modules/atac/atac_align'
-include { ATAC_FILTER } from '../modules/atac/atac_filter'
-include { ATAC_PEAKS } from '../modules/atac/atac_peaks'
-include { ATAC_TRACKS } from '../modules/atac/atac_tracks'
-include { ATAC_QC } from '../modules/atac/atac_qc'
-include { ATAC_MULTIQC } from '../modules/atac/atac_multiqc'
+include { GET_REFERENCES } from '../modules/common/get_references'
+include { DOWNLOAD } from '../modules/common/download'
+include { FASTQC } from '../modules/common/fastqc'
+include { ATAC_TRIM } from '../modules/atac-seq/atac_trim'
+include { ATAC_ALIGN } from '../modules/atac-seq/atac_align'
+include { ATAC_FILTER } from '../modules/atac-seq/atac_filter'
+include { ATAC_PEAKS } from '../modules/atac-seq/atac_peaks'
+include { ATAC_TRACKS } from '../modules/atac-seq/atac_tracks'
+include { ATAC_QC } from '../modules/atac-seq/atac_qc'
+include { ATAC_MULTIQC } from '../modules/atac-seq/atac_multiqc'
 
 // Sheet rules a JSON schema cannot express: the exact columns, existing reference files, distinct
 // reference IDs, and one gene annotation and organelle list per reference.
@@ -64,7 +64,7 @@ workflow {
         log.info(report.join('\n'))
     }
 
-    // nextflow_schema.json checks the input sheet, paths, resources, and analysis options.
+    // assets/atac-seq.params.schema.json checks the sheet, paths, resources and analysis options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
@@ -76,7 +76,7 @@ workflow {
         score_threshold: params.bwa_score_threshold
     ]
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
-    def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/schema_atac.json")
+    def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/atac-seq.samples.schema.json")
         .collect { row -> row[0] }
     checkSamples(sheet, sheetRows, referencesDir)
     samples = channel.fromList(sheetRows.collect { row ->

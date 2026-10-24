@@ -2,7 +2,7 @@
 
 Complete the [one-time installation](../../README.md#install-and-check-your-environment)
 first. Bulk ATAC runs like DAP-seq: the same launcher, profiles, workspace layout,
-reference cache and image pins, with `workflows/atac.nf` as the workflow.
+reference cache and image pins, with `workflows/atac-seq.nf` as the workflow and `conf/atac-seq.config` for its settings.
 
 ```bash
 pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references
@@ -10,7 +10,7 @@ pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references
 pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references -resume
 ```
 
-`pixi run pipeline-atac` is `scripts/run-pipeline.sh --workflow atac`; run either with
+`pixi run pipeline-atac` is `scripts/run-pipeline.sh --workflow atac-seq`; run either with
 `--help` for the options. Pixi runs from the checkout folder, so give absolute paths.
 
 ## Sample sheet

@@ -23,7 +23,7 @@ process BWA_MEM2_INDEX {
     // retry with more memory and time when killed (OOM, walltime, or preemption)
     errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
     maxRetries 2
-    conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
+    conda "${moduleDir}/../../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"
     // <fasta>.sha256 records the FASTA hash and every product's size; GET_REFERENCES reuses products

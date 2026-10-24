@@ -21,7 +21,7 @@ def check_fastqc_inputs(work: Path) -> None:
     work.mkdir(parents=True)
     harness = work / "main.nf"
     harness.write_text(
-        f"include {{ FASTQC }} from '{ROOT / 'modules/fastqc'}'\n"
+        f"include {{ FASTQC }} from '{ROOT / 'modules/common/fastqc'}'\n"
         "workflow {\n"
         "    FASTQC(Channel.of(tuple([id: 'case', species: 'Synthetic'], 'read1',\n"
         "        file(params.read, checkIfExists: true))))\n"

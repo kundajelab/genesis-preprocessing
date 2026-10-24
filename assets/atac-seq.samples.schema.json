@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Genesis bulk ATAC-seq sample sheet",
-  "description": "One row per paired-end library. workflows/atac.nf also checks the exact header, reference files, reference IDs and per-reference consistency.",
+  "description": "One row per paired-end library. workflows/atac-seq.nf also checks the exact header, reference files, reference IDs and per-reference consistency.",
   "type": "array",
   "minItems": 1,
   "uniqueEntries": ["sample_id"],

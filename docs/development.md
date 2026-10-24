@@ -118,8 +118,9 @@ guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/READM
 
 | Area | Implementation | Focused check |
 | --- | --- | --- |
-| DAP | `workflows/dap-seq.nf`, `modules/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
-| Bulk ATAC | `workflows/atac.nf`, `modules/atac/`, shared `modules/` | `tests/verify_atac.py` |
+| DAP | `workflows/dap-seq.nf`, `conf/dap-seq.config`, `modules/dap-seq/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
+| Bulk ATAC | `workflows/atac-seq.nf`, `conf/atac-seq.config`, `modules/atac-seq/` | `tests/verify_atac.py` |
+| Shared steps | `nextflow.config`, `modules/common/` (download, references, FastQC) | both of the above |
 | Documentation | README and task guides | `tests/verify_readme.py` |
 
 Python package paths in this table are relative to `genesis_tools/src/`.

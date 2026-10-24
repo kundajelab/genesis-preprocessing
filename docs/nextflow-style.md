@@ -5,6 +5,16 @@ the [DAP](usage/dapseq-reference.md) or [bulk ATAC](usage/bulk-atac.md) guide.
 
 ## Module structure
 
+Each workflow has a script, a config and a parameter schema:
+
+- `workflows/<name>.nf`; `conf/<name>.config`, which includes the shared root `nextflow.config`
+  and adds the workflow's own params; and `assets/<name>.params.schema.json`. nf-schema cannot
+  reference another schema file, so the shared sections are repeated in each schema and
+  `tests/verify_nextflow_style.py` checks that they stay identical.
+- Modules used by more than one workflow are in `modules/common/`; the others are in
+  `modules/dap-seq/` or `modules/atac-seq/`. Move a module to `common/` when a second workflow
+  needs it unchanged.
+
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 
 - Each process declares its resources, conda YAML, and nf-dotenv container image.
@@ -15,7 +25,7 @@ The DAP scaffold follows igvf_pseudobulking_pipeline:
   *.toml/*.lock files with Pixi and use dockers/pixi-yaml.Dockerfile.
 - The environments are dap_seq_alignment, dap_seq_peaks (MACS3),
   dap_seq_qc, and dap_seq_tracks. Bulk ATAC reuses them and adds atac_trimming
-  (cutadapt); its own modules are in modules/atac/.
+  (cutadapt); its own modules are in modules/atac-seq/.
 - genesis_tools/ is a Python 3.14.5 uv project on standard, not free-threaded, CPython:
   pysam has no free-threaded wheels and re-enables the GIL. .python-version pins
   3.14.5+gil so uv never selects an installed free-threaded build; uv cannot download

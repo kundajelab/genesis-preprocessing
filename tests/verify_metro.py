@@ -37,7 +37,7 @@ def main() -> None:
             assert "prefers-color-scheme:dark" in text
         for stem, workflow in [
             ("genesis", "workflows/dap-seq.nf"),
-            ("genesis_atac", "workflows/atac.nf"),
+            ("genesis_atac", "workflows/atac-seq.nf"),
         ]:
             static = ET.parse(out / f"{stem}_metro_map.svg").getroot()
             animated = ET.parse(out / f"{stem}_metro_map_animated.svg").getroot()
@@ -47,7 +47,8 @@ def main() -> None:
 
             assert paths(static) == paths(animated)
             code = (ROOT / workflow).read_text()
-            expected = set(re.findall(r"include\s*\{\s*(\w+)\s*\}\s*from '\.\./modules/", code))
+            include = r"include\s*\{\s*(\w+)\s*\}\s*from '\.\./modules/[\w-]+/"
+            expected = set(re.findall(include, code))
             stations = {g.attrib["id"] for g in static.findall("s:g", NS)}
             assert expected <= stations, expected - stations
             assert (

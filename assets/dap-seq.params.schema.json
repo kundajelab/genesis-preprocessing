@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Genesis pipelines",
+  "title": "Genesis DAP-seq parameters",
   "type": "object",
   "$defs": {
     "input_output_options": {
@@ -73,10 +73,10 @@
         }
       }
     },
-    "analysis_options": {
-      "title": "Analysis options",
+    "alignment_options": {
+      "title": "Alignment options",
       "type": "object",
-      "description": "bwa-mem2 options and the SPP script.",
+      "description": "bwa-mem2 options.",
       "properties": {
         "bwa_batch_size": {
           "type": "integer",
@@ -105,7 +105,14 @@
           "default": 30,
           "errorMessage": "Parameter --bwa_score_threshold must be a positive integer",
           "description": "bwa-mem2 -T: minimum score to output."
-        },
+        }
+      }
+    },
+    "dap_seq_options": {
+      "title": "DAP-seq options",
+      "type": "object",
+      "description": "SPP cross-correlation.",
+      "properties": {
         "spp_read_length": {
           "type": "integer",
           "minimum": 20,
@@ -136,27 +143,6 @@
           "description": "workspace/run_name. Set automatically; use --workspace and --run_name instead."
         }
       }
-    },
-    "atac_options": {
-      "title": "Bulk ATAC options",
-      "type": "object",
-      "description": "Used only by workflows/atac.nf.",
-      "properties": {
-        "atac_mapq": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 254,
-          "default": 30,
-          "description": "Minimum MAPQ for both mates of a usable fragment."
-        },
-        "atac_adapter": {
-          "type": "string",
-          "pattern": "^[ACGTN]+$",
-          "default": "CTGTCTCTTATACACATCT",
-          "errorMessage": "Parameter --atac_adapter must be a DNA sequence",
-          "description": "Adapter trimmed from both mates by cutadapt."
-        }
-      }
     }
   },
   "allOf": [
@@ -167,10 +153,10 @@
       "$ref": "#/$defs/resource_options"
     },
     {
-      "$ref": "#/$defs/analysis_options"
+      "$ref": "#/$defs/alignment_options"
     },
     {
-      "$ref": "#/$defs/atac_options"
+      "$ref": "#/$defs/dap_seq_options"
     },
     {
       "$ref": "#/$defs/internal_options"

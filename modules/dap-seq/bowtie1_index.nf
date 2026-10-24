@@ -5,7 +5,7 @@ process BOWTIE1_INDEX {
     cpus { resources.cpus }
     memory { resources.memory }
     time { resources.time }
-    conda "${moduleDir}/../environments/DAP_SEQ_ALIGNMENT.yaml"
+    conda "${moduleDir}/../../environments/DAP_SEQ_ALIGNMENT.yaml"
     container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"
     publishDir params.references, mode: 'copy', pattern: '*.bowtie1'

@@ -24,7 +24,7 @@ ARGS:
     -p|--profile: Use comma-separated nextflow profiles. Default inferred from environment ($profile)
     -w|--workspace: Where to put run folders. Default inferred from environment ($workspace)
     -n|--run-name: Name of the run folder in the workspace. Default: INPUT.tsv basename without .tsv
-    --workflow: Workflow in workflows/ to run: dap-seq or atac. Default: $workflow
+    --workflow: Workflow in workflows/ to run: dap-seq or atac-seq. Default: $workflow
 EOF
 }
 
@@ -72,7 +72,7 @@ fi
 sheet=$1
 shift
 if [[ ! -f $sheet ]]; then printf 'Missing input TSV: %s\n' "$sheet" >&2; exit 2; fi
-if [[ ! -f $repo_dir/workflows/$workflow.nf ]]; then
+if [[ ! -f $repo_dir/workflows/$workflow.nf || ! -f $repo_dir/conf/$workflow.config ]]; then
     printf 'Unknown workflow: %s\n' "$workflow" >&2
     exit 2
 fi
@@ -87,11 +87,12 @@ run_folder="$workspace/$run_name"
 mkdir -p -- "$run_folder"
 # Launch from the run folder so .nextflow/ history and .nextflow.log are kept with the run.
 cd -- "$run_folder"
-# The workflow lives in workflows/, so pass the repository's config explicitly: Nextflow only
-# looks for nextflow.config beside the script and in the launch folder.
+# The workflow lives in workflows/, so pass its config explicitly: Nextflow only looks for
+# nextflow.config beside the script and in the launch folder. conf/WORKFLOW.config includes the
+# shared nextflow.config.
 exec pixi run --manifest-path "$repo_dir" \
     nextflow run "$repo_dir/workflows/$workflow.nf" \
-    -c "$repo_dir/nextflow.config" \
+    -c "$repo_dir/conf/$workflow.config" \
     --input "$sheet" \
     -profile "$profile" \
     --workspace "$workspace" \
