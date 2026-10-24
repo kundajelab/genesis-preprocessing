@@ -133,7 +133,7 @@ ATAC_NODES = [
     ("ATAC_FILTER",1060,330,"Filter","MAPQ, organelles, duplicates","reads"),
     ("ATAC_PEAKS",1290,330,"MACS3 peaks","BAMPE fragments","peaks"),
     ("FASTQC",370,180,"FastQC","One report per mate","qc"),
-    ("ATAC_MULTIQC",1290,180,"MultiQC","HTML + parsed data","qc"),
+    ("MULTIQC_REPORT",1290,180,"MultiQC","HTML + parsed data","qc"),
     ("ATAC_QC",1290,510,"ATAC QC","FRiP, TSS, complexity","qc"),
     ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
     ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),

@@ -219,7 +219,7 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
         "ATAC_PEAKS": 3,
         "ATAC_TRACKS": 3,
         "ATAC_QC": 3,
-        "ATAC_MULTIQC": 1,
+        "MULTIQC_REPORT": 1,
     }, counts
     published = work / "published" / "samples" / "output"
     for path in published.rglob("*"):
