@@ -12,8 +12,8 @@ Each workflow has a script, a config and a parameter schema:
   reference another schema file, so the shared sections are repeated in each schema and
   `tests/verify_nextflow_style.py` checks that they stay identical.
 - Modules used by more than one workflow are in `modules/common/`; the others are in
-  `modules/dap-seq/` or `modules/atac-seq/`. Move a module to `common/` when a second workflow
-  needs it unchanged.
+  `modules/dap-seq/`, `modules/atac-seq/` or `modules/scatac-seq/`. Move a module to
+  `common/` when a second workflow needs it unchanged.
 
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 

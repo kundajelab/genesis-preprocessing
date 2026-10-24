@@ -120,7 +120,8 @@ guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/READM
 | --- | --- | --- |
 | DAP | `workflows/dap-seq.nf`, `conf/dap-seq.config`, `modules/dap-seq/`, `genesis_tools/samples.py` | `tests/verify_pipeline.py` |
 | Bulk ATAC | `workflows/atac-seq.nf`, `conf/atac-seq.config`, `modules/atac-seq/` | `tests/verify_atac.py` |
-| Shared steps | `nextflow.config`, `modules/common/` (download, references, FastQC) | both of the above |
+| scATAC | `workflows/scatac-seq.nf`, `conf/scatac-seq.config`, `modules/scatac-seq/` | `tests/verify_scatac.py` |
+| Shared steps | `nextflow.config`, `modules/common/` (download, references, FastQC, MultiQC report) | all of the above |
 | Documentation | README and task guides | `tests/verify_readme.py` |
 
 Python package paths in this table are relative to `genesis_tools/src/`.
@@ -155,8 +156,9 @@ binary data or every credential format is safe to publish. Keep private original
 environment files and assistant configuration outside Git.
 
 Real-tool acceptance is opt-in: `pixi run validate-docker` runs DAP-seq with its pinned
-containers on synthetic inputs. For bulk ATAC, run `tests/verify_atac.py --docker`, or
-`--conda` to build the tools from `environments/*.yaml` where Docker is unavailable.
+containers on synthetic inputs. For bulk ATAC and scATAC, run `tests/verify_atac.py --docker`
+and `tests/verify_scatac.py --docker`, or `--conda` to build the tools from
+`environments/*.yaml` where Docker is unavailable.
 
 ## Data and configuration
 
