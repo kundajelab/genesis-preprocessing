@@ -1,0 +1,7 @@
+name: atac_trimming
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::cutadapt=5.2

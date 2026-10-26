@@ -36,7 +36,7 @@ def main() -> None:
                 [
                     "nextflow",
                     "-C",
-                    str(ROOT / "conf/atac.config"),
+                    str(ROOT / "nextflow.config"),
                     "config",
                     str(ROOT / "workflows"),
                     "-profile",

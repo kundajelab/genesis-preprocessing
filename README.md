@@ -113,24 +113,21 @@ rules, reference setup, analysis choices and output definitions.
 
 ### Bulk ATAC-seq
 
-Prepare one row per paired-end technical lane and a reference registry containing
-the FASTA, annotation-derived TSS positions, organellar contigs and checksums.
-The [ATAC guide](docs/usage/bulk-atac.md) explains the columns and reference fields.
+Bulk ATAC uses the same launcher, references folder and workspace as DAP-seq. Its
+sample sheet has one row per paired-end library:
 
-```bash
-pixi run pipeline-atac /path/to/atac.tsv --references /path/to/references.json \
-    --outdir /scratch/atac-run
-# Continue the same analysis after an interruption.
-pixi run pipeline-atac /path/to/atac.tsv --references /path/to/references.json \
-    --outdir /scratch/atac-run --resume
+```tsv
+sample_id	species	read1_url	read2_url	reference_fasta	reference_genes	organelle_contigs
+leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://example.org/rep1_2.fastq.gz	TAIR10.fa.gz	TAIR10.genes.bed	ChrC,ChrM
 ```
 
-The sheet and reference registry are checked before any task starts.
+```bash
+pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references
+```
 
-Results appear under `/scratch/atac-run/output/`. Each library has QC reports,
-fragments, Tn5 cut-count tracks and peaks. Technical lanes are combined within a
-library; biological replicates remain separate. Choose MAPQ, duplicate and adapter
-policies in the sample sheet before running.
+Results appear in `/scratch/genesis/atac-A/output/`: fragments, peaks, Tn5 cut-count
+tracks and QC for each library. The [ATAC guide](docs/usage/bulk-atac.md) explains
+the columns, filters and metrics.
 
 <a id="analysis-choices"></a>
 <a id="outputs-and-resources"></a>
@@ -148,7 +145,7 @@ flags need interpretation, and zero peaks can be a valid result.
 | Peaks | Regions enriched under the recorded peak-calling and control settings |
 | bigWig tracks | Signal across the reference; check whether the track contains normalized coverage or raw cuts |
 | DAP peak scores | Read-end RPM and mean coverage RPKM; these are different statistics |
-| ATAC fragments and enrichment metrics | Usable paired fragments, fragment FRiP and TSS enrichment |
+| ATAC fragments and QC table | Usable paired fragments, FRiP, TSS enrichment and library complexity |
 | Provenance and Nextflow reports | Inputs, analysis settings, software identity and execution records |
 
 See the [DAP output definitions](docs/usage/dapseq-reference.md#outputs-and-resources)

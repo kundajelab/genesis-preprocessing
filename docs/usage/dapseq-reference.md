@@ -31,7 +31,7 @@ pixi run install-all
 
 Place each sheet's gzipped reference FASTA under `references/`, using the exact
 basename in `reference_fasta`. Reference genomes are not downloaded automatically.
-The `GET_REFERENCES` subworkflow (`modules/get_references.nf`) builds each
+The `GET_REFERENCES` subworkflow (`modules/common/get_references.nf`) builds each
 reference's chromosome sizes and bwa-mem2 index and publishes them beside the FASTA,
 with `<fasta>.sha256`. Its first line is the SHA-256 of the compressed FASTA (in
 `sha256sum` format); each further line records a product's size in bytes. Every run,
@@ -119,7 +119,7 @@ in the same sheet, have `control_sample = -`, and match the treatment's species,
 reference, and layout. Controls receive alignment, QC, and tracks; treatments
 also receive peaks and quantification. Multiple treatments can share a control.
 The whole sheet is validated before any task starts: nf-schema checks it against
-`assets/schema_input.json` (required values, patterns, unique sample IDs), then
+`assets/dap-seq.samples.schema.json` (required values, patterns, unique sample IDs), then
 `workflows/dap-seq.nf` checks the exact header, the reference FASTAs, reference IDs and control
 assignments.
 
@@ -138,7 +138,7 @@ samples (default 8), one batch at a time; mates with matching basenames are fine
 ## Analysis choices
 
 The main workflow uses bwa-mem2 for alignment. The Bowtie 1 comparison modules in
-`modules/` are not imported or run by this workflow.
+`modules/dap-seq/` are not imported or run by this workflow.
 
 Main and first-read QC alignments use **full reads**; only SPP's input is cut
 (see below). Read length is inferred
@@ -167,7 +167,7 @@ records the discrepancy.
 BWA defaults are `-K 10000000 -k 19 -c 10000 -T 30`. Override them with
 `--bwa_batch_size`, `--bwa_seed_length`, `--bwa_max_seed_occurrences`, and
 `--bwa_score_threshold`; each must be a positive integer.
-Parameters are validated against `nextflow_schema.json` (nf-schema) before any
+Parameters are validated against `assets/dap-seq.params.schema.json` (nf-schema) before any
 task runs, and parameters that differ from the defaults are logged at startup.
 
 SPP uses the unmodified, vendored upstream `run_spp.R` revision
