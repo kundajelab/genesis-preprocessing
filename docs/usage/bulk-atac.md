@@ -44,7 +44,8 @@ awk -v OFS='\t' '$3 == "gene" {print $1, $4 - 1, $5, ".", 0, $7}' genes.gff3 > g
 
 ## Analysis and metrics
 
-The steps follow the ENCODE ATAC pipeline:
+The steps loosely follow the ENCODE ATAC pipeline, with the differences listed
+below:
 
 1. **Trimming.** cutadapt removes the Nextera adapter (`--atac_adapter`, default
    `CTGTCTCTTATACACATCT`) from both mates and drops pairs where either mate is
@@ -72,6 +73,19 @@ The `qc/*.atac_qc_mqc.tsv` table, also shown in MultiQC, reports per library:
 
 Organelle reads are visible in the samtools idxstats of the marked BAM. No plant
 QC thresholds are applied.
+
+### Differences from ENCODE
+
+These are deliberate but not yet justified against ENCODE on plant data:
+
+- **Aligner.** bwa-mem2 with the DAP-seq options; ENCODE uses Bowtie2.
+- **Peaks.** MACS3 `-q 0.01` in BAMPE mode on whole, unshifted fragments; ENCODE
+  runs MACS2 `-p 0.01` on Tn5-shifted single reads, extended around each cut site.
+- **Replicates.** Each library gets its own peaks; there is no IDR or overlap step
+  across replicates or pseudoreplicates.
+- **TSS enrichment.** The profile is at 1-base resolution; ENCODE uses 10-base bins.
+- **Library complexity.** Fragments are counted by contig, start and end; ENCODE
+  also keys on each mate's strand.
 
 ## Outputs
 
