@@ -6,7 +6,7 @@ include { FASTQC } from '../modules/common/fastqc'
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { RNA_ANNOTATION } from '../modules/rna-seq/rna_annotation'
-include { RNA_INDEX } from '../modules/rna-seq/rna_index'
+include { GET_STAR_INDEX } from '../modules/rna-seq/get_star_index'
 include { RNA_ALIGN } from '../modules/rna-seq/rna_align'
 include { RNA_COUNTS } from '../modules/rna-seq/rna_counts'
 include { RNA_TRACKS } from '../modules/rna-seq/rna_tracks'
@@ -83,17 +83,17 @@ workflow {
     // One annotation and one STAR index per reference; samples rejoin them by ref_id.
     references = samples.unique { sample -> sample.ref_id }
         .map { meta ->
-            def ref = [id: meta.ref_id, filename: meta.reference_fasta]
+            def ref = [id: meta.ref_id, filename: meta.reference_fasta, annotation: meta.reference_annotation]
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true),
                   file("${referencesDir}/${meta.reference_annotation}", checkIfExists: true))
         }
     // The shared reference step reuses existing products; STAR needs only the sizes, and the
     // bwa-mem2 index is left for the other modalities.
     GET_REFERENCES(references.map { ref, fasta, _annotation -> tuple(ref, fasta) }, referencesDir)
-    sized = references.map { ref, fasta, annotation -> tuple(ref.id, ref, fasta, annotation) }
-        .join(GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) },
-              failOnDuplicate: true, failOnMismatch: true)
-        .map { _id, ref, fasta, annotation, path ->
+    // Keep the ref GET_REFERENCES emits: its FASTA hash keys the STAR index record.
+    sized = references.map { ref, fasta, annotation -> tuple(ref.id, fasta, annotation) }
+        .join(GET_REFERENCES.out.sizes, failOnDuplicate: true, failOnMismatch: true)
+        .map { _id, fasta, annotation, ref, path ->
             def lengths = path.readLines().collect { line -> line.tokenize('\t')[1].toLong() }
             tuple(ref + [length: lengths.sum(), contigs: lengths.size()], fasta, annotation, path)
         }
@@ -101,9 +101,9 @@ workflow {
     annotations = RNA_ANNOTATION.out.annotation.map { ref, gtf, rrna, maxIntron ->
         tuple(ref.id, ref, gtf, rrna, maxIntron.text.trim().toInteger())
     }
-    RNA_INDEX(sized.map { ref, fasta, _annotation, _path -> tuple(ref.id, ref, fasta) }
+    GET_STAR_INDEX(sized.map { ref, fasta, _annotation, _path -> tuple(ref.id, ref, fasta) }
         .join(annotations, failOnDuplicate: true, failOnMismatch: true)
-        .map { _id, ref, fasta, _ref, gtf, _rrna, _maxIntron -> tuple(ref, fasta, gtf) })
+        .map { _id, ref, fasta, _ref, gtf, _rrna, _maxIntron -> tuple(ref, fasta, gtf) }, referencesDir)
     DOWNLOAD(samples.collate(params.download_batch_size))
     // Split each batch back into one tuple per sample: a single read path for SE, a list for PE.
     downloaded = DOWNLOAD.out.downloads.flatMap { batch, reads, _counts ->
@@ -122,7 +122,7 @@ workflow {
     })
     alignmentInputs = downloaded.map { meta, reads -> tuple(meta.ref_id, meta, reads) }
         .combine(annotations, by: 0)
-        .combine(RNA_INDEX.out.index.map { ref, index -> tuple(ref.id, index) }, by: 0)
+        .combine(GET_STAR_INDEX.out.index.map { refId, _ref, index -> tuple(refId, index) }, by: 0)
         .map { _refId, meta, reads, ref, _gtf, _rrna, maxIntron, index ->
             tuple(meta + [genome_size: ref.length, max_intron: maxIntron], reads, index)
         }
@@ -151,7 +151,7 @@ workflow {
         .mix(RNA_ALIGN.out.log.map { _meta, log -> log })
         .mix(RNA_COUNTS.out.summary.map { _meta, summary -> summary })
         .mix(RNA_QC.out.summary.map { _meta, summary -> summary })
-        .flatten().collect().map { paths -> paths.sort { it.name } }
+        .flatten().collect().map { paths -> paths.sort { it -> it.name } }
     // Record what produced this run beside its outputs, as workflows/dap-seq.nf does.
     def git = { List args ->
         try {
@@ -159,7 +159,7 @@ workflow {
             // Trim only the end: porcelain status lines start with positional status columns.
             def text = process.text.stripTrailing()
             return process.waitFor() == 0 ? text : null
-        } catch (IOException ignored) {
+        } catch (IOException _ignored) {
             return null
         }
     }

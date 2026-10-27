@@ -83,7 +83,8 @@ process RNA_ANNOTATION {
     """
     stub:
     """
-    printf 'chr1\\tstub\\texon\\t1\\t100\\t.\\t+\\t.\\tgene_id "g1"; transcript_id "t1";\\n' > '${ref.id}.genes.gtf'
+    # The input passes through, so a changed annotation changes the GTF GET_STAR_INDEX hashes.
+    gzip -dcf '${annotation}' > '${ref.id}.genes.gtf'
     touch '${ref.id}.rrna_genes.txt'
     printf '1000\\n' > '${ref.id}.max_intron.txt'
     """

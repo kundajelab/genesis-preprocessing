@@ -21,13 +21,13 @@ process RNA_ALIGN {
     tuple val(meta), path("${meta.id}.star.Log.final.out"), emit: log
     tuple val(meta), path("${meta.id}.star.SJ.out.tab"), emit: junctions
     script:
-    def files = [reads].flatten().sort { it.name }
+    def files = [reads].flatten().sort { it -> it.name }
     // No intron longer than the longest annotated intron (see RNA_ANNOTATION). The gap between
     // mates can hold such an intron plus the unread middle of the insert, up to 1 kb.
     // Up to 20 loci per read, as ENCODE does; gene counts later keep only unique alignments.
     """
     STAR --runThreadN ${task.cpus} --genomeDir '${index}' --readFilesCommand zcat \\
-        --readFilesIn ${files.collect { "'${it}'" }.join(' ')} \\
+        --readFilesIn ${files.collect { it -> "'${it}'" }.join(' ')} \\
         --alignIntronMax ${meta.max_intron} --alignMatesGapMax ${meta.max_intron + 1000} \\
         --outFilterMultimapNmax 20 --outSAMattributes NH HI AS nM \\
         --outSAMattrRGline 'ID:${meta.id}' 'SM:${meta.id}' 'PL:ILLUMINA' \\

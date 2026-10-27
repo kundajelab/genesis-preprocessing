@@ -47,8 +47,18 @@ Each row is one library: biological replicates are never pooled.
    own transcript ID and keeps the gene ID, so STAR does not join the copies into one
    transcript and all copies count toward the gene. The `gene:` prefix of Ensembl
    Plants GFF3 IDs is dropped, so genes keep their usual IDs, such as `AT1G01010`.
-2. **Index.** STAR indexes the FASTA with the annotated junctions, once per reference
-   in each run. Its memory is sized from the genome: about 35 GB for maize B73.
+2. **Index.** STAR indexes the FASTA with the annotated junctions. Its memory is sized
+   from the genome: about 35 GB for maize B73. The `GET_STAR_INDEX` subworkflow
+   (`modules/rna-seq/get_star_index.nf`) publishes the index beside the FASTA as
+   `<id>.<annotation>.star/`, with the annotation's name less any `.gz`, so each
+   annotation of a FASTA gets its own index. Its record `<id>.<annotation>.star.sha256`
+   holds the SHA-256 of the compressed FASTA and of the generated GTF, the STAR
+   version, the index parameters and each index file's size in bytes. Every run,
+   including resume, rehashes both. The index is reused only while the record matches
+   them, the STAR version pinned in `environments/GENESIS_STAR.yaml` and exactly the
+   files in the index folder; otherwise it is rebuilt and a new record saved. Stub runs
+   never publish into the references folder. The bwa-mem2 index is built and reused as
+   for DAP-seq, for the other modalities.
 3. **Alignment.** STAR, with no intron longer than the longest annotated intron
    (`--alignIntronMax`; the mate gap may add 1 kb for the unread middle of the
    insert). STAR's default allows about 590 kb, sized for mammals. Annotated plant
@@ -93,8 +103,6 @@ These are deliberate but not yet compared with those pipelines on plant data:
 - **Trimming and duplicates.** No adapter trimming (Trim Galore in nf-core/rnaseq) and
   no duplicate marking.
 - **Tracks.** One unstranded CPM track; ENCODE also writes strand-specific signal.
-- **Index reuse.** The STAR index is rebuilt in each new run directory; `-resume` reuses
-  it within a run.
 
 ## Outputs
 

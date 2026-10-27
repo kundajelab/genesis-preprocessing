@@ -5,16 +5,20 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
+import hashlib
+import math
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
-from verify_pipeline import serve, trace_rows, write_reads
+from verify_pipeline import INDEX_SUFFIXES, reference_record, serve, trace_rows, write_reads
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = [
@@ -132,7 +136,10 @@ def create_fixture(work: Path, base_url: str, *, engine: str | None) -> Path:
     start, end = GENES[4][2][0]
     copy_start = GENES[5][2][0][0]
     chromosome[copy_start : copy_start + end - start] = chromosome[start:end]
-    contigs = {"chr1": "".join(chromosome), "ChrC": "".join(generator.choices("ACGT", k=20000))}
+    contigs = {
+        "chr1": "".join(chromosome),
+        "ChrC": "".join(generator.choices("ACGT", k=20000)),
+    }
     references = work / "references"
     references.mkdir()
     for name in ("plant.fa.gz", "lifted.fa.gz"):
@@ -273,7 +280,7 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
         "GET_REFERENCES:CHROM_SIZES": 2,
         "GET_REFERENCES:BWA_MEM2_INDEX": 2,
         "RNA_ANNOTATION": 2,
-        "RNA_INDEX": 2,
+        "GET_STAR_INDEX:RNA_INDEX": 2,
         "DOWNLOAD": 2,
         "FASTQC": 5,
         "RNA_ALIGN": 3,
@@ -318,7 +325,14 @@ def check_results(published: Path) -> None:
         table = csv.DictReader(lines, delimiter="\t")
         genes = {row["Geneid"]: int(row[f"{sample}.bam"]) for row in table}
         # Unique genes keep every fragment, including both Liftoff copies of AT1G00050.
-        for gene in ("AT1G00010", "AT1G00020", "AT1G00030", "AT1G00040", "RRNA1", "ATCG00010"):
+        for gene in (
+            "AT1G00010",
+            "AT1G00020",
+            "AT1G00030",
+            "AT1G00040",
+            "RRNA1",
+            "ATCG00010",
+        ):
             assert genes[gene] == EXPRESSION[gene], (sample, gene, genes[gene])
         assert genes["AT1G00050"] == EXPRESSION["AT1G00050"], (sample, genes)
         # Homeolog reads align to both copies, so neither counts them.
@@ -328,7 +342,10 @@ def check_results(published: Path) -> None:
         assert int(qc["input_reads"]) == total, qc
         assert abs(float(qc["multimapped"]) - EXPRESSION["HOMEOLOG_A"] / total) < 0.01, qc
         assigned = sum(EXPRESSION.values()) - EXPRESSION["HOMEOLOG_A"] - EXPRESSION["NOVEL"]
-        assert abs(float(qc["rRNA"]) - EXPRESSION["RRNA1"] / assigned) < 0.01, (sample, qc)
+        assert abs(float(qc["rRNA"]) - EXPRESSION["RRNA1"] / assigned) < 0.01, (
+            sample,
+            qc,
+        )
         if sample == "lifted":
             assert float(qc["organelle"]) == 0, qc
         else:
@@ -346,11 +363,191 @@ def check_resume(work: Path, sheet: Path, *, engine: str | None) -> None:
     rows = trace_rows(work, "resume")
     tasks = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD"]
     assert tasks and all(row["status"] == "CACHED" for row in tasks), tasks
-    # Newly published chromosome sizes change staged input paths on the first resume.
+    indexes = [row for row in rows if row["name"].split(" ")[0] == "GET_STAR_INDEX:RNA_INDEX"]
+    if engine:
+        # Published STAR indexes are reused from disk without any index task.
+        assert not indexes, indexes
+    else:
+        # Stub runs publish no indexes, so they are rebuilt, from Nextflow's task cache.
+        assert len(indexes) == 2 and all(row["status"] == "CACHED" for row in indexes), indexes
+    # Newly published chromosome sizes and STAR indexes change staged input paths on the first
+    # resume.
     # A second resume must cache all downstream computation at those stable paths.
     assert run_rna(work, sheet, engine=engine, resume=True, suffix="stable").returncode == 0
     rows = trace_rows(work, "stable")
     assert rows and all(row["status"] == "CACHED" for row in rows), rows
+
+
+STAR_PIN = re.search(r"star=([^\s,<>]+)", (ROOT / "environments/GENESIS_STAR.yaml").read_text())
+assert STAR_PIN, "environments/GENESIS_STAR.yaml does not pin a STAR version"
+STAR_VERSION = STAR_PIN.group(1)
+# Header lines of a STAR index record: FASTA, GTF, STAR version and three index parameters.
+STAR_HEADER = 6
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def task_dir(work: Path, name: str) -> Path:
+    """A traced task's work folder, from its hash prefix."""
+    (row,) = [row for row in trace_rows(work) if row["name"] == name]
+    prefix, rest = row["hash"].split("/")
+    (folder,) = (work / "work" / prefix).glob(f"{rest}*")
+    return folder
+
+
+def star_record(references: Path, ref_id: str, annotation: str, gtf: Path) -> list[str]:
+    """The <index>.sha256 lines RNA_INDEX writes, with index files sorted (glob order varies)."""
+    name = f"{ref_id}.{annotation.removesuffix('.gz')}.star"
+    lengths = [
+        int(line.split("\t")[1])
+        for line in (references / f"{ref_id}.chrom.sizes").read_text().splitlines()
+    ]
+    length = sum(lengths)
+    parameters = {
+        "sjdbOverhang": 100,
+        "genomeSAindexNbases": min(14, math.floor(math.log2(length) / 2 - 1)),
+        "genomeChrBinNbits": min(18, math.floor(math.log2(max(length / len(lengths), 100)))),
+    }
+    header = [
+        f"{sha256(references / f'{ref_id}.fa.gz')}  {ref_id}.fa.gz",
+        f"{sha256(gtf)}  {ref_id}.genes.gtf",
+        f"{STAR_VERSION}  STAR",
+    ] + [f"{value}  {key}" for key, value in parameters.items()]
+    files = [path for path in (references / name).iterdir() if path.is_file()]
+    return header + sorted(f"{path.stat().st_size}  {name}/{path.name}" for path in files)
+
+
+def read_star_record(path: Path) -> list[str]:
+    lines = path.read_text().splitlines()
+    return lines[:STAR_HEADER] + sorted(lines[STAR_HEADER:])
+
+
+def synthetic_products(references: Path, work: Path) -> None:
+    """Reference products as a real run publishes them, from the first stub run's tasks.
+
+    The STAR index and record are the ones the stub wrote, with the pinned STAR version for the
+    stub's, so the reuse cases also exercise RNA_INDEX's record writer.
+    """
+    for ref_id in ("plant", "lifted"):
+        sizes = task_dir(work, f"GET_REFERENCES:CHROM_SIZES ({ref_id})") / f"{ref_id}.chrom.sizes"
+        shutil.copy2(sizes, references / sizes.name)
+        (references / f"{ref_id}.bwa-mem2").mkdir()
+        for suffix in INDEX_SUFFIXES:
+            (references / f"{ref_id}.bwa-mem2/genome{suffix}").write_text(f"{ref_id}{suffix}\n")
+        (references / f"{ref_id}.fa.gz.sha256").write_text(
+            reference_record(references, ref_id, f"{ref_id}.fa.gz")
+        )
+        built = task_dir(work, f"GET_STAR_INDEX:RNA_INDEX ({ref_id})")
+        name = f"{ref_id}.{ref_id}.gff3.star"
+        shutil.copytree(built / name, references / name)
+        record = (built / f"{name}.sha256").read_text()
+        assert "STUB  STAR\n" in record, record
+        (references / f"{name}.sha256").write_text(
+            record.replace("STUB  STAR\n", f"{STAR_VERSION}  STAR\n")
+        )
+        gtf = task_dir(work, f"RNA_ANNOTATION ({ref_id})") / f"{ref_id}.genes.gtf"
+        expected = star_record(references, ref_id, f"{ref_id}.gff3", gtf)
+        assert read_star_record(references / f"{name}.sha256") == expected, ref_id
+
+
+def check_star_rebuild(work: Path, sheet: Path, *, engine: str | None) -> None:
+    """Rebuild a STAR index only when its record no longer matches its inputs and files."""
+    parent = work / "star-rebuild"
+    parent.mkdir()
+    built = work / "references"
+    record_name = "plant.plant.gff3.star.sha256"
+    if engine:
+        # The real run published indexes and records the reader must accept.
+        gtf = task_dir(work, "RNA_ANNOTATION (plant)") / "plant.genes.gtf"
+        expected = star_record(built, "plant", "plant.gff3", gtf)
+        assert read_star_record(built / record_name) == expected
+
+    def changed_fasta(references: Path) -> None:
+        fasta = references / "plant.fa.gz"
+        content = gzip.decompress(fasta.read_bytes())
+        fasta.write_bytes(gzip.compress(content.replace(b"A", b"T", 1), mtime=0))
+
+    def changed_annotation(references: Path) -> None:
+        annotation = references / "plant.gff3"
+        annotation.write_text(annotation.read_text().replace("\t10900\t", "\t10901\t", 1))
+
+    def resized_index(references: Path) -> None:
+        index = references / "plant.plant.gff3.star/SA"
+        index.write_bytes(index.read_bytes() + b"x")  # e.g. replaced or partly copied
+
+    def star_version(references: Path) -> None:
+        record = references / record_name
+        record.write_text(record.read_text().replace(f"{STAR_VERSION}  STAR", "2.7.10a  STAR"))
+
+    def second_annotation(references: Path) -> None:
+        shutil.copy2(references / "plant.gff3", references / "plant.v2.gff3")
+
+    cases: list[tuple[str, Callable[[Path], object] | None, bool]] = [
+        ("unchanged", None, False),
+        ("changed-fasta", changed_fasta, True),
+        ("changed-annotation", changed_annotation, True),
+        ("missing-record", lambda r: (r / record_name).unlink(), True),
+        ("resized-index", resized_index, True),
+        (
+            "extra-index-file",
+            lambda r: (r / "plant.plant.gff3.star/extra").write_text("x"),
+            True,
+        ),
+        ("star-version", star_version, True),
+        # Another annotation for the same FASTA gets its own index beside the first.
+        ("second-annotation", second_annotation, True),
+    ]
+    with sheet.open() as stream:
+        rows = list(csv.DictReader(stream, delimiter="\t"))
+    for scenario, change, rebuilt in cases:
+        case = parent / scenario
+        case.mkdir()
+        references = case / "references"
+        shutil.copytree(built, references)
+        if not engine:
+            synthetic_products(references, work)
+        shutil.copy2(work / "limits.config", case / "limits.config")
+        if change:
+            change(references)
+        annotation = "plant.v2.gff3" if scenario == "second-annotation" else "plant.gff3"
+        case_sheet = case / "samples.tsv"
+        write_sheet(
+            case_sheet,
+            [
+                {**row, "reference_annotation": annotation}
+                if row["reference_fasta"] == "plant.fa.gz"
+                else row
+                for row in rows
+            ],
+        )
+        before = {
+            path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()
+        }
+        assert run_rna(case, case_sheet, engine=engine).returncode == 0, scenario
+        names = [row["name"] for row in trace_rows(case)]
+        # Only the altered plant index is rebuilt; the lifted index is always reused.
+        assert ("GET_STAR_INDEX:RNA_INDEX (plant)" in names) == rebuilt, (
+            scenario,
+            names,
+        )
+        assert "GET_STAR_INDEX:RNA_INDEX (lifted)" not in names, (scenario, names)
+        after = {
+            path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()
+        }
+        if engine and rebuilt:
+            # A rebuild publishes a fresh index and a record matching it.
+            gtf = task_dir(case, "RNA_ANNOTATION (plant)") / "plant.genes.gtf"
+            name = f"plant.{annotation}.star.sha256"
+            expected = star_record(references, "plant", annotation, gtf)
+            assert read_star_record(references / name) == expected, scenario
+            if scenario == "second-annotation":
+                # The first annotation's index is left as it was.
+                assert all(after[path] == data for path, data in before.items()), scenario
+        else:
+            # Stub runs never publish into the references folder, and reuse changes nothing.
+            assert after == before, scenario
 
 
 def check_failures(work: Path, sheet: Path) -> None:
@@ -361,7 +558,11 @@ def check_failures(work: Path, sheet: Path) -> None:
     cases: list[tuple[str, str, str]] = []
     for suffix, changed, diagnostic in (
         ("strand", [{**rows[0], "strandedness": "dUTP"}], "strandedness must be"),
-        ("missing", [{**rows[0], "reference_annotation": "absent.gff3"}], "annotation missing"),
+        (
+            "missing",
+            [{**rows[0], "reference_annotation": "absent.gff3"}],
+            "annotation missing",
+        ),
         # Both rows use plant.fa.gz but name different organelles.
         ("organelles", [rows[0], {**rows[1], "organelle_contigs": "-"}], "disagree on"),
     ):
@@ -382,13 +583,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     engines = parser.add_mutually_exclusive_group()
     engines.add_argument(
-        "--docker", action="store_true", help="Use real tools in the pinned Docker images"
+        "--docker",
+        action="store_true",
+        help="Use real tools in the pinned Docker images",
     )
     engines.add_argument(
-        "--conda", action="store_true", help="Use real tools from the environments/*.yaml files"
+        "--conda",
+        action="store_true",
+        help="Use real tools from the environments/*.yaml files",
     )
     parser.add_argument(
-        "--keep", action="store_true", help="Retain fixtures, logs, and work directories"
+        "--keep",
+        action="store_true",
+        help="Retain fixtures, logs, and work directories",
     )
     args = parser.parse_args()
     engine = "docker" if args.docker else "conda" if args.conda else None
@@ -403,6 +610,7 @@ def main() -> None:
             assert run_rna(work, sheet, engine=engine).returncode == 0
             check_outputs(work, engine=engine)
             check_resume(work, sheet, engine=engine)
+            check_star_rebuild(work, sheet, engine=engine)
             if not engine:
                 check_failures(work, sheet)
         label = f"Real-tool ({engine}) RNA-seq" if engine else "RNA-seq Nextflow regression"
