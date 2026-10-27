@@ -28,7 +28,7 @@ leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://examp
 | `sample_id`, `species` | Library identifier and output folder, as for DAP-seq |
 | `read1_url`, `read2_url` | HTTP(S) URLs of the gzipped reads; `read2_url` is `-` for single-end libraries |
 | `strandedness` | `unstranded`, `forward` (read 1 is the transcript's strand) or `reverse` (dUTP and most stranded kits) |
-| `reference_fasta` | Gzipped FASTA in the references folder |
+| `reference_fasta` | Gzipped FASTA in the references folder, cached as for DAP-seq |
 | `reference_annotation` | The annotation as published, GFF3 or GTF, optionally gzipped, in the references folder |
 | `organelle_contigs` | Comma-separated mitochondrial and plastid contig names, or `-` for none |
 

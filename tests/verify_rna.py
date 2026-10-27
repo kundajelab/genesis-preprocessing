@@ -270,7 +270,8 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
     assert all(row["status"] == "COMPLETED" for row in rows), rows
     counts = Counter(row["name"].split(" ")[0] for row in rows)
     assert counts == {
-        "CHROM_SIZES": 2,
+        "GET_REFERENCES:CHROM_SIZES": 2,
+        "GET_REFERENCES:BWA_MEM2_INDEX": 2,
         "RNA_ANNOTATION": 2,
         "RNA_INDEX": 2,
         "DOWNLOAD": 2,
@@ -340,9 +341,15 @@ def check_results(published: Path) -> None:
 
 
 def check_resume(work: Path, sheet: Path, *, engine: str | None) -> None:
-    """Resumed runs reuse every task."""
+    """Resumed runs reuse the downloads, and then every task."""
     assert run_rna(work, sheet, engine=engine, resume=True).returncode == 0
     rows = trace_rows(work, "resume")
+    tasks = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD"]
+    assert tasks and all(row["status"] == "CACHED" for row in tasks), tasks
+    # Newly published chromosome sizes change staged input paths on the first resume.
+    # A second resume must cache all downstream computation at those stable paths.
+    assert run_rna(work, sheet, engine=engine, resume=True, suffix="stable").returncode == 0
+    rows = trace_rows(work, "stable")
     assert rows and all(row["status"] == "CACHED" for row in rows), rows
 
 

@@ -1,9 +1,9 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
-include { CHROM_SIZES } from '../modules/common/chrom_sizes'
 include { DOWNLOAD } from '../modules/common/download'
 include { FASTQC } from '../modules/common/fastqc'
+include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { RNA_ANNOTATION } from '../modules/rna-seq/rna_annotation'
 include { RNA_INDEX } from '../modules/rna-seq/rna_index'
@@ -87,9 +87,11 @@ workflow {
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true),
                   file("${referencesDir}/${meta.reference_annotation}", checkIfExists: true))
         }
-    CHROM_SIZES(references.map { ref, fasta, _annotation -> tuple(ref, fasta) })
+    // The shared reference step reuses existing products; STAR needs only the sizes, and the
+    // bwa-mem2 index is left for the other modalities.
+    GET_REFERENCES(references.map { ref, fasta, _annotation -> tuple(ref, fasta) }, referencesDir)
     sized = references.map { ref, fasta, annotation -> tuple(ref.id, ref, fasta, annotation) }
-        .join(CHROM_SIZES.out.sizes.map { ref, path -> tuple(ref.id, path) },
+        .join(GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) },
               failOnDuplicate: true, failOnMismatch: true)
         .map { _id, ref, fasta, annotation, path ->
             def lengths = path.readLines().collect { line -> line.tokenize('\t')[1].toLong() }
