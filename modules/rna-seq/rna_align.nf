@@ -2,7 +2,8 @@ include { dotenv } from 'plugin/nf-dotenv'
 
 process RNA_ALIGN {
     cpus 8
-    // The loaded index is ~10 bytes per reference base; sorting gets its own 2 GB.
+    // The loaded index is ~10 bytes per reference base. samtools sorts after STAR exits, so it
+    // can use that memory too, and spills to disk rather than failing on large libraries.
     memory { (4.GB + 11.B * meta.genome_size) * task.attempt }
     time { 1.h * (1 + [reads].flatten().sum { read -> read.size() } / 1e9) * task.attempt }
     // retry with more memory and time when killed (OOM, walltime, or preemption)
@@ -21,19 +22,22 @@ process RNA_ALIGN {
     tuple val(meta), path("${meta.id}.star.Log.final.out"), emit: log
     tuple val(meta), path("${meta.id}.star.SJ.out.tab"), emit: junctions
     script:
-    def files = [reads].flatten().sort { it -> it.name }
+    def files = [reads].flatten().sort { read -> read.name }
+    // Per sorting thread, leaving a quarter of the task's memory for samtools itself.
+    def sortMemory = Math.max(256L, (task.memory.toMega() * 3 / 4 / task.cpus) as long)
     // No intron longer than the longest annotated intron (see RNA_ANNOTATION). The gap between
     // mates can hold such an intron plus the unread middle of the insert, up to 1 kb.
     // Up to 20 loci per read, as ENCODE does; gene counts later keep only unique alignments.
     """
-    STAR --runThreadN ${task.cpus} --genomeDir '${index}' --readFilesCommand zcat \\
-        --readFilesIn ${files.collect { it -> "'${it}'" }.join(' ')} \\
+    STAR --runThreadN ${task.cpus} --genomeDir '${index}' --readFilesCommand gunzip -c \\
+        --readFilesIn ${files.collect { read -> "'${read}'" }.join(' ')} \\
         --alignIntronMax ${meta.max_intron} --alignMatesGapMax ${meta.max_intron + 1000} \\
         --outFilterMultimapNmax 20 --outSAMattributes NH HI AS nM \\
         --outSAMattrRGline 'ID:${meta.id}' 'SM:${meta.id}' 'PL:ILLUMINA' \\
-        --outSAMtype BAM SortedByCoordinate --limitBAMsortRAM 2000000000 \\
-        --outFileNamePrefix star. --outTmpDir star.tmp
-    mv star.Aligned.sortedByCoord.out.bam '${meta.id}.bam'
+        --outSAMtype BAM Unsorted --outFileNamePrefix star. --outTmpDir star.tmp
+    samtools sort -@ ${task.cpus} -m ${sortMemory}M -T sort.tmp -o '${meta.id}.bam' \\
+        star.Aligned.out.bam
+    rm star.Aligned.out.bam
     samtools index '${meta.id}.bam'
     # MultiQC recognises the STAR log by its name.
     mv star.Log.final.out '${meta.id}.star.Log.final.out'

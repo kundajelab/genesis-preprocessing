@@ -72,14 +72,15 @@ process RNA_ANNOTATION {
         print id
     }' annotation.txt | sort -u > '${ref.id}.rrna_genes.txt'
     # The longest annotated intron: STAR then aligns every annotated junction, and no novel one
-    # longer than that, instead of its default of about 590 kb, which suits mammals.
+    # longer than that, instead of its default of about 590 kb, which suits mammals. At least
+    # 1 kb: with no multi-exon transcripts it would be 0, which STAR reads as its default.
     gffread '${ref.id}.genes.gtf' --table @exons 2> /dev/null | awk '{
         n = split(\$1, exons, ",")
         for (i = 2; i <= n; i++) {
             split(exons[i - 1], before, "-"); split(exons[i], after, "-")
             if (after[1] - before[2] - 1 > longest) longest = after[1] - before[2] - 1
         }
-    } END {print longest + 0}' > '${ref.id}.max_intron.txt'
+    } END {print (longest > 1000 ? longest : 1000)}' > '${ref.id}.max_intron.txt'
     """
     stub:
     """

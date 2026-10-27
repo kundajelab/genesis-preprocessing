@@ -59,9 +59,9 @@ Each row is one library: biological replicates are never pooled.
    files in the index folder; otherwise it is rebuilt and a new record saved. Stub runs
    never publish into the references folder. The bwa-mem2 index is built and reused as
    for DAP-seq, for the other modalities.
-3. **Alignment.** STAR, with no intron longer than the longest annotated intron
-   (`--alignIntronMax`; the mate gap may add 1 kb for the unread middle of the
-   insert). STAR's default allows about 590 kb, sized for mammals. Annotated plant
+3. **Alignment.** STAR, with no intron longer than the longest annotated intron, and
+   at least 1 kb (`--alignIntronMax`; the mate gap may add 1 kb for the unread middle
+   of the insert). STAR's default allows about 590 kb, sized for mammals. Annotated plant
    introns are much shorter: 99.9% are under about 2 kb in Araport11, 4 kb in
    A. lyrata and 20 kb in maize, although each annotation also has a few far longer
    ones (14 kb in A. lyrata, 435 kb in maize), which set the limit. Reads may align to up to 20 loci, as in ENCODE. Read ends that do

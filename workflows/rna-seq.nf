@@ -87,8 +87,8 @@ workflow {
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true),
                   file("${referencesDir}/${meta.reference_annotation}", checkIfExists: true))
         }
-    // The shared reference step reuses existing products; STAR needs only the sizes, and the
-    // bwa-mem2 index is left for the other modalities.
+    // The shared reference step reuses existing products; STAR needs only the sizes, but the
+    // bwa-mem2 index will be used by the other sequencing modality pipelines.
     GET_REFERENCES(references.map { ref, fasta, _annotation -> tuple(ref, fasta) }, referencesDir)
     // Keep the ref GET_REFERENCES emits: its FASTA hash keys the STAR index record.
     sized = references.map { ref, fasta, annotation -> tuple(ref.id, fasta, annotation) }
