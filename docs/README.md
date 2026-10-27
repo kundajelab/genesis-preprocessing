@@ -10,11 +10,13 @@ measurement definitions and evidence boundaries, read the
 - [DAP-seq](usage/dapseq-reference.md): sample sheets, controls, references, execution and scientific settings.
 - [MACS3 builds and resources](usage/macs3.md): select the optimized source build and inspect caller provenance.
 - [Bulk ATAC-seq](usage/bulk-atac.md): sample sheets, trimming, filtering, fragments, peaks and QC.
+- [scATAC pseudobulks](usage/scatac-seq.md): fragment files, cell lists, pseudobulk peaks, tracks and QC.
 
 ## Related repository
 
 [genesis-curation](https://github.com/kundajelab/genesis-curation) has study
-management, metadata curation and review, single-cell ATAC and the method benchmarks.
+management, metadata curation and review, single-cell ATAC model export and the
+method benchmarks.
 
 ## Understand the methods
 

@@ -10,7 +10,7 @@ include { ATAC_FILTER } from '../modules/atac-seq/atac_filter'
 include { ATAC_PEAKS } from '../modules/atac-seq/atac_peaks'
 include { ATAC_TRACKS } from '../modules/atac-seq/atac_tracks'
 include { ATAC_QC } from '../modules/atac-seq/atac_qc'
-include { ATAC_MULTIQC } from '../modules/atac-seq/atac_multiqc'
+include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 
 // Sheet rules a JSON schema cannot express: the exact columns, existing reference files, distinct
 // reference IDs, and one gene annotation and organelle list per reference.
@@ -175,5 +175,5 @@ workflow {
     runOutput.mkdirs()
     file("${repoDir}/conf/dap-images.lock").copyTo(runOutput.resolve('dap-images.lock'))
     runOutput.resolve('git-status.txt').text = gitReport
-    ATAC_MULTIQC(multiqcFiles)
+    MULTIQC_REPORT(multiqcFiles)
 }

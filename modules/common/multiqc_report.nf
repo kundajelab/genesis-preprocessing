@@ -1,6 +1,6 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
-process ATAC_MULTIQC {
+process MULTIQC_REPORT {
     cpus 1
     memory '2 GB'
     time '1h'

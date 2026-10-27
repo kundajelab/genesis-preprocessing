@@ -1,11 +1,11 @@
 # Genesis: plant DAP-seq and ATAC-seq processing
 
-Genesis turns plant DAP-seq and paired-end bulk ATAC-seq reads into peaks, signal
-tracks and quality-control reports. It runs on a single server or through
-Nextflow on a cluster.
+Genesis turns plant DAP-seq and paired-end bulk ATAC-seq reads, and published
+single-cell ATAC fragments, into peaks, signal tracks and quality-control reports.
+It runs on a single server or through Nextflow on a cluster.
 
-Study management, metadata curation and review, single-cell ATAC and method
-benchmarks are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
+Study management, metadata curation and review, single-cell ATAC model export and
+method benchmarks are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
 
 <a id="architecture-and-current-capabilities"></a>
 
@@ -54,8 +54,9 @@ cd genesis-preprocessing
 pixi run install-all
 ```
 
-This installs everything both pipelines need: run DAP-seq with `pixi run pipeline`
-and bulk ATAC with `pixi run pipeline-atac` (see below).
+This installs everything the pipelines need: run DAP-seq with `pixi run pipeline`,
+bulk ATAC with `pixi run pipeline-atac` and scATAC with `pixi run pipeline-scatac`
+(see below).
 
 ## Run your first analysis
 
@@ -129,6 +130,23 @@ Results appear in `/scratch/genesis/atac-A/output/`: fragments, peaks, Tn5 cut-c
 tracks and QC for each library. The [ATAC guide](docs/usage/bulk-atac.md) explains
 the columns, filters and metrics.
 
+### scATAC pseudobulks
+
+scATAC starts from published single-cell fragment files, such as 10x
+`fragments.tsv.gz`, and a cell list per library that assigns each barcode to a group:
+
+```tsv
+sample_id	species	fragments_url	cells_url	reference_fasta	reference_genes	organelle_contigs
+root_rep1	Arabidopsis_thaliana	https://example.org/rep1.fragments.tsv.gz	https://example.org/rep1.cells.tsv	TAIR10.fa.gz	TAIR10.genes.bed	Mt,Pt
+```
+
+```bash
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references
+```
+
+Each library's groups become separate pseudobulks with peaks, Tn5 cut-count tracks and
+QC. The [scATAC guide](docs/usage/scatac-seq.md) explains the cell list and metrics.
+
 <a id="analysis-choices"></a>
 <a id="outputs-and-resources"></a>
 
@@ -146,6 +164,7 @@ flags need interpretation, and zero peaks can be a valid result.
 | bigWig tracks | Signal across the reference; check whether the track contains normalized coverage or raw cuts |
 | DAP peak scores | Read-end RPM and mean coverage RPKM; these are different statistics |
 | ATAC fragments and QC table | Usable paired fragments, FRiP, TSS enrichment and library complexity |
+| scATAC pseudobulk QC table | Cells, fragments, insertion FRiP and TSS enrichment per group |
 | Provenance and Nextflow reports | Inputs, analysis settings, software identity and execution records |
 
 See the [DAP output definitions](docs/usage/dapseq-reference.md#outputs-and-resources)
@@ -160,7 +179,8 @@ between tools or studies.
 | --- | --- |
 | Run DAP-seq or understand its scientific settings | [DAP-seq guide](docs/usage/dapseq-reference.md) |
 | Run paired-end bulk ATAC | [Bulk ATAC guide](docs/usage/bulk-atac.md) |
-| Manage studies, curate metadata or work with single-cell ATAC | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
+| Make pseudobulks from single-cell ATAC fragments | [scATAC guide](docs/usage/scatac-seq.md) |
+| Manage studies, curate metadata or export single-cell ATAC for models | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
 | Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |
 

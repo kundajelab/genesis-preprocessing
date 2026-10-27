@@ -286,14 +286,13 @@ def check_builds(work: Path, bash: str) -> None:
 def config_params(path: Path) -> set[str]:
     """Names assigned in a config file's params block."""
     block = re.search(r"^params \{\n(.*?)^\}", path.read_text(), re.M | re.S)
-    assert block, path
-    return set(re.findall(r"^    (\w+) = ", block.group(1), re.M))
+    return set(re.findall(r"^    (\w+) = ", block.group(1), re.M)) if block else set()
 
 
 def check_workflow_configs() -> None:
     """Each workflow has its own config and parameter schema; the shared sections stay identical."""
     workflows = sorted(path.stem for path in (ROOT / "workflows").glob("*.nf"))
-    assert workflows == ["atac-seq", "dap-seq"], workflows
+    assert workflows == ["atac-seq", "dap-seq", "scatac-seq"], workflows
     shared = config_params(ROOT / "nextflow.config") | {"run_dir"}
     schemas = {}
     for name in workflows:
@@ -308,12 +307,13 @@ def check_workflow_configs() -> None:
         assert declared == expected, (name, declared ^ expected)
         assert schema["allOf"] == [{"$ref": f"#/$defs/{key}"} for key in schema["$defs"]], name
         schemas[name] = schema["$defs"]
-    # nf-schema cannot $ref another file, so each schema repeats the shared sections verbatim.
+    # nf-schema cannot $ref another file, so schemas repeat shared sections verbatim.
     common = set.intersection(*(set(defs) for defs in schemas.values()))
-    sections = {"input_output_options", "resource_options", "alignment_options", "internal_options"}
+    sections = {"input_output_options", "resource_options", "internal_options"}
     assert sections <= common, sections - common
-    for key in common:
-        assert len({json.dumps(defs[key], sort_keys=True) for defs in schemas.values()}) == 1, key
+    for key in set().union(*schemas.values()):
+        copies = {json.dumps(defs[key], sort_keys=True) for defs in schemas.values() if key in defs}
+        assert len(copies) == 1, key
 
 
 def main() -> None:

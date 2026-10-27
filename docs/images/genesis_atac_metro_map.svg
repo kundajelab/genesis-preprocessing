@@ -61,7 +61,7 @@
 <circle class="station" cx="370" cy="180" r="9" stroke="#9260b7"/>
 <text class="label" text-anchor="middle" x="370" y="140">FastQC</text>
 <text class="detail" text-anchor="middle" x="370" y="163">One report per mate</text></g>
-<g id="ATAC_MULTIQC"><title>MultiQC: HTML + parsed data</title>
+<g id="MULTIQC_REPORT"><title>MultiQC: HTML + parsed data</title>
 <circle class="station" cx="1290" cy="180" r="9" stroke="#9260b7"/>
 <text class="label" text-anchor="middle" x="1290" y="140">MultiQC</text>
 <text class="detail" text-anchor="middle" x="1290" y="163">HTML + parsed data</text></g>
@@ -93,4 +93,4 @@
 <text class="note" x="48" y="798">Adapters are trimmed first. Usable pairs need both mates at MAPQ ≥ 30 on nuclear contigs; duplicates are removed.</text>
 <text class="note" x="48" y="823">BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; the TSS profile uses strand-aware windows.</text>
 <text class="note" x="48" y="848">QC is diagnostic, with no plant thresholds. Libraries and biological replicates are never pooled.</text>
-<metadata>Genesis diagram schema 2; workflows/atac-seq.nf SHA256 4398dc98a83f16405850902fab1f9b9286d77d212b65986efb93dc464c130a10; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/atac-seq.nf SHA256 4cce7af725665420b4831dadec6e589fa7837fe7a031d483115a1e8ac2cd6ece; schematic animation.</metadata></svg>

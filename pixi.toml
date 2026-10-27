@@ -20,6 +20,7 @@ python = "3.14.5.*"
 
 [tasks]
 pipeline-atac = { cmd = "scripts/run-pipeline.sh --workflow atac-seq", description = "Run bulk ATAC on one sample sheet. Run with --help for usage." }
+pipeline-scatac = { cmd = "scripts/run-pipeline.sh --workflow scatac-seq", description = "Run scATAC pseudobulks on one sample sheet. Run with --help for usage." }
 pipeline = { cmd = "scripts/run-pipeline.sh", description = "Run the pipeline on one sample sheet. Run with --help for usage." }
 install-all = { cmd = "scripts/install-projects.sh", description = "Install locked environments." }
 checks = { cmd = "scripts/check-projects.sh", description = "Run all checks." }
