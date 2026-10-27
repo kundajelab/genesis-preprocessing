@@ -81,6 +81,14 @@ esac
 tmp_env=$(mktemp)
 trap 'rm -rf "$tmp_env"' EXIT
 
+# Docker Desktop on macOS ships QEMU emulation; elsewhere register it so arm64 and amd64 can build
+if [[ "$(uname -s)" != "Darwin" ]]; then
+    if ! docker run --privileged --rm tonistiigi/binfmt --install arm64,amd64 &> /dev/null; then
+        echo "Failed to register QEMU emulators with tonistiigi/binfmt." >&2
+        exit 1
+    fi
+fi
+
 "$script_dir/find-projects.sh" \
 | while read -r project type; do
     if [[ "$all_projects" == "false" ]] && [[ ! " ${projects[*]} " =~ [[:space:]]${project}[[:space:]] ]]; then
