@@ -12,8 +12,8 @@ Each workflow has a script, a config and a parameter schema:
   reference another schema file, so the shared sections are repeated in each schema and
   `tests/verify_nextflow_style.py` checks that they stay identical.
 - Modules used by more than one workflow are in `modules/common/`; the others are in
-  `modules/dap-seq/`, `modules/atac-seq/` or `modules/scatac-seq/`. Move a module to
-  `common/` when a second workflow needs it unchanged.
+  `modules/dap-seq/`, `modules/atac-seq/`, `modules/scatac-seq/` or `modules/rna-seq/`.
+  Move a module to `common/` when a second workflow needs it unchanged.
 
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 
@@ -25,7 +25,9 @@ The DAP scaffold follows igvf_pseudobulking_pipeline:
   *.toml/*.lock files with Pixi and use dockers/pixi-yaml.Dockerfile.
 - The environments are dap_seq_alignment, dap_seq_peaks (MACS3),
   dap_seq_qc, and dap_seq_tracks. Bulk ATAC reuses them and adds atac_trimming
-  (cutadapt); its own modules are in modules/atac-seq/.
+  (cutadapt); its own modules are in modules/atac-seq/. RNA-seq adds genesis_star (STAR
+  and samtools; other aligners get their own environments) and genesis_rna_counts
+  (featureCounts, gffread and samtools), and reuses dap_seq_tracks for its bigWigs.
 - genesis_tools/ is a Python 3.14.5 uv project on standard, not free-threaded, CPython:
   pysam has no free-threaded wheels and re-enables the GIL. .python-version pins
   3.14.5+gil so uv never selects an installed free-threaded build; uv cannot download

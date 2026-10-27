@@ -1,0 +1,9 @@
+name: genesis_rna_counts
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::subread=2.1.1
+  - bioconda::gffread=0.12.9
+  - bioconda::samtools>=1.22,<2

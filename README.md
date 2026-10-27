@@ -1,8 +1,9 @@
 # Genesis: plant DAP-seq and ATAC-seq processing
 
 Genesis turns plant DAP-seq and paired-end bulk ATAC-seq reads, and published
-single-cell ATAC fragments, into peaks, signal tracks and quality-control reports.
-It runs on a single server or through Nextflow on a cluster.
+single-cell ATAC fragments, into peaks, signal tracks and quality-control reports,
+and plant RNA-seq reads into gene counts and tracks. It runs on a single server or
+through Nextflow on a cluster.
 
 Study management, metadata curation and review, single-cell ATAC model export and
 method benchmarks are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
@@ -55,8 +56,8 @@ pixi run install-all
 ```
 
 This installs everything the pipelines need: run DAP-seq with `pixi run pipeline`,
-bulk ATAC with `pixi run pipeline-atac` and scATAC with `pixi run pipeline-scatac`
-(see below).
+bulk ATAC with `pixi run pipeline-atac`, scATAC with `pixi run pipeline-scatac` and
+RNA-seq with `pixi run pipeline-rna` (see below).
 
 ## Run your first analysis
 
@@ -147,6 +148,24 @@ pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --refe
 Each library's groups become separate pseudobulks with peaks, Tn5 cut-count tracks and
 QC. The [scATAC guide](docs/usage/scatac-seq.md) explains the cell list and metrics.
 
+### RNA-seq
+
+RNA-seq takes single- or paired-end libraries, their strandedness, and the reference's
+annotation as published, GFF3 or GTF:
+
+```tsv
+sample_id	species	read1_url	read2_url	strandedness	reference_fasta	reference_annotation	organelle_contigs
+leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://example.org/rep1_2.fastq.gz	reverse	TAIR10.fa.gz	Araport11.gff3	ChrC,ChrM
+```
+
+```bash
+pixi run pipeline-rna -w /scratch/genesis -n rna-A /data/rna.tsv --references /data/references
+```
+
+Each library gets STAR alignments, featureCounts gene counts, a CPM track and QC,
+including strandedness, rRNA and organelle fractions. The
+[RNA-seq guide](docs/usage/rna-seq.md) explains the plant-specific settings.
+
 <a id="analysis-choices"></a>
 <a id="outputs-and-resources"></a>
 
@@ -165,6 +184,7 @@ flags need interpretation, and zero peaks can be a valid result.
 | DAP peak scores | Read-end RPM and mean coverage RPKM; these are different statistics |
 | ATAC fragments and QC table | Usable paired fragments, FRiP, TSS enrichment and library complexity |
 | scATAC pseudobulk QC table | Cells, fragments, insertion FRiP and TSS enrichment per group |
+| RNA-seq gene counts and QC table | Unique-alignment gene counts; strandedness, rRNA, organelle and multi-mapping fractions |
 | Provenance and Nextflow reports | Inputs, analysis settings, software identity and execution records |
 
 See the [DAP output definitions](docs/usage/dapseq-reference.md#outputs-and-resources)
@@ -180,6 +200,7 @@ between tools or studies.
 | Run DAP-seq or understand its scientific settings | [DAP-seq guide](docs/usage/dapseq-reference.md) |
 | Run paired-end bulk ATAC | [Bulk ATAC guide](docs/usage/bulk-atac.md) |
 | Make pseudobulks from single-cell ATAC fragments | [scATAC guide](docs/usage/scatac-seq.md) |
+| Count genes in plant RNA-seq | [RNA-seq guide](docs/usage/rna-seq.md) |
 | Manage studies, curate metadata or export single-cell ATAC for models | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
 | Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |

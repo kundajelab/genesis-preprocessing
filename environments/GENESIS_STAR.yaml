@@ -1,0 +1,8 @@
+name: genesis_star
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::star=2.7.11b
+  - bioconda::samtools>=1.22,<2
