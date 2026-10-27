@@ -40,7 +40,11 @@ process SCATAC_FRAGMENTS {
         \$2 !~ /^[A-Za-z0-9_][A-Za-z0-9_.-]*\$/ {
             print "cells line " NR ": groups use only letters, digits, _ . -" > "/dev/stderr"; exit 1
         }
-        {print}
+        \$1 in first_line {
+            print "cells line " NR ": barcode " \$1 " is listed again (first on line " first_line[\$1] \\
+                "); each cell must appear once, in one group" > "/dev/stderr"; exit 1
+        }
+        {first_line[\$1] = NR; print}
     ' '${cells}' > cells.tsv
     # Fragments from another assembly stop here, then keep listed cells. Organelle fragments and
     # unlisted barcodes are counted, not kept.

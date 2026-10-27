@@ -32,7 +32,7 @@ root_rep1	Arabidopsis_thaliana	https://example.org/rep1.fragments.tsv.gz	https:/
 | `sample_id`, `species` | Library identifier and output folder, as for DAP-seq |
 | `fragments_url` | HTTP(S) URL of the library's gzipped fragment file |
 | `cells_url` | HTTP(S) URL of the library's cell list (below) |
-| `reference_fasta` | Gzipped FASTA in the references folder; the fragments must be on this assembly |
+| `reference_fasta` | Gzipped FASTA in the references folder, cached as for DAP-seq; the fragments must be on this assembly |
 | `reference_genes` | BED6 gene or transcript intervals in the references folder, or `-` to skip TSS enrichment |
 | `organelle_contigs` | Comma-separated mitochondrial and plastid contig names, or `-` for none |
 
@@ -40,8 +40,9 @@ Rows that share a reference must give the same `reference_genes` and
 `organelle_contigs`, as in bulk ATAC. Each row is one library: libraries, and so
 biological replicates, are never pooled.
 
-The cell list is tab-separated with a `barcode	group` header and one row per cell.
-Barcodes must match the fragment file exactly, including any `-1` suffix. Groups are
+The cell list is tab-separated with a `barcode	group` header and one row per cell; a
+barcode listed twice stops the library. Barcodes must match the fragment file exactly,
+including any `-1` suffix. Groups are
 names such as cell types (letters, digits, `_`, `.` and `-`); use one group, for
 example `all`, for a single pseudobulk of every cell.
 

@@ -1,7 +1,7 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
-include { CHROM_SIZES } from '../modules/common/chrom_sizes'
+include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { SCATAC_DOWNLOAD } from '../modules/scatac-seq/scatac_download'
 include { SCATAC_FRAGMENTS } from '../modules/scatac-seq/scatac_fragments'
@@ -75,14 +75,15 @@ workflow {
         row + [ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
                organelles: row.organelle_contigs == '-' ? [] : row.organelle_contigs.tokenize(',')]
     })
-    // Only chromosome sizes are needed: the fragments are already aligned.
+    // Only chromosome sizes are needed, as the fragments are already aligned, but the shared
+    // reference step reuses existing products and leaves the bwa-mem2 index for other modalities.
     references = samples.unique { sample -> sample.ref_id }
         .map { meta ->
             def ref = [id: meta.ref_id, filename: meta.reference_fasta]
             tuple(ref, file("${referencesDir}/${ref.filename}", checkIfExists: true))
         }
-    CHROM_SIZES(references)
-    sizes_ch = CHROM_SIZES.out.sizes.map { ref, path -> tuple(ref.id, path) }
+    GET_REFERENCES(references, referencesDir)
+    sizes_ch = GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) }
     SCATAC_DOWNLOAD(samples)
     // MACS3's genome size counts nuclear contigs only, as in bulk ATAC.
     sized = SCATAC_DOWNLOAD.out.downloads

@@ -206,7 +206,8 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
     # Stub libraries have a single group; real ones have A and B.
     groups = 4 if engine else 2
     assert counts == {
-        "CHROM_SIZES": 1,
+        "GET_REFERENCES:CHROM_SIZES": 1,
+        "GET_REFERENCES:BWA_MEM2_INDEX": 1,
         "SCATAC_DOWNLOAD": 2,
         "SCATAC_FRAGMENTS": 2,
         "SCATAC_PEAKS": groups,
@@ -353,6 +354,23 @@ def check_rejected_fragments(work: Path, sheet: Path, base_url: str, *, engine: 
     assert "No fragments for any listed barcode" in result.stdout, result.stdout[-3000:]
 
 
+def check_duplicate_barcodes(work: Path, sheet: Path, base_url: str, *, engine: str) -> None:
+    """A barcode listed twice, even in two groups, stops the library."""
+    inputs = work / "inputs"
+    lines = (inputs / "rep1.cells.tsv").read_text().splitlines(keepends=True)
+    barcode = lines[1].split("\t")[0]
+    (inputs / "twice.cells.tsv").write_text("".join(lines) + f"{barcode}\tB\n")
+    with sheet.open() as stream:
+        (row, _) = list(csv.DictReader(stream, delimiter="\t"))
+    candidate = work / "twice.tsv"
+    changed = {"cells_url": f"{base_url}/twice.cells.tsv", "sample_id": "twice"}
+    write_sheet(candidate, [{**row, **changed}])
+    result = run_scatac(work, candidate, engine=engine, suffix="twice", expect_failure=True)
+    assert result.returncode != 0
+    message = f"barcode {barcode} is listed again (first on line 2)"
+    assert message in result.stdout, result.stdout[-3000:]
+
+
 def check_failures(work: Path, sheet: Path) -> None:
     """A rejected sheet stops before any task."""
     with sheet.open() as stream:
@@ -406,6 +424,7 @@ def main() -> None:
             check_resume(work, sheet, engine=engine)
             if engine:
                 check_rejected_fragments(work, sheet, base_url, engine=engine)
+                check_duplicate_barcodes(work, sheet, base_url, engine=engine)
             else:
                 check_failures(work, sheet)
                 # Stub runs never publish into the references folder.
