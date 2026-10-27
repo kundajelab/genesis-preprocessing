@@ -55,13 +55,15 @@ if [[ -f "$lock" ]]; then
     # lock already exists. Use existing lock for faster update
     ln "$lock" "$temp_dir/pixi.lock"
 fi
-# create .toml from scratch
+# create .toml from scratch (then delete authors line that creates churn)
 pushd "$temp_dir" &> /dev/null
 unset PIXI_PROJECT_MANIFEST
 pixi init \
     --import "$yaml" \
     -p linux-64 -p osx-64 -p osx-arm64 -p linux-aarch64 \
     .
+grep -v '^authors = ' pixi.toml > pixi.toml.tmp && mv pixi.toml.tmp pixi.toml
+
 # update lock. Installing is allowed because locking a PyPI source dependency (e.g. MACS3 pinned to
 # a git commit) needs the conda environment to build its metadata; it installs into the temporary
 # folder, which is removed below.
