@@ -1,7 +1,7 @@
 # MACS3 builds and peak-calling resources
 
 DAP-seq peak calling builds MACS3 from upstream source. The DAP environment,
-`environments/DAP_SEQ_PEAKS.yaml`, and its image pin revision
+`environments/GENESIS_MACS3.yaml`, and its image pin revision
 `da19e1dcbf3a2ff06ab906abc0658edb0c7e82d1`. It includes the callpeak
 optimization, later fixes to worker cleanup, process safety and concurrent
 scoring, and a CPU budget (`--threads`) that bounds MACS3's threads and worker

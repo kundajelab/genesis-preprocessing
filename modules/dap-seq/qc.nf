@@ -4,8 +4,8 @@ process QC {
     cpus { resources.cpus }
     memory { resources.memory }
     time { resources.time }
-    conda "${moduleDir}/../../environments/DAP_SEQ_QC.yaml"
-    container "${dotenv('DAP_SEQ_QC_IMAGE')}"
+    conda "${moduleDir}/../../environments/GENESIS_SPP.yaml"
+    container "${dotenv('GENESIS_SPP_IMAGE')}"
     tag "${meta.id}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
         pattern: '*.qc.report.*'

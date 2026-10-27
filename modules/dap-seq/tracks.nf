@@ -4,8 +4,8 @@ process TRACKS {
     cpus { resources.cpus }
     memory { resources.memory }
     time { resources.time }
-    conda "${moduleDir}/../../environments/DAP_SEQ_TRACKS.yaml"
-    container "${dotenv('DAP_SEQ_TRACKS_IMAGE')}"
+    conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
+    container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
         pattern: '*.bw'

@@ -1,7 +1,7 @@
-name: atac_trimming
+name: genesis_multiqc
 channels:
   - conda-forge
   - bioconda
   - nodefaults
 dependencies:
-  - bioconda::cutadapt=5.2
+  - bioconda::multiqc==1.35

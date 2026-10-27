@@ -312,7 +312,7 @@ Build tool images through Pixi:
 
 ```bash
 pixi run build-dockers --no-push
-pixi run build-dockers --no-push -- dap_seq_alignment genesis_tools
+pixi run build-dockers --no-push -- genesis_alignment genesis_tools
 ```
 
 Every build targets `linux/amd64` and `linux/arm64`. The build scripts default

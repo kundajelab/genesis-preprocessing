@@ -1,7 +1,7 @@
-name: dap_seq_multiqc
+name: genesis_fastqc
 channels:
   - conda-forge
   - bioconda
   - nodefaults
 dependencies:
-  - bioconda::multiqc==1.35
+  - bioconda::fastqc=0.12.1

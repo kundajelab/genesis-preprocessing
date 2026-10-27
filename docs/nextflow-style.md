@@ -23,11 +23,11 @@ The DAP scaffold follows igvf_pseudobulking_pipeline:
 - BWA options and the pinned SPP script are also explicit inputs.
 - Pure tool environments live in environments/*.yaml. Docker builds derive matching
   *.toml/*.lock files with Pixi and use dockers/pixi-yaml.Dockerfile.
-- The environments are dap_seq_alignment, dap_seq_peaks (MACS3),
-  dap_seq_qc, and dap_seq_tracks. Bulk ATAC reuses them and adds atac_trimming
-  (cutadapt); its own modules are in modules/atac-seq/. RNA-seq adds genesis_star (STAR
-  and samtools; other aligners get their own environments) and genesis_rna_counts
-  (featureCounts, gffread and samtools), and reuses dap_seq_tracks for its bigWigs.
+- Environments and images are named `genesis_` plus their contents, not the assay, since
+  workflows share them: genesis_alignment (bwa-mem2, bowtie, samtools, aria2), genesis_fastqc,
+  genesis_multiqc, genesis_macs3, genesis_spp (SPP and R QC), genesis_deeptools,
+  genesis_cutadapt (bulk ATAC trimming), genesis_star (STAR and samtools; other aligners get
+  their own environments) and genesis_rna_counts (featureCounts, gffread and samtools).
 - genesis_tools/ is a Python 3.14.5 uv project on standard, not free-threaded, CPython:
   pysam has no free-threaded wheels and re-enables the GIL. .python-version pins
   3.14.5+gil so uv never selects an installed free-threaded build; uv cannot download
@@ -49,7 +49,7 @@ standalone peak-rpm and peak-rpkm commands use the same code.
 ```bash
 pixi run install-all
 pixi run build-dockers --no-push
-pixi run build-dockers --no-push -- dap_seq_alignment genesis_tools
+pixi run build-dockers --no-push -- genesis_alignment genesis_tools
 pixi run pipeline -p local,docker /path/INPUT.tsv
 pixi run pipeline -p sherlock,apptainer /path/INPUT.tsv
 ```

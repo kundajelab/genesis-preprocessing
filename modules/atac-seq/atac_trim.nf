@@ -7,8 +7,8 @@ process ATAC_TRIM {
     // retry with more memory and time when killed (OOM, walltime, or preemption)
     errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
     maxRetries 2
-    conda "${moduleDir}/../../environments/ATAC_TRIMMING.yaml"
-    container "${dotenv('ATAC_TRIMMING_IMAGE')}"
+    conda "${moduleDir}/../../environments/GENESIS_CUTADAPT.yaml"
+    container "${dotenv('GENESIS_CUTADAPT_IMAGE')}"
     tag "${meta.id}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
         pattern: '*.cutadapt.log'

@@ -11,8 +11,8 @@ process BWA_MEM2_ALIGN {
     // retry with more memory and time when killed (OOM, walltime, or preemption)
     errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
     maxRetries 2
-    conda "${moduleDir}/../../environments/DAP_SEQ_ALIGNMENT.yaml"
-    container "${dotenv('DAP_SEQ_ALIGNMENT_IMAGE')}"
+    conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
+    container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${meta.id}"
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
         pattern: '*.alignment.tsv'

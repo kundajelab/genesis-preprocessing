@@ -776,7 +776,7 @@ def check_bams(work: Path) -> None:
                     "none",
                     "-v",
                     f"{work}:{work}:ro",
-                    images["DAP_SEQ_ALIGNMENT_IMAGE"],
+                    images["GENESIS_ALIGNMENT_IMAGE"],
                     "samtools",
                     "view",
                     str(bam),

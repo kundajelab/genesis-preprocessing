@@ -6,9 +6,9 @@ A nextflow pipeline to process and analyze plant transcription factors.
 ### Environments
 The main project environment is managed by pixi. There are subprojects:
 - genesis_tools is a Python project managed by uv. It has software tools needed for some Processes in the main pipeline.
-- environments/DAP_SEQ_ALIGNMENT.yaml defines a conda environment used for alignment and indexing.
-- environments/DAP_SEQ_PEAKS.yaml defines a conda environment used for peak calling and intersection.
-- environments/DAP_SEQ_QC.yaml defines a conda environment used for QC.
+- environments/GENESIS_ALIGNMENT.yaml defines a conda environment used for alignment and indexing.
+- environments/GENESIS_MACS3.yaml defines a conda environment used for peak calling and intersection.
+- environments/GENESIS_SPP.yaml defines a conda environment used for QC.
 
 ### Compute resources
 The project runs locally on macOS or Linux and on supported scheduler profiles.

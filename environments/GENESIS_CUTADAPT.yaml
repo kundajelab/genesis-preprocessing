@@ -1,7 +1,7 @@
-name: dap_seq_fastqc
+name: genesis_cutadapt
 channels:
   - conda-forge
   - bioconda
   - nodefaults
 dependencies:
-  - bioconda::fastqc=0.12.1
+  - bioconda::cutadapt=5.2

@@ -1,10 +1,11 @@
 [workspace]
 channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/bioconda"]
-name = "dap_seq_fastqc"
+name = "genesis_deeptools"
 platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 
 [tasks]
 
 [dependencies]
-fastqc = { version = "0.12.1.*", channel = "bioconda" }
+deeptools = { version = ">=3.5.6,<4", channel = "bioconda" }
+samtools = { version = ">=1.22,<2", channel = "bioconda" }
