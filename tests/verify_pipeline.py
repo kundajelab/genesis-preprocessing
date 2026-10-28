@@ -36,13 +36,13 @@ EXPECTED = {
 }
 SHEET_DIGESTS = {
     "Arabidopsis_thaliana/dap-seq-GSE60141": (
-        "fcb598098b6943241633f66d1a9882a1329ec9fc738658e3a7aaf3526a245a3c"
+        "24b5929ae27606d655cf1f190e6cb8703e1db89cf3442e8b2413e0d615ae20d5"
     ),
     "Arabidopsis_lyrata/dap-seq-PRJNA1177479": (
         "ee3323ecfbf0010dd727291da44699065c17e017b4ad155b6391f9289098ab9f"
     ),
     "Arabidopsis_thaliana/dap-seq-PRJNA1177481": (
-        "9150a1ec44a26af02f0996d98a07e2f83e9a265a9ed271d77ccb51a794145a62"
+        "4ceb6b00bb6393ce8702293a0d38dbc9c64c27b30bce5b842fa0bc9dc850cf6f"
     ),
     "Sorghum_bicolor/dap-seq-PRJNA1177471": (
         "20df482448afde0a126e9f61de367115ff7803c12449fe1d63e732b0883c233d"
