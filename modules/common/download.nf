@@ -4,6 +4,10 @@ process DOWNLOAD {
     // Each task fetches a batch of samples with parallel aria2c connections, so only one task
     // runs at a time to keep the load on the remote servers bounded.
     maxForks 1
+    // A transfer can end early or arrive corrupt (the gzip check below catches it); fetch the
+    // batch again rather than stop the whole run.
+    errorStrategy 'retry'
+    maxRetries 2
     cpus 2
     memory '1 GB'
     time { 1.h * samples.size() }
