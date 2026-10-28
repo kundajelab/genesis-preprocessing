@@ -7,13 +7,14 @@ implicitly join channels. FastQC observes each raw mate independently. SPP uses
 a separate shortened-read alignment and is not currently parsed into MultiQC.
 The chapter labels are reading guides, not synchronization barriers.
 
-The architecture map distinguishes implemented DAP-seq processing, bulk ATAC, tested pseudobulk/multiome contracts and planned barcode processing.
-Solid routes include the available bulk ATAC workflow. Dashed routes mark specified or planned integrations. Biological replicates are not implicitly pooled.
+The architecture map distinguishes the available DAP-seq, bulk ATAC, scATAC (from published
+fragments) and bulk RNA-seq workflows from tested multiome contracts and planned model export.
+Solid routes are available workflows. Dashed routes mark specified or planned integrations. Biological replicates are not implicitly pooled.
 
 Edit `render_metro.py` to update station labels, data dependencies and layout, then
 run `pixi run uv run --frozen --project genesis_tools python docs/diagrams/render_metro.py`. It uses only Python's standard library
-and deterministically generates seven static, animated and architecture SVGs.
-The SVG metadata records the SHA256 of each documented workflow (DAP or ATAC); it is not a
+and deterministically generates eleven static, animated and architecture SVGs.
+The SVG metadata records the SHA256 of each documented workflow (DAP, ATAC, scATAC or RNA-seq); it is not a
 claim about an upstream release. Update a map with its corresponding workflow
 change. Do not depict validation-only features as available in an upstream revision
 which does not contain them.

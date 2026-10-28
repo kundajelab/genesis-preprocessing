@@ -157,6 +157,62 @@ ATAC_EDGES = [
     edge("reference",[(140,510),(945,510),(945,330),(1060,330)],"Chromosome sizes give nuclear contigs and genome size"),
     edge("reference",[(600,690),(715,690),(715,735),(1350,735),(1350,510),(1290,510)],"Gene starts define strand-aware TSS windows"),
 ]
+RNA_NODES = [
+    ("samples",140,330,"Sample sheet","SE / PE + strandedness","reads"),
+    ("DOWNLOAD",370,330,"Download","Unmodified raw mates","reads"),
+    ("RNA_ALIGN",830,330,"STAR","Annotated junctions","reads"),
+    ("RNA_COUNTS",1060,330,"featureCounts","Unique reads, stranded","reads"),
+    ("RNA_QC",1290,330,"RNA QC","Strand, rRNA, organelles","qc"),
+    ("FASTQC",370,180,"FastQC","One report per mate","qc"),
+    ("MULTIQC_REPORT",1290,180,"MultiQC","HTML + parsed data","qc"),
+    ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
+    ("RNA_ANNOTATION",370,510,"Annotation","GTF + longest intron","reference"),
+    ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
+    ("GET_STAR_INDEX",600,690,"STAR index","Hash-checked reuse","reference"),
+    ("RNA_TRACKS",1060,690,"CPM track","Per-base bigWig","tracks"),
+]
+RNA_EDGES = [
+    edge("reads",[(140,330),(830,330)],"Libraries download and align"),
+    edge("reads",[(830,330),(1060,330)],"Uniquely aligned reads are counted per gene"),
+    edge("qc",[(1060,330),(1290,330)],"Counts and assignment feed RNA QC"),
+    edge("qc",[(370,330),(370,180)],"Raw mates independently feed FastQC"),
+    edge("qc",[(370,180),(1290,180)],"FastQC reports feed MultiQC"),
+    edge("qc",[(830,330),(945,330),(945,250),(1405,250),(1405,180),(1290,180)],"STAR and featureCounts logs feed MultiQC"),
+    edge("qc",[(1290,330),(1290,180)],"RNA QC table feeds MultiQC"),
+    edge("tracks",[(830,330),(875,330),(875,690),(1060,690)],"Aligned reads give a CPM track"),
+    edge("reference",[(140,690),(255,690),(255,510),(140,510)],"Build or verify chromosome sizes"),
+    edge("reference",[(140,510),(370,510)],"Annotation contigs must be in the FASTA"),
+    edge("reference",[(140,690),(600,690)],"FASTA feeds the STAR index"),
+    edge("reference",[(370,510),(485,510),(485,690),(600,690)],"Annotated junctions feed the STAR index"),
+    edge("reference",[(600,690),(715,690),(715,330),(830,330)],"Verified index and intron limit feed alignment"),
+    edge("reference",[(370,510),(945,510),(945,330),(1060,330)],"GTF defines the genes to count"),
+    edge("reference",[(370,510),(370,600),(1350,600),(1350,330),(1290,330)],"rRNA genes and organelle contigs feed QC"),
+]
+SCATAC_NODES = [
+    ("samples",140,330,"Sample sheet","Fragments + cell list","reads"),
+    ("SCATAC_DOWNLOAD",370,330,"Download","Published files","reads"),
+    ("SCATAC_FRAGMENTS",600,330,"Fragments","Listed cells, nuclear","reads"),
+    ("groups",830,330,"Cell groups","One pseudobulk each","reads"),
+    ("SCATAC_PEAKS",1060,330,"MACS3 peaks","Per group","peaks"),
+    ("SCATAC_QC",1290,330,"scATAC QC","FRiP, TSS enrichment","qc"),
+    ("MULTIQC_REPORT",1290,180,"MultiQC","HTML + parsed data","qc"),
+    ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
+    ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
+    ("genes",600,690,"Gene starts","Optional BED6","reference"),
+    ("SCATAC_TRACKS",1060,690,"Tn5 cut sites","Per-base bigWig","tracks"),
+]
+SCATAC_EDGES = [
+    edge("reads",[(140,330),(830,330)],"Fragments and cells are checked, then split into groups"),
+    edge("peaks",[(830,330),(1060,330)],"Each group's fragments give peaks"),
+    edge("qc",[(1060,330),(1290,330)],"Peaks give FRiP"),
+    edge("tracks",[(830,330),(945,330),(945,690),(1060,690)],"Each group's fragments give cut sites"),
+    edge("qc",[(1060,690),(1290,690),(1290,330)],"Cut sites give the TSS profile"),
+    edge("qc",[(1290,330),(1290,180)],"Group QC and TSS profiles feed MultiQC"),
+    edge("qc",[(600,330),(715,330),(715,250),(1405,250),(1405,180),(1290,180)],"Library summary feeds MultiQC"),
+    edge("reference",[(140,690),(255,690),(255,510),(140,510)],"Build or verify chromosome sizes"),
+    edge("reference",[(140,510),(485,510),(485,330),(600,330)],"Every fragment must lie on a contig"),
+    edge("reference",[(600,690),(715,690),(715,735),(1350,735),(1350,330),(1290,330)],"Gene starts define strand-aware TSS windows"),
+]
 CONTROL_NODES = [
     ("inputs",140,330,"Datasets","Exact references + policy","reads"),
     ("controller",370,330,"Controller","Queue + durable status","reads"),
@@ -185,18 +241,19 @@ ROAD_NODES = [
     ("dap_outputs",1060,180,"Peaks + quantification","Per treatment","reads"),
     ("bulk_atac",600,330,"Bulk ATAC","Paired-end libraries","tracks"),
     ("bulk_outputs",1060,330,"Fragments + ATAC QC","Separate biological replicates","tracks"),
-    ("single_cell",600,510,"sc/snATAC","Planned barcode route","future"),
-    ("cells",1060,510,"Cells + fragments","Specified contract","future"),
-    ("pseudobulk",1290,510,"Pseudobulks","Type × replicate","future"),
+    ("single_cell",600,510,"scATAC","Published fragments","tracks"),
+    ("cells",1060,510,"Cell groups","From the cell list","tracks"),
+    ("pseudobulk",1290,510,"Pseudobulks","Group × library","tracks"),
     ("multiome",140,690,"Multiome identity","Tested linking contract","future"),
-    ("rna",600,690,"RNA modality","External, separate QC","future"),
+    ("rna",600,690,"Bulk RNA-seq","STAR + featureCounts","reads"),
     ("reference_registry",140,180,"Reference registry","Tested schema","reference"),
     ("models",1290,690,"Model inputs","Model-specific export","future"),
 ]
 ROAD_EDGES = [
     edge("reads",[(140,330),(370,330),(485,330),(485,180),(600,180),(1060,180)],"Implemented DAP route"),
     edge("tracks",[(370,330),(600,330),(1060,330)],"Paired-end libraries bulk ATAC route"),
-    edge("future",[(370,330),(485,330),(485,510),(600,510),(1060,510),(1290,510)],"Planned barcode processing and pseudobulk",True),
+    edge("tracks",[(370,330),(485,330),(485,510),(600,510),(1060,510),(1290,510)],"scATAC from published fragments to group pseudobulks"),
+    edge("reads",[(370,330),(485,330),(485,690),(600,690)],"Bulk RNA-seq route"),
     edge("reference",[(140,180),(255,180),(255,330),(370,330)],"Versioned registry contract",True),
     edge("future",[(140,690),(600,690),(945,690),(945,510),(1060,510)],"Modality-specific QC with shared annotation provenance",True),
     edge("future",[(1060,330),(1175,330),(1175,690),(1290,690)],"Proposed bulk model export",True),
@@ -222,6 +279,18 @@ def main() -> None:
           "BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; the TSS profile uses strand-aware windows.",
           "QC is diagnostic, with no plant thresholds. Libraries and biological replicates are never pooled."],
          ["workflows/atac-seq.nf"]),
+        ("_rna", "GENESIS / BULK RNA-seq", "SE / PE libraries · STAR with plant intron limits · unique-read gene counts",
+         RNA_NODES, RNA_EDGES,
+         ["The intron limit is the longest annotated intron; STAR's default suits mammals. Up to 20 loci per read.",
+          "featureCounts counts uniquely aligned reads by the sheet's strandedness; rRNA and organelle genes stay in the counts.",
+          "QC is diagnostic: the forward fraction checks the sheet's strandedness. Replicates are never pooled."],
+         ["workflows/rna-seq.nf"]),
+        ("_scatac", "GENESIS / scATAC PSEUDOBULKS", "Published fragments · one pseudobulk per cell group · separate libraries",
+         SCATAC_NODES, SCATAC_EDGES,
+         ["Starts from published fragments and a cell list. Organelle fragments and unlisted barcodes are counted, then dropped.",
+          "Each group gets MACS3 peaks, a per-base cut-site bigWig (first and last fragment base), FRiP and TSS enrichment.",
+          "QC is diagnostic, with no plant thresholds. Groups stay within one library; libraries are never pooled."],
+         ["workflows/scatac-seq.nf"]),
     ]:
         for animated, suffix in [(False, ""), (True, "_animated")]:
             (out / f"genesis{assay}_metro_map{suffix}.svg").write_text(
@@ -231,8 +300,8 @@ def main() -> None:
         ROAD_NODES, ROAD_EDGES,
         ["Solid: available assay processing. Dashed: contracts or planned integration.",
          "RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.",
-         "Plant biological thresholds remain UNSPECIFIED. Barcode processing and model export are not production workflows."],
-        ["workflows/dap-seq.nf", "workflows/atac-seq.nf"]))
+         "Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments; raw-read barcode processing and model export are not production workflows."],
+        ["workflows/dap-seq.nf", "workflows/atac-seq.nf", "workflows/rna-seq.nf", "workflows/scatac-seq.nf"]))
     for animated, suffix in [(False, ""), (True, "_animated")]:
         (out / f"genesis_execution{suffix}.svg").write_text(document(
             "GENESIS / RUN AND REVIEW", "Start on one Linux server. Add managed clusters or independent workers when needed.",
@@ -241,7 +310,7 @@ def main() -> None:
              "Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.",
              "Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions."],
             ["conf/execution.config"], animated))
-    print("Rendered 7 Genesis SVG maps")
+    print("Rendered 11 Genesis SVG maps")
 
 
 if __name__ == "__main__":

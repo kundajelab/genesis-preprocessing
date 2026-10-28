@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import gzip
 import os
 import random
@@ -15,7 +16,14 @@ from collections import Counter
 from pathlib import Path
 
 import pysam
-from verify_pipeline import serve, trace_rows, write_reads
+from verify_pipeline import (
+    executor_limits,
+    in_parallel,
+    launch_folder,
+    serve,
+    trace_rows,
+    write_reads,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = [
@@ -116,7 +124,7 @@ def create_fixture(work: Path, base_url: str, *, engine: str | None) -> Path:
         )
     sheet = work / "samples.tsv"
     write_sheet(sheet, rows)
-    limits = "executor.cpus = 4\nexecutor.memory = '8 GB'\n"
+    limits = executor_limits(docker=engine == "docker")
     if engine == "docker":
         # Linux Docker only resolves host.docker.internal with an explicit host-gateway mapping.
         limits += (
@@ -337,11 +345,15 @@ def check_failures(work: Path, sheet: Path) -> None:
     extra = work / "extra-column.tsv"
     extra.write_text("".join(line.rstrip("\n") + "\tnote\n" for line in lines))
     cases.append(("extra-column", str(extra), "expected header"))
-    for suffix, candidate, diagnostic in cases:
-        assert run_atac(work, Path(candidate), suffix=suffix, expect_failure=True).returncode != 0
-        assert trace_rows(work, suffix) == []
-        log = (work / f"output-{suffix}.log").read_text()
+
+    def reject(suffix: str, candidate: str, diagnostic: str) -> None:
+        case = launch_folder(work, suffix)
+        assert run_atac(case, Path(candidate), expect_failure=True).returncode != 0
+        assert trace_rows(case) == [], suffix
+        log = (case / "output-run.log").read_text()
         assert diagnostic in log, (suffix, log[-2000:])
+
+    in_parallel([functools.partial(reject, *case) for case in cases])
 
 
 def main() -> None:
@@ -368,9 +380,16 @@ def main() -> None:
             sheet = create_fixture(work, base_url, engine=engine)
             assert run_atac(work, sheet, engine=engine).returncode == 0
             check_outputs(work, engine=engine)
-            check_resume(work, sheet, engine=engine)
-            if not engine:
-                check_failures(work, sheet)
+            if engine:
+                check_resume(work, sheet, engine=engine)
+            else:
+                # Independent of each other, each in its own launch folder.
+                in_parallel(
+                    [
+                        functools.partial(check_resume, work, sheet, engine=engine),
+                        functools.partial(check_failures, work, sheet),
+                    ]
+                )
                 # Stub runs never publish into the references folder.
                 assert sorted(p.name for p in (work / "references").iterdir()) == [
                     "atac.fa.gz",

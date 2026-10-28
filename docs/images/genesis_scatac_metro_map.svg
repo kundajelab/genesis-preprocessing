@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 870" role="img" aria-labelledby="title description">
+<title id="title">GENESIS / scATAC PSEUDOBULKS</title>
+<desc id="description">Published fragments · one pseudobulk per cell group · separate libraries. Starts from published fragments and a cell list. Organelle fragments and unlisted barcodes are counted, then dropped. Each group gets MACS3 peaks, a per-base cut-site bigWig (first and last fragment base), FRiP and TSS enrichment. QC is diagnostic, with no plant thresholds. Groups stay within one library; libraries are never pooled.</desc>
+<style>
+    svg{--bg:#fbfcfe;--text:#172c3d;--muted:#536779;--panel:#e2e8ef;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
+    .title{font-size:32px;font-weight:700;letter-spacing:1px;fill:var(--text)}
+    .subtitle,.note{font-size:17px;fill:var(--muted)}
+    .label{font-size:21px;font-weight:700;fill:var(--text)}
+    .detail{font-size:16px;fill:var(--muted)}
+    .station{fill:var(--bg);stroke-width:4}
+    .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+    .planned{stroke-dasharray:9 9}
+    .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
+    @keyframes travel{to{stroke-dashoffset:-400}}
+    @media(prefers-reduced-motion:reduce){.flow{display:none}}
+    @media(prefers-color-scheme:dark){svg{--bg:#14212d;--text:#eff6fc;--muted:#bdcbd6;--panel:#344957}.line,.station{filter:brightness(1.25)}}
+    @media print{.flow{display:none}svg{--bg:#fff;--text:#172c3d;--muted:#536779;--panel:#e2e8ef}}
+    </style>
+<rect width="1480" height="870" fill="var(--bg)"/>
+<text class="title" x="48" y="52">GENESIS / scATAC PSEUDOBULKS</text>
+<text class="subtitle" x="48" y="85">Published fragments · one pseudobulk per cell group · separate libraries</text>
+<path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 830 330"><title>Fragments and cells are checked, then split into groups</title></path>
+<path id="route-1" class="line" stroke="#ce6030" d="M 830 330 L 1060 330"><title>Each group&#x27;s fragments give peaks</title></path>
+<path id="route-2" class="line" stroke="#9260b7" d="M 1060 330 L 1290 330"><title>Peaks give FRiP</title></path>
+<path id="route-3" class="line" stroke="#438362" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 676 Q 945 690 959 690 L 1060 690"><title>Each group&#x27;s fragments give cut sites</title></path>
+<path id="route-4" class="line" stroke="#9260b7" d="M 1060 690 L 1276 690 Q 1290 690 1290 676 L 1290 330"><title>Cut sites give the TSS profile</title></path>
+<path id="route-5" class="line" stroke="#9260b7" d="M 1290 330 L 1290 180"><title>Group QC and TSS profiles feed MultiQC</title></path>
+<path id="route-6" class="line" stroke="#9260b7" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 264 Q 715 250 729 250 L 1391 250 Q 1405 250 1405 236 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>Library summary feeds MultiQC</title></path>
+<path id="route-7" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path id="route-8" class="line" stroke="#4169b1" d="M 140 510 L 471 510 Q 485 510 485 496 L 485 344 Q 485 330 499 330 L 600 330"><title>Every fragment must lie on a contig</title></path>
+<path id="route-9" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 721 Q 715 735 729 735 L 1336 735 Q 1350 735 1350 721 L 1350 344 Q 1350 330 1336 330 L 1290 330"><title>Gene starts define strand-aware TSS windows</title></path>
+<g id="samples"><title>Sample sheet: Fragments + cell list</title>
+<circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
+<text class="detail" text-anchor="middle" x="140" y="313">Fragments + cell list</text></g>
+<g id="SCATAC_DOWNLOAD"><title>Download: Published files</title>
+<circle class="station" cx="370" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="370" y="290">Download</text>
+<text class="detail" text-anchor="middle" x="370" y="313">Published files</text></g>
+<g id="SCATAC_FRAGMENTS"><title>Fragments: Listed cells, nuclear</title>
+<circle class="station" cx="600" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="600" y="290">Fragments</text>
+<text class="detail" text-anchor="middle" x="600" y="313">Listed cells, nuclear</text></g>
+<g id="groups"><title>Cell groups: One pseudobulk each</title>
+<circle class="station" cx="830" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="830" y="290">Cell groups</text>
+<text class="detail" text-anchor="middle" x="830" y="313">One pseudobulk each</text></g>
+<g id="SCATAC_PEAKS"><title>MACS3 peaks: Per group</title>
+<circle class="station" cx="1060" cy="330" r="9" stroke="#ce6030"/>
+<text class="label" text-anchor="middle" x="1060" y="290">MACS3 peaks</text>
+<text class="detail" text-anchor="middle" x="1060" y="313">Per group</text></g>
+<g id="SCATAC_QC"><title>scATAC QC: FRiP, TSS enrichment</title>
+<circle class="station" cx="1290" cy="330" r="9" stroke="#9260b7"/>
+<text class="label" text-anchor="middle" x="1290" y="290">scATAC QC</text>
+<text class="detail" text-anchor="middle" x="1290" y="313">FRiP, TSS enrichment</text></g>
+<g id="MULTIQC_REPORT"><title>MultiQC: HTML + parsed data</title>
+<circle class="station" cx="1290" cy="180" r="9" stroke="#9260b7"/>
+<text class="label" text-anchor="middle" x="1290" y="140">MultiQC</text>
+<text class="detail" text-anchor="middle" x="1290" y="163">HTML + parsed data</text></g>
+<g id="CHROM_SIZES"><title>Chromosome sizes: Verified products</title>
+<circle class="station" cx="140" cy="510" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="140" y="470">Chromosome sizes</text>
+<text class="detail" text-anchor="middle" x="140" y="493">Verified products</text></g>
+<g id="GET_REFERENCES"><title>Reference FASTA: Hash-checked reuse</title>
+<circle class="station" cx="140" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="140" y="650">Reference FASTA</text>
+<text class="detail" text-anchor="middle" x="140" y="673">Hash-checked reuse</text></g>
+<g id="genes"><title>Gene starts: Optional BED6</title>
+<circle class="station" cx="600" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="600" y="650">Gene starts</text>
+<text class="detail" text-anchor="middle" x="600" y="673">Optional BED6</text></g>
+<g id="SCATAC_TRACKS"><title>Tn5 cut sites: Per-base bigWig</title>
+<circle class="station" cx="1060" cy="690" r="9" stroke="#438362"/>
+<text class="label" text-anchor="middle" x="1060" y="650">Tn5 cut sites</text>
+<text class="detail" text-anchor="middle" x="1060" y="673">Per-base bigWig</text></g>
+<path d="M48 762 H1432" stroke="var(--panel)" stroke-width="2"/>
+<text class="note" x="48" y="798">Starts from published fragments and a cell list. Organelle fragments and unlisted barcodes are counted, then dropped.</text>
+<text class="note" x="48" y="823">Each group gets MACS3 peaks, a per-base cut-site bigWig (first and last fragment base), FRiP and TSS enrichment.</text>
+<text class="note" x="48" y="848">QC is diagnostic, with no plant thresholds. Groups stay within one library; libraries are never pooled.</text>
+<metadata>Genesis diagram schema 2; workflows/scatac-seq.nf SHA256 e81a7404894091b3ada32e5d5b53dee3ca9f567974f9a5f9e03ce4a60961f97f; schematic animation.</metadata></svg>
