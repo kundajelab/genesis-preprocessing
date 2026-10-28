@@ -12,7 +12,7 @@ function usage {
 Usage: $0 [ARGS] -- [projects]
 
 Build project dockers. If no project is specified, build all.
-Update conf/dap-images.lock with public container image pins.
+Update conf/genesis-images.lock with public container image pins.
 
 ARGS:
     -h|--help: Show this message and exit.
@@ -122,8 +122,8 @@ done \
         }
     }
     ' \
-    "$repo_dir/conf/dap-images.lock" \
+    "$repo_dir/conf/genesis-images.lock" \
     - \
 > "$tmp_env"
 
-mv "$tmp_env" "$repo_dir/conf/dap-images.lock"
+mv "$tmp_env" "$repo_dir/conf/genesis-images.lock"

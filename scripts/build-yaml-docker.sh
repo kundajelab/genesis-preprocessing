@@ -96,6 +96,6 @@ if [[ "$push" == "true" ]]; then
     1>&2 docker push "${remote_tag}"
 fi
 
-# Output the public image pin for conf/dap-images.lock.
+# Output the public image pin for conf/genesis-images.lock.
 digest=$(docker images --digests "${remote_tag}" | tail -n1 | awk '{print $3}')
 echo "${environment_name}_IMAGE=${registry}/${project}@${digest}"

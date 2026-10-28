@@ -41,7 +41,7 @@ The project runs locally on macOS or Linux and on supported scheduler profiles.
 
 ## Boundaries
 Keep assistant settings, environment files and credentials local and untracked.
-The public `conf/dap-images.lock` contains container image pins only; never put
+The public `conf/genesis-images.lock` contains container image pins only; never put
 credentials or machine-specific settings in it.
 - Allowed without prompting:
   - Creation of temporary files as long as they are cleaned up.

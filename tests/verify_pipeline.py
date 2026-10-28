@@ -425,8 +425,8 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert provenance["run"]["pipeline_version"] == "0.1.0"
     assert len(provenance["run"]["git_sha"]) == 40
     # The run records its image pins and source checkout beside its outputs, not task receipts.
-    assert (published / "dap-images.lock").read_bytes() == (
-        ROOT / "conf/dap-images.lock"
+    assert (published / "genesis-images.lock").read_bytes() == (
+        ROOT / "conf/genesis-images.lock"
     ).read_bytes()
     status = (published / "git-status.txt").read_text().splitlines()
     assert (
@@ -754,7 +754,7 @@ def check_bams(work: Path) -> None:
     """Read real BAMs to verify MAPQ-zero retention, flags, and untrimmed sequences."""
     images = dict(
         line.split("=", 1)
-        for line in (ROOT / "conf/dap-images.lock").read_text().splitlines()
+        for line in (ROOT / "conf/genesis-images.lock").read_text().splitlines()
         if "=" in line
     )
     for row in trace_rows(work):

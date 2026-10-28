@@ -105,5 +105,5 @@ Under `WORKSPACE/RUN_NAME/output/<species>/<sample_id>/`:
   table and TSS profile.
 
 `output/multiqc/` has the run's MultiQC report. As for DAP-seq, `output/` also holds
-`dap-images.lock` and `git-status.txt`, and `trace/` the Nextflow trace, report,
+`genesis-images.lock` and `git-status.txt`, and `trace/` the Nextflow trace, report,
 timeline and DAG.

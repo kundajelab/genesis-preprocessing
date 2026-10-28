@@ -78,7 +78,7 @@ def check_public_configuration(work: Path) -> None:
         assert not private, f"Local configuration must not be tracked: {name}"
 
     pins: dict[str, str] = {}
-    for line in (ROOT / "conf/dap-images.lock").read_text().splitlines():
+    for line in (ROOT / "conf/genesis-images.lock").read_text().splitlines():
         if not line or line.startswith("#"):
             continue
         key, separator, value = line.partition("=")
@@ -116,7 +116,7 @@ def check_public_configuration(work: Path) -> None:
             ".codex/rules/default.rules",
         )
     ]
-    public_paths = ["conf/dap-images.lock", "AGENTS.md"]
+    public_paths = ["conf/genesis-images.lock", "AGENTS.md"]
     ignored = subprocess.check_output(
         ["git", "check-ignore", "--no-index", "--stdin"],
         cwd=work,
@@ -217,7 +217,7 @@ def check_builds(work: Path, bash: str) -> None:
     for name in ("pyproject.toml", "uv.lock"):
         (project / name).write_text("mock\n")
     (repo / "conf").mkdir()
-    image_lock = repo / "conf/dap-images.lock"
+    image_lock = repo / "conf/genesis-images.lock"
     unrelated = "OTHER_IMAGE=example/other@sha256:" + "b" * 64
     image_lock.write_text(unrelated + "\nGENESIS_ALIGNMENT_IMAGE=old\n")
     private_env = repo / ".env"

@@ -38,7 +38,7 @@ The DAP scaffold follows igvf_pseudobulking_pipeline:
   supplies GNU coreutils on macOS, including mktemp.
 - The Dockerfiles use pinned base images. The uv recipe copies
   .python-version before dependency installation to select the Python version.
-- `conf/dap-images.lock` records public image pins for nf-dotenv.
+- `conf/genesis-images.lock` records public image pins for nf-dotenv.
 
 QUANTIFY (genesis_tools) reads the BAM with pysam and the RPKM bedGraph in one
 pass each, with no intermediate files, and publishes the two score files. The
@@ -58,7 +58,7 @@ Every Docker build targets both linux/amd64 and linux/arm64. The build scripts
 default to pushing, so explicitly pass --no-push for local builds. They derive
 image tags from the latest Git tag, with --tag available to
 override it. Image names match project/environment names without an extra prefix.
-The scripts update `conf/dap-images.lock` using image digests. Publishing images requires user
+The scripts update `conf/genesis-images.lock` using image digests. Publishing images requires user
 approval; local images alone are not available to Sherlock's Apptainer.
 
 Without a supplied profile, the pipeline wrapper uses scripts/get-default-profile.sh. `scripts/run-pipeline.sh` (and `pixi run pipeline`) runs Nextflow in the checkout's Pixi environment. The default is `local,docker`; choose a cluster profile explicitly. Input TSV and references are staged

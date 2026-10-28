@@ -55,7 +55,7 @@ def main() -> None:
 
         def check(script: str, args: list[str], expected: int, tag: str | None = None) -> None:
             log.write_text("")
-            images = root / "conf/dap-images.lock"
+            images = root / "conf/genesis-images.lock"
             images.write_text("UNCHANGED_IMAGE=example/unchanged@sha256:" + "a" * 64 + "\n")
             original_images = images.read_bytes()
             private_env = root / ".env"

@@ -166,10 +166,10 @@ or `--conda` to build the tools from `environments/*.yaml` where Docker is unava
 Git transfers code, locks, small fixtures, schemas, templates and validation reports.
 It does not transfer references, reads, analysis outputs, caches, live databases,
 model weights or credentials. Public container pins for both workflows are in
-`conf/dap-images.lock`. It contains image references only.
+`conf/genesis-images.lock`. It contains image references only.
 
 Keep `.env`, `.env.*`, `.envrc`, `.claude/` and `.codex/` local. Git and Docker build
-contexts ignore them. Genesis reads image pins from `conf/dap-images.lock`; it
+contexts ignore them. Genesis reads image pins from `conf/genesis-images.lock`; it
 does not load a local `.env`. Check staged files with `git diff --cached --name-only`
 before committing.
 

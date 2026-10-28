@@ -188,7 +188,7 @@ workflow {
             (changes ? "dirty files:\n${changes}\n" : "dirty files: none\n")
     def runOutput = file("${params.run_dir}/output")
     runOutput.mkdirs()
-    file("${repoDir}/conf/dap-images.lock").copyTo(runOutput.resolve('dap-images.lock'))
+    file("${repoDir}/conf/genesis-images.lock").copyTo(runOutput.resolve('genesis-images.lock'))
     runOutput.resolve('git-status.txt').text = gitReport
     def reportProvenance = [name: file(params.run_dir).name, git_sha: gitSha,
                            source_status: sourceStatus, pipeline_version: workflow.manifest.version]
