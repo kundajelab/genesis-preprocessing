@@ -1,0 +1,11 @@
+[workspace]
+channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/bioconda"]
+name = "genesis_star"
+platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+star = { version = "2.7.11b.*", channel = "bioconda" }
+samtools = { version = ">=1.22,<2", channel = "bioconda" }

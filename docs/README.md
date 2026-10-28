@@ -11,6 +11,7 @@ measurement definitions and evidence boundaries, read the
 - [MACS3 builds and resources](usage/macs3.md): select the optimized source build and inspect caller provenance.
 - [Bulk ATAC-seq](usage/bulk-atac.md): sample sheets, trimming, filtering, fragments, peaks and QC.
 - [scATAC pseudobulks](usage/scatac-seq.md): fragment files, cell lists, pseudobulk peaks, tracks and QC.
+- [RNA-seq](usage/rna-seq.md): plant annotations, STAR intron limits, gene counts, tracks and QC.
 
 ## Related repository
 
