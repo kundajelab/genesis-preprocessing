@@ -25,6 +25,7 @@ pipeline-rna = { cmd = "scripts/run-pipeline.sh --workflow rna-seq", description
 pipeline = { cmd = "scripts/run-pipeline.sh", description = "Run the pipeline on one sample sheet. Run with --help for usage." }
 install-all = { cmd = "scripts/install-projects.sh", description = "Install locked environments." }
 checks = { cmd = "scripts/check-projects.sh", description = "Run all checks." }
+checks-fast = { cmd = "scripts/check-projects.sh --fast", description = "Run all checks except the Nextflow pipeline regressions." }
 build-dockers = { cmd = "scripts/build-dockers.sh", description = "Build all the dockers for the project." }
 get-latest-report = { cmd = "scripts/get-latest-report.sh", description = "Get the path to the most recent execution report. Optional argument: WORKSPACE." }
 watch-log = { cmd = "scripts/watch-log.sh", description = "Follow the log of a task, given its hash (e.g. ab/123456) or a log file. Optional second argument: WORKSPACE." }

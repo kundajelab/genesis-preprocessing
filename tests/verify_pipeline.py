@@ -21,6 +21,7 @@ import threading
 import zipfile
 from collections import Counter
 from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -55,6 +56,56 @@ SAMPLES = {
     "pe_treatment": "PE",
     "pe_control": "PE",
 }
+
+# Independent Nextflow runs at once; set GENESIS_CHECK_JOBS=1 on shared machines.
+JOBS = int(os.environ.get("GENESIS_CHECK_JOBS", "4"))
+assert JOBS >= 1, "GENESIS_CHECK_JOBS must be a positive integer"
+
+
+def in_parallel(jobs: list[Callable[[], object]]) -> None:
+    """Run independent checks, up to JOBS at once; any failure is raised."""
+    with ThreadPoolExecutor(max_workers=JOBS) as pool:
+        for future in [pool.submit(job) for job in jobs]:
+            future.result()
+
+
+@functools.cache
+def available_resources(*, docker: bool) -> tuple[int, int]:
+    """CPUs and bytes of memory for tasks: the host's, and within Docker's VM when used."""
+    cpus = os.cpu_count() or 2
+    memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    if docker:
+        info = subprocess.run(
+            ["docker", "info", "--format", "{{.NCPU}} {{.MemTotal}}"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        ).stdout.split()
+        cpus, memory = min(cpus, int(info[0])), min(memory, int(info[1]))
+    return cpus, memory
+
+
+def executor_limits(*, docker: bool) -> str:
+    """Nextflow settings giving each run half the CPUs and half the memory.
+
+    Test tasks request 2 CPUs and 2 GB each, so this sets how many run at once.
+    """
+    cpus, memory = available_resources(docker=docker)
+    megabytes = max(2048, memory // 2 // 2**20)
+    return f"executor.cpus = {max(2, cpus // 2)}\nexecutor.memory = '{megabytes} MB'\n"
+
+
+def launch_folder(work: Path, name: str) -> Path:
+    """A separate launch folder for a concurrent run, sharing the fixture's references.
+
+    Each Nextflow run keeps its own .nextflow history, logs and trace there.
+    """
+    case = work / "cases" / name
+    case.mkdir(parents=True)
+    (case / "references").symlink_to(work / "references", target_is_directory=True)
+    shutil.copy2(work / "limits.config", case / "limits.config")
+    return case
 
 
 def rejected(function: Callable[[], object], message: str) -> None:
@@ -286,7 +337,7 @@ def create_fixture(work: Path, base_url: str, *, docker: bool) -> Path:
     sheet = work / "samples.tsv"
     write_sheet(sheet, rows)
     config = work / "limits.config"
-    limits = "executor.cpus = 4\nexecutor.memory = '8 GB'\n"
+    limits = executor_limits(docker=docker)
     if docker:
         # Linux Docker only resolves host.docker.internal with an explicit host-gateway mapping.
         limits += (
@@ -647,10 +698,6 @@ def check_failures(work: Path, sheet: Path) -> None:
         rows = list(csv.DictReader(stream, delimiter="\t"))
     bad = work / "bad.tsv"
     write_sheet(bad, [{**rows[0], "control_sample": "missing"}])
-    # The whole sheet is checked before any task starts, so a rejected sheet runs nothing.
-    assert run_pipeline(work, bad, suffix="invalid-sheet", expect_failure=True).returncode != 0
-    assert trace_rows(work, "invalid-sheet") == []
-    assert "invalid control missing" in (work / "output-invalid-sheet.log").read_text()
     schema = work / "schema-invalid.tsv"
     write_sheet(
         schema,
@@ -660,57 +707,54 @@ def check_failures(work: Path, sheet: Path) -> None:
             {**rows[2], "read1_url": "ftp://example.org/reads.fastq.gz"},
         ],
     )
-    assert run_pipeline(work, schema, suffix="schema-sheet", expect_failure=True).returncode != 0
-    assert trace_rows(work, "schema-sheet") == []
-    log = (work / "output-schema-sheet.log").read_text()
-    assert "Validation of samplesheet failed" in log and "duplicate entries" in log, log[-2000:]
-    assert "read1_url must be an HTTP or HTTPS URL" in log, log[-2000:]
     lines = sheet.read_text().splitlines(keepends=True)
-    for suffix, text, diagnostic in (
+    texts = {
+        "extra-column": "".join(line.rstrip("\n") + "\tnote\n" for line in lines),
+        "reordered-columns": "".join(
+            "\t".join(f[1:2] + f[:1] + f[2:]) + "\n"
+            for f in (line.rstrip("\n").split("\t") for line in lines)
+        ),
+        "missing-column": sheet.read_text().replace("control_sample", "control", 1),
+    }
+    sheets = {"invalid-sheet": bad, "schema-sheet": schema}
+    for suffix, text in texts.items():
+        sheets[suffix] = work / f"{suffix}.tsv"
+        sheets[suffix].write_text(text)
+
+    def reject(suffix: str, candidate: Path, diagnostics: list[str], extra: list[str]) -> None:
+        case = launch_folder(work, suffix)
+        assert run_pipeline(case, candidate, expect_failure=True, extra=extra).returncode != 0
+        # The whole sheet is checked before any task starts, so a rejected sheet runs nothing.
+        assert trace_rows(case) == [], suffix
+        log = (case / "output-run.log").read_text()
+        for diagnostic in diagnostics:
+            assert diagnostic in log, (suffix, diagnostic, log[-2000:])
+
+    cases: list[tuple[str, Path, list[str], list[str]]] = [
+        ("invalid-sheet", bad, ["invalid control missing"], []),
+        (
+            "schema-sheet",
+            schema,
+            [
+                "Validation of samplesheet failed",
+                "duplicate entries",
+                "read1_url must be an HTTP or HTTPS URL",
+            ],
+            [],
+        ),
         # nf-schema reports a missing column; the header check rejects what it allows.
         (
             "missing-column",
-            sheet.read_text().replace("control_sample", "control", 1),
-            "Missing required field(s): control_sample",
+            sheets["missing-column"],
+            ["Missing required field(s): control_sample"],
+            [],
         ),
-        (
-            "extra-column",
-            "".join(line.rstrip("\n") + "\tnote\n" for line in lines),
-            "expected header",
-        ),
-        (
-            "reordered-columns",
-            "".join(
-                "\t".join(f[1:2] + f[:1] + f[2:]) + "\n"
-                for f in (line.rstrip("\n").split("\t") for line in lines)
-            ),
-            "expected header",
-        ),
-    ):
-        candidate = work / f"{suffix}.tsv"
-        candidate.write_text(text)
-        assert run_pipeline(work, candidate, suffix=suffix, expect_failure=True).returncode != 0
-        assert trace_rows(work, suffix) == []
-        log = (work / f"output-{suffix}.log").read_text()
-        assert diagnostic in log, (suffix, log[-2000:])
-    assert (
-        run_pipeline(
-            work, sheet, suffix="invalid-bwa", expect_failure=True, extra=["--bwa_seed_length", "0"]
-        ).returncode
-        != 0
-    )
-    assert "must be a positive integer" in (work / "output-invalid-bwa.log").read_text()
-    assert (
-        run_pipeline(
-            work,
-            sheet,
-            suffix="multiple-sheets",
-            expect_failure=True,
-            extra=["--input", f"{sheet},{bad}"],
-        ).returncode
-        != 0
-    )
-    assert "Supply exactly one" in (work / "output-multiple-sheets.log").read_text()
+        ("extra-column", sheets["extra-column"], ["expected header"], []),
+        ("reordered-columns", sheets["reordered-columns"], ["expected header"], []),
+        ("invalid-bwa", sheet, ["must be a positive integer"], ["--bwa_seed_length", "0"]),
+        ("multiple-sheets", sheet, ["Supply exactly one"], ["--input", f"{sheet},{bad}"]),
+    ]
+    in_parallel([functools.partial(reject, *case) for case in cases])
 
 
 def check_download_failures(work: Path, base_url: str) -> None:
@@ -805,10 +849,8 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         for p in (work / "references").rglob("*")
         if p.is_file()
     }
-    for scenario, diagnostic in (
-        ("id-collision", "reference ID collision"),
-        ("missing-reference", "reference missing: absent.fa.gz"),
-    ):
+
+    def reject(scenario: str, diagnostic: str) -> None:
         case = parent / scenario
         case.mkdir()
         references = case / "references"
@@ -826,6 +868,13 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
         assert run_pipeline(case, candidate, docker=docker, expect_failure=True).returncode != 0
         assert diagnostic in (case / "output-run.log").read_text()
         assert trace_rows(case) == []
+
+    in_parallel(
+        [
+            functools.partial(reject, "id-collision", "reference ID collision"),
+            functools.partial(reject, "missing-reference", "reference missing: absent.fa.gz"),
+        ]
+    )
     assert original == {
         p.relative_to(work / "references"): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in (work / "references").rglob("*")
@@ -846,84 +895,109 @@ def reference_record(references: Path, ref_id: str, fasta: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def synthetic_products(references: Path) -> None:
-    """Stand-in reference products with a valid record, as a real run would publish."""
-    for ref_id in ("se", "pe"):
+def reference_products(references: Path, ref_id: str, built: Path | None) -> None:
+    """Products for <ref_id>.fa.gz with a valid record, as a real run would publish.
+
+    Copied from the SE reference in built, or stand-ins when built is None (stub runs).
+    """
+    if built:
+        shutil.copy2(built / "se.chrom.sizes", references / f"{ref_id}.chrom.sizes")
+        shutil.copytree(built / "se.bwa-mem2", references / f"{ref_id}.bwa-mem2")
+    else:
         (references / f"{ref_id}.chrom.sizes").write_text("chr1\t2000000\n")
         (references / f"{ref_id}.bwa-mem2").mkdir()
         for suffix in INDEX_SUFFIXES:
             (references / f"{ref_id}.bwa-mem2/genome{suffix}").write_text(f"{ref_id}{suffix}\n")
-        (references / f"{ref_id}.fa.gz.sha256").write_text(
-            reference_record(references, ref_id, f"{ref_id}.fa.gz")
-        )
+    (references / f"{ref_id}.fa.gz.sha256").write_text(
+        reference_record(references, ref_id, f"{ref_id}.fa.gz")
+    )
 
 
 def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
-    """Rebuild a reference only when its FASTA hash or a recorded product size is off."""
-    parent = work / "reference-rebuild"
-    parent.mkdir()
+    """Rebuild a reference only when its FASTA hash or a recorded product size is off.
+
+    Each scenario is its own copy of the SE reference with one library, so a single run
+    checks them all: exactly the altered references are rebuilt, the rest are reused.
+    """
     built = work / "references"
     if docker:
         # The real run published products and a record the reader must accept.
         assert (built / "se.fa.gz.sha256").read_text() == reference_record(built, "se", "se.fa.gz")
 
-    def changed_fasta(references: Path) -> None:
-        fasta = references / "se.fa.gz"
+    def changed_fasta(references: Path, ref_id: str) -> None:
+        fasta = references / f"{ref_id}.fa.gz"
         content = gzip.decompress(fasta.read_bytes())
         fasta.write_bytes(gzip.compress(content.replace(b"A", b"T", 1), mtime=0))
 
-    def resized_index(references: Path) -> None:
-        index = references / "se.bwa-mem2/genome.ann"
+    def empty_index(references: Path, ref_id: str) -> None:
+        (references / f"{ref_id}.bwa-mem2/genome.ann").write_bytes(b"")
+
+    def resized_index(references: Path, ref_id: str) -> None:
+        index = references / f"{ref_id}.bwa-mem2/genome.ann"
         index.write_bytes(index.read_bytes() + b"x")  # e.g. replaced or partly copied
 
-    def hash_only(references: Path) -> None:
-        record = references / "se.fa.gz.sha256"
+    def hash_only(references: Path, ref_id: str) -> None:
+        record = references / f"{ref_id}.fa.gz.sha256"
         record.write_text(record.read_text().splitlines()[0] + "\n")  # earlier one-line format
 
-    cases: list[tuple[str, Callable[[Path], object] | None, bool]] = [
-        ("unchanged", None, False),
-        ("changed-fasta", changed_fasta, True),
-        ("missing-record", lambda r: (r / "se.fa.gz.sha256").unlink(), True),
-        ("empty-index", lambda r: (r / "se.bwa-mem2/genome.ann").write_bytes(b""), True),
-        ("resized-index", resized_index, True),
-        ("hash-only-record", hash_only, True),
-        (
-            "stale-hash",
-            lambda r: (r / "se.fa.gz.sha256").write_text(
-                "0" * 64 + (r / "se.fa.gz.sha256").read_text()[64:]
-            ),
-            True,
-        ),
-    ]
-    for scenario, change, rebuilt in cases:
-        case = parent / scenario
-        case.mkdir()
-        references = case / "references"
-        shutil.copytree(built, references)
-        if not docker:
-            synthetic_products(references)
-        shutil.copy2(work / "limits.config", case / "limits.config")
+    def stale_hash(references: Path, ref_id: str) -> None:
+        record = references / f"{ref_id}.fa.gz.sha256"
+        record.write_text("0" * 64 + record.read_text()[64:])
+
+    cases: dict[str, Callable[[Path, str], object] | None] = {
+        "unchanged": None,
+        "changed_fasta": changed_fasta,
+        "missing_record": lambda r, ref_id: (r / f"{ref_id}.fa.gz.sha256").unlink(),
+        "empty_index": empty_index,
+        "resized_index": resized_index,
+        "hash_only_record": hash_only,
+        "stale_hash": stale_hash,
+    }
+    case = work / "reference-rebuild"
+    references = case / "references"
+    references.mkdir(parents=True)
+    shutil.copy2(work / "limits.config", case / "limits.config")
+    with sheet.open() as stream:
+        control = next(
+            row
+            for row in csv.DictReader(stream, delimiter="\t")
+            if row["sample_id"] == "se_control"
+        )
+    rows = []
+    for ref_id, change in cases.items():
+        shutil.copy2(built / "se.fa.gz", references / f"{ref_id}.fa.gz")
+        reference_products(references, ref_id, built if docker else None)
         if change:
-            change(references)
-        before = {
-            path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()
+            change(references, ref_id)
+        rows.append({**control, "sample_id": ref_id, "reference_fasta": f"{ref_id}.fa.gz"})
+    candidate = case / "samples.tsv"
+    write_sheet(candidate, rows)
+    before = {path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()}
+    assert run_pipeline(case, candidate, docker=docker).returncode == 0
+    names = [row["name"] for row in trace_rows(case)]
+    rebuilt = {ref_id for ref_id, change in cases.items() if change}
+    for process in ("GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM2_INDEX"):
+        tags = {
+            name.removeprefix(f"{process} (").removesuffix(")")
+            for name in names
+            if name.startswith(f"{process} (")
         }
-        assert run_pipeline(case, sheet, docker=docker).returncode == 0, scenario
-        names = [row["name"] for row in trace_rows(case)]
-        for process in ("GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM2_INDEX"):
-            # Only the altered SE reference is rebuilt; the PE reference is always reused.
-            assert (f"{process} (se)" in names) == rebuilt, (scenario, names)
-            assert f"{process} (pe)" not in names, (scenario, names)
-        after = {
-            path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()
+        assert tags == rebuilt, (process, sorted(tags))
+    after = {path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()}
+    if docker:
+        # A rebuild publishes fresh products and a record matching them; reuse changes nothing.
+        for ref_id in rebuilt:
+            record = (references / f"{ref_id}.fa.gz.sha256").read_text()
+            assert record == reference_record(references, ref_id, f"{ref_id}.fa.gz"), ref_id
+        unchanged = {
+            path: data
+            for path, data in before.items()
+            if path.name.startswith("unchanged.") or path.parent.name.startswith("unchanged.")
         }
-        if docker:
-            # A rebuild publishes fresh products and a record matching them.
-            record = (references / "se.fa.gz.sha256").read_text()
-            assert record == reference_record(references, "se", "se.fa.gz"), scenario
-        else:
-            # Stub runs never publish into the references folder.
-            assert after == before, scenario
+        assert all(after[path] == data for path, data in unchanged.items())
+    else:
+        # Stub runs never publish into the references folder.
+        assert after == before
 
 
 def main() -> None:
@@ -963,45 +1037,57 @@ def main() -> None:
             check_outputs(work, docker=args.docker)
             if args.docker:
                 check_bams(work)
-            check_resume(work, sheet, docker=args.docker)
-            check_reference_failures(work, sheet, docker=args.docker)
-            check_reference_rebuild(work, sheet, docker=args.docker)
+
+            def resume_and_report() -> None:
+                check_resume(work, sheet, docker=args.docker)
+                # The report cases read the published output that resuming republishes.
+                if args.docker:
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            str(ROOT / "tests/verify_multiqc.py"),
+                            "--source",
+                            str(work / "published/samples/output"),
+                            "--manifest",
+                            str(
+                                work
+                                / "published/samples/output/multiqc/multiqc_data"
+                                / "genesis_provenance.json"
+                            ),
+                            "--work",
+                            str(work / "multiqc-cases"),
+                        ],
+                        check=True,
+                        timeout=900,
+                    )
+
+            # Independent of each other, each in its own launch folder, so they run at once.
+            phases: list[Callable[[], object]] = [
+                resume_and_report,
+                functools.partial(check_reference_failures, work, sheet, docker=args.docker),
+                functools.partial(check_reference_rebuild, work, sheet, docker=args.docker),
+            ]
+            if args.docker:
+                phases += [
+                    functools.partial(check_download_failures, work, base_url),
+                    functools.partial(
+                        subprocess.run,
+                        [
+                            sys.executable,
+                            str(ROOT / "tests/verify_fastqc.py"),
+                            "--work",
+                            str(work / "fastqc-cases"),
+                        ],
+                        check=True,
+                        timeout=900,
+                    ),
+                ]
+            else:
+                phases.append(functools.partial(check_failures, work, sheet))
+            in_parallel(phases)
             assert raw_before == {
                 path: hashlib.sha256(Path(path).read_bytes()).hexdigest() for path in raw_before
             }
-            if args.docker:
-                check_download_failures(work, base_url)
-            else:
-                check_failures(work, sheet)
-        if args.docker:
-            subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "tests/verify_fastqc.py"),
-                    "--work",
-                    str(work / "fastqc-cases"),
-                ],
-                check=True,
-                timeout=900,
-            )
-        if args.docker:
-            subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "tests/verify_multiqc.py"),
-                    "--source",
-                    str(work / "published/samples/output"),
-                    "--manifest",
-                    str(
-                        work
-                        / "published/samples/output/multiqc/multiqc_data/genesis_provenance.json"
-                    ),
-                    "--work",
-                    str(work / "multiqc-cases"),
-                ],
-                check=True,
-                timeout=900,
-            )
         label = "Real-tool Docker end-to-end" if args.docker else "Nextflow regression"
         print(f"{label} validation passed.", flush=True)
         passed = True

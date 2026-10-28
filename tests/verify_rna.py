@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import gzip
 import hashlib
 import math
@@ -18,7 +19,16 @@ from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
-from verify_pipeline import INDEX_SUFFIXES, reference_record, serve, trace_rows, write_reads
+from verify_pipeline import (
+    INDEX_SUFFIXES,
+    executor_limits,
+    in_parallel,
+    launch_folder,
+    reference_record,
+    serve,
+    trace_rows,
+    write_reads,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = [
@@ -187,7 +197,7 @@ def create_fixture(work: Path, base_url: str, *, engine: str | None) -> Path:
         )
     sheet = work / "samples.tsv"
     write_sheet(sheet, rows)
-    limits = "executor.cpus = 4\nexecutor.memory = '8 GB'\n"
+    limits = executor_limits(docker=engine == "docker")
     if engine == "docker":
         # Linux Docker only resolves host.docker.internal with an explicit host-gateway mapping.
         limits += (
@@ -397,13 +407,12 @@ def task_dir(work: Path, name: str) -> Path:
     return folder
 
 
-def star_record(references: Path, ref_id: str, annotation: str, gtf: Path) -> list[str]:
+def star_record(
+    fasta: Path, sizes: Path, gtf: Path, index: Path, *, version: str = STAR_VERSION
+) -> list[str]:
     """The <index>.sha256 lines RNA_INDEX writes, with index files sorted (glob order varies)."""
-    name = f"{ref_id}.{annotation.removesuffix('.gz')}.star"
-    lengths = [
-        int(line.split("\t")[1])
-        for line in (references / f"{ref_id}.chrom.sizes").read_text().splitlines()
-    ]
+    ref_id = fasta.name.removesuffix(".fa.gz")
+    lengths = [int(line.split("\t")[1]) for line in sizes.read_text().splitlines()]
     length = sum(lengths)
     parameters = {
         "sjdbOverhang": 100,
@@ -411,12 +420,12 @@ def star_record(references: Path, ref_id: str, annotation: str, gtf: Path) -> li
         "genomeChrBinNbits": min(18, math.floor(math.log2(max(length / len(lengths), 100)))),
     }
     header = [
-        f"{sha256(references / f'{ref_id}.fa.gz')}  {ref_id}.fa.gz",
+        f"{sha256(fasta)}  {fasta.name}",
         f"{sha256(gtf)}  {ref_id}.genes.gtf",
-        f"{STAR_VERSION}  STAR",
+        f"{version}  STAR",
     ] + [f"{value}  {key}" for key, value in parameters.items()]
-    files = [path for path in (references / name).iterdir() if path.is_file()]
-    return header + sorted(f"{path.stat().st_size}  {name}/{path.name}" for path in files)
+    files = [path for path in index.iterdir() if path.is_file()]
+    return header + sorted(f"{path.stat().st_size}  {index.name}/{path.name}" for path in files)
 
 
 def read_star_record(path: Path) -> list[str]:
@@ -424,130 +433,155 @@ def read_star_record(path: Path) -> list[str]:
     return lines[:STAR_HEADER] + sorted(lines[STAR_HEADER:])
 
 
-def synthetic_products(references: Path, work: Path) -> None:
-    """Reference products as a real run publishes them, from the first stub run's tasks.
+def published_record(references: Path, ref_id: str, annotation: str, gtf: Path) -> list[str]:
+    """The record for <ref_id>.<annotation>.star in the references folder."""
+    return star_record(
+        references / f"{ref_id}.fa.gz",
+        references / f"{ref_id}.chrom.sizes",
+        gtf,
+        references / f"{ref_id}.{annotation}.star",
+    )
 
-    The STAR index and record are the ones the stub wrote, with the pinned STAR version for the
-    stub's, so the reuse cases also exercise RNA_INDEX's record writer.
+
+def reference_products(references: Path, ref_id: str, built: Path | None, gtf: Path) -> None:
+    """Products for <ref_id>.fa.gz and <ref_id>.gff3 with valid records, as a real run publishes.
+
+    Copied from the plant reference in built, or stand-ins when built is None (stub runs).
+    gtf is the GTF RNA_ANNOTATION makes from the annotation.
     """
-    for ref_id in ("plant", "lifted"):
-        sizes = task_dir(work, f"GET_REFERENCES:CHROM_SIZES ({ref_id})") / f"{ref_id}.chrom.sizes"
-        shutil.copy2(sizes, references / sizes.name)
+    index = references / f"{ref_id}.{ref_id}.gff3.star"
+    if built:
+        shutil.copy2(built / "plant.chrom.sizes", references / f"{ref_id}.chrom.sizes")
+        shutil.copytree(built / "plant.bwa-mem2", references / f"{ref_id}.bwa-mem2")
+        shutil.copytree(built / "plant.plant.gff3.star", index)
+    else:
+        (references / f"{ref_id}.chrom.sizes").write_text("chr1\t300000\nChrC\t20000\n")
         (references / f"{ref_id}.bwa-mem2").mkdir()
         for suffix in INDEX_SUFFIXES:
             (references / f"{ref_id}.bwa-mem2/genome{suffix}").write_text(f"{ref_id}{suffix}\n")
-        (references / f"{ref_id}.fa.gz.sha256").write_text(
-            reference_record(references, ref_id, f"{ref_id}.fa.gz")
-        )
-        built = task_dir(work, f"GET_STAR_INDEX:RNA_INDEX ({ref_id})")
-        name = f"{ref_id}.{ref_id}.gff3.star"
-        shutil.copytree(built / name, references / name)
-        record = (built / f"{name}.sha256").read_text()
-        assert "STUB  STAR\n" in record, record
-        (references / f"{name}.sha256").write_text(
-            record.replace("STUB  STAR\n", f"{STAR_VERSION}  STAR\n")
-        )
-        gtf = task_dir(work, f"RNA_ANNOTATION ({ref_id})") / f"{ref_id}.genes.gtf"
-        expected = star_record(references, ref_id, f"{ref_id}.gff3", gtf)
-        assert read_star_record(references / f"{name}.sha256") == expected, ref_id
+        index.mkdir()
+        (index / "SA").write_text(f"{ref_id}\n")
+    (references / f"{ref_id}.fa.gz.sha256").write_text(
+        reference_record(references, ref_id, f"{ref_id}.fa.gz")
+    )
+    record = published_record(references, ref_id, f"{ref_id}.gff3", gtf)
+    (references / f"{index.name}.sha256").write_text("\n".join(record) + "\n")
 
 
 def check_star_rebuild(work: Path, sheet: Path, *, engine: str | None) -> None:
-    """Rebuild a STAR index only when its record no longer matches its inputs and files."""
-    parent = work / "star-rebuild"
-    parent.mkdir()
+    """Rebuild a STAR index only when its record no longer matches its inputs and files.
+
+    Each scenario is its own copy of the plant reference and annotation with one library, so a
+    single run checks them all: exactly the altered indexes are rebuilt, the rest are reused.
+    """
     built = work / "references"
-    record_name = "plant.plant.gff3.star.sha256"
+    plant_gtf = task_dir(work, "RNA_ANNOTATION (plant)") / "plant.genes.gtf"
     if engine:
         # The real run published indexes and records the reader must accept.
-        gtf = task_dir(work, "RNA_ANNOTATION (plant)") / "plant.genes.gtf"
-        expected = star_record(built, "plant", "plant.gff3", gtf)
-        assert read_star_record(built / record_name) == expected
+        expected = published_record(built, "plant", "plant.gff3", plant_gtf)
+        assert read_star_record(built / "plant.plant.gff3.star.sha256") == expected
+    else:
+        # Stub runs publish nothing, so check the record the stub index task wrote.
+        task = task_dir(work, "GET_STAR_INDEX:RNA_INDEX (plant)")
+        sizes = task_dir(work, "GET_REFERENCES:CHROM_SIZES (plant)") / "plant.chrom.sizes"
+        index = task / "plant.plant.gff3.star"
+        expected = star_record(built / "plant.fa.gz", sizes, plant_gtf, index, version="STUB")
+        assert read_star_record(task / "plant.plant.gff3.star.sha256") == expected
 
-    def changed_fasta(references: Path) -> None:
-        fasta = references / "plant.fa.gz"
+    def changed_fasta(references: Path, ref_id: str) -> None:
+        fasta = references / f"{ref_id}.fa.gz"
         content = gzip.decompress(fasta.read_bytes())
         fasta.write_bytes(gzip.compress(content.replace(b"A", b"T", 1), mtime=0))
 
-    def changed_annotation(references: Path) -> None:
-        annotation = references / "plant.gff3"
+    def changed_annotation(references: Path, ref_id: str) -> None:
+        annotation = references / f"{ref_id}.gff3"
         annotation.write_text(annotation.read_text().replace("\t10900\t", "\t10901\t", 1))
 
-    def resized_index(references: Path) -> None:
-        index = references / "plant.plant.gff3.star/SA"
+    def resized_index(references: Path, ref_id: str) -> None:
+        index = references / f"{ref_id}.{ref_id}.gff3.star/SA"
         index.write_bytes(index.read_bytes() + b"x")  # e.g. replaced or partly copied
 
-    def star_version(references: Path) -> None:
-        record = references / record_name
+    def extra_index_file(references: Path, ref_id: str) -> None:
+        (references / f"{ref_id}.{ref_id}.gff3.star/extra").write_text("x")
+
+    def star_version(references: Path, ref_id: str) -> None:
+        record = references / f"{ref_id}.{ref_id}.gff3.star.sha256"
         record.write_text(record.read_text().replace(f"{STAR_VERSION}  STAR", "2.7.10a  STAR"))
 
-    def second_annotation(references: Path) -> None:
-        shutil.copy2(references / "plant.gff3", references / "plant.v2.gff3")
+    def missing_record(references: Path, ref_id: str) -> None:
+        (references / f"{ref_id}.{ref_id}.gff3.star.sha256").unlink()
 
-    cases: list[tuple[str, Callable[[Path], object] | None, bool]] = [
-        ("unchanged", None, False),
-        ("changed-fasta", changed_fasta, True),
-        ("changed-annotation", changed_annotation, True),
-        ("missing-record", lambda r: (r / record_name).unlink(), True),
-        ("resized-index", resized_index, True),
-        (
-            "extra-index-file",
-            lambda r: (r / "plant.plant.gff3.star/extra").write_text("x"),
-            True,
-        ),
-        ("star-version", star_version, True),
+    def second_annotation(references: Path, ref_id: str) -> None:
+        shutil.copy2(references / f"{ref_id}.gff3", references / f"{ref_id}.v2.gff3")
+
+    cases: dict[str, Callable[[Path, str], object] | None] = {
+        "unchanged": None,
+        "changed_fasta": changed_fasta,
+        "changed_annotation": changed_annotation,
+        "missing_record": missing_record,
+        "resized_index": resized_index,
+        "extra_index_file": extra_index_file,
+        "star_version": star_version,
         # Another annotation for the same FASTA gets its own index beside the first.
-        ("second-annotation", second_annotation, True),
-    ]
+        "second_annotation": second_annotation,
+    }
+    case = work / "star-rebuild"
+    references = case / "references"
+    references.mkdir(parents=True)
+    shutil.copy2(work / "limits.config", case / "limits.config")
     with sheet.open() as stream:
-        rows = list(csv.DictReader(stream, delimiter="\t"))
-    for scenario, change, rebuilt in cases:
-        case = parent / scenario
-        case.mkdir()
-        references = case / "references"
-        shutil.copytree(built, references)
-        if not engine:
-            synthetic_products(references, work)
-        shutil.copy2(work / "limits.config", case / "limits.config")
+        library = next(
+            row for row in csv.DictReader(stream, delimiter="\t") if row["sample_id"] == "rep2"
+        )
+    annotations = {}
+    rows = []
+    for ref_id, change in cases.items():
+        shutil.copy2(built / "plant.fa.gz", references / f"{ref_id}.fa.gz")
+        shutil.copy2(built / "plant.gff3", references / f"{ref_id}.gff3")
+        # Stub annotation tasks pass the annotation through as the GTF.
+        gtf = plant_gtf if engine else references / f"{ref_id}.gff3"
+        reference_products(references, ref_id, built if engine else None, gtf)
         if change:
-            change(references)
-        annotation = "plant.v2.gff3" if scenario == "second-annotation" else "plant.gff3"
-        case_sheet = case / "samples.tsv"
-        write_sheet(
-            case_sheet,
-            [
-                {**row, "reference_annotation": annotation}
-                if row["reference_fasta"] == "plant.fa.gz"
-                else row
-                for row in rows
-            ],
+            change(references, ref_id)
+        annotations[ref_id] = (
+            f"{ref_id}.v2.gff3" if ref_id == "second_annotation" else f"{ref_id}.gff3"
         )
-        before = {
-            path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()
-        }
-        assert run_rna(case, case_sheet, engine=engine).returncode == 0, scenario
-        names = [row["name"] for row in trace_rows(case)]
-        # Only the altered plant index is rebuilt; the lifted index is always reused.
-        assert ("GET_STAR_INDEX:RNA_INDEX (plant)" in names) == rebuilt, (
-            scenario,
-            names,
+        rows.append(
+            {
+                **library,
+                "sample_id": ref_id,
+                "reference_fasta": f"{ref_id}.fa.gz",
+                "reference_annotation": annotations[ref_id],
+            }
         )
-        assert "GET_STAR_INDEX:RNA_INDEX (lifted)" not in names, (scenario, names)
-        after = {
-            path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()
-        }
-        if engine and rebuilt:
-            # A rebuild publishes a fresh index and a record matching it.
-            gtf = task_dir(case, "RNA_ANNOTATION (plant)") / "plant.genes.gtf"
-            name = f"plant.{annotation}.star.sha256"
-            expected = star_record(references, "plant", annotation, gtf)
-            assert read_star_record(references / name) == expected, scenario
-            if scenario == "second-annotation":
-                # The first annotation's index is left as it was.
-                assert all(after[path] == data for path, data in before.items()), scenario
-        else:
-            # Stub runs never publish into the references folder, and reuse changes nothing.
-            assert after == before, scenario
+    candidate = case / "samples.tsv"
+    write_sheet(candidate, rows)
+    before = {path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()}
+    assert run_rna(case, candidate, engine=engine).returncode == 0
+    names = [row["name"] for row in trace_rows(case)]
+    prefix = "GET_STAR_INDEX:RNA_INDEX ("
+    tags = {
+        name.removeprefix(prefix).removesuffix(")") for name in names if name.startswith(prefix)
+    }
+    rebuilt = {ref_id for ref_id, change in cases.items() if change}
+    assert tags == rebuilt, sorted(tags)
+    after = {path: path.read_bytes() for path in sorted(references.rglob("*")) if path.is_file()}
+    if engine:
+        # A rebuild publishes a fresh index and a record matching it.
+        for ref_id in rebuilt:
+            gtf = task_dir(case, f"RNA_ANNOTATION ({ref_id})") / f"{ref_id}.genes.gtf"
+            annotation = annotations[ref_id]
+            record = references / f"{ref_id}.{annotation}.star.sha256"
+            expected = published_record(references, ref_id, annotation, gtf)
+            assert read_star_record(record) == expected, ref_id
+        # Reuse changes nothing, and the first annotation's index is left as it was.
+        kept = ("unchanged.", "second_annotation.second_annotation.gff3.star")
+        for path, data in before.items():
+            if path.relative_to(references).as_posix().startswith(kept):
+                assert after[path] == data, path
+    else:
+        # Stub runs never publish into the references folder.
+        assert after == before
 
 
 def check_failures(work: Path, sheet: Path) -> None:
@@ -572,11 +606,15 @@ def check_failures(work: Path, sheet: Path) -> None:
     extra = work / "extra-column.tsv"
     extra.write_text("".join(line.rstrip("\n") + "\tnote\n" for line in lines))
     cases.append(("extra-column", str(extra), "expected header"))
-    for suffix, candidate, diagnostic in cases:
-        assert run_rna(work, Path(candidate), suffix=suffix, expect_failure=True).returncode != 0
-        assert trace_rows(work, suffix) == []
-        log = (work / f"output-{suffix}.log").read_text()
+
+    def reject(suffix: str, candidate: str, diagnostic: str) -> None:
+        case = launch_folder(work, suffix)
+        assert run_rna(case, Path(candidate), expect_failure=True).returncode != 0
+        assert trace_rows(case) == [], suffix
+        log = (case / "output-run.log").read_text()
         assert diagnostic in log, (suffix, log[-2000:])
+
+    in_parallel([functools.partial(reject, *case) for case in cases])
 
 
 def main() -> None:
@@ -609,10 +647,14 @@ def main() -> None:
             sheet = create_fixture(work, base_url, engine=engine)
             assert run_rna(work, sheet, engine=engine).returncode == 0
             check_outputs(work, engine=engine)
-            check_resume(work, sheet, engine=engine)
-            check_star_rebuild(work, sheet, engine=engine)
+            # Independent of each other, each in its own launch folder, so they run at once.
+            phases: list[Callable[[], object]] = [
+                functools.partial(check_resume, work, sheet, engine=engine),
+                functools.partial(check_star_rebuild, work, sheet, engine=engine),
+            ]
             if not engine:
-                check_failures(work, sheet)
+                phases.append(functools.partial(check_failures, work, sheet))
+            in_parallel(phases)
         label = f"Real-tool ({engine}) RNA-seq" if engine else "RNA-seq Nextflow regression"
         print(f"{label} validation passed.", flush=True)
         passed = True

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import gzip
 import os
 import random
@@ -12,10 +13,11 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 import pysam
-from verify_pipeline import serve, trace_rows
+from verify_pipeline import executor_limits, in_parallel, launch_folder, serve, trace_rows
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = [
@@ -130,7 +132,7 @@ def run_scatac(
     suffix = suffix or ("resume" if resume else "run")
     limits = work / "limits.config"
     if not limits.exists():
-        text = "executor.cpus = 4\nexecutor.memory = '8 GB'\n"
+        text = executor_limits(docker=engine == "docker")
         if engine == "docker":
             # Linux Docker only resolves host.docker.internal with an explicit host-gateway mapping.
             text += (
@@ -349,7 +351,8 @@ def check_rejected_fragments(work: Path, sheet: Path, base_url: str, *, engine: 
     candidate = work / "suffix.tsv"
     changed = {"cells_url": f"{base_url}/suffix.cells.tsv", "sample_id": "suffix"}
     write_sheet(candidate, [{**row, **changed}])
-    result = run_scatac(work, candidate, engine=engine, suffix="suffix", expect_failure=True)
+    case = launch_folder(work, "suffix")
+    result = run_scatac(case, candidate, engine=engine, expect_failure=True)
     assert result.returncode != 0
     assert "No fragments for any listed barcode" in result.stdout, result.stdout[-3000:]
 
@@ -365,7 +368,8 @@ def check_duplicate_barcodes(work: Path, sheet: Path, base_url: str, *, engine: 
     candidate = work / "twice.tsv"
     changed = {"cells_url": f"{base_url}/twice.cells.tsv", "sample_id": "twice"}
     write_sheet(candidate, [{**row, **changed}])
-    result = run_scatac(work, candidate, engine=engine, suffix="twice", expect_failure=True)
+    case = launch_folder(work, "twice")
+    result = run_scatac(case, candidate, engine=engine, expect_failure=True)
     assert result.returncode != 0
     message = f"barcode {barcode} is listed again (first on line 2)"
     assert message in result.stdout, result.stdout[-3000:]
@@ -388,11 +392,15 @@ def check_failures(work: Path, sheet: Path) -> None:
     extra = work / "extra-column.tsv"
     extra.write_text("".join(line.rstrip("\n") + "\tnote\n" for line in lines))
     cases.append(("extra-column", str(extra), "expected header"))
-    for suffix, candidate, diagnostic in cases:
-        assert run_scatac(work, Path(candidate), suffix=suffix, expect_failure=True).returncode != 0
-        assert trace_rows(work, suffix) == []
-        log = (work / f"output-{suffix}.log").read_text()
+
+    def reject(suffix: str, candidate: str, diagnostic: str) -> None:
+        case = launch_folder(work, suffix)
+        assert run_scatac(case, Path(candidate), expect_failure=True).returncode != 0
+        assert trace_rows(case) == [], suffix
+        log = (case / "output-run.log").read_text()
         assert diagnostic in log, (suffix, log[-2000:])
+
+    in_parallel([functools.partial(reject, *case) for case in cases])
 
 
 def main() -> None:
@@ -421,12 +429,23 @@ def main() -> None:
             check_outputs(work, engine=engine)
             if engine:
                 check_cut_sites(work)
-            check_resume(work, sheet, engine=engine)
+            # Independent of each other, each in its own launch folder, so they run at once.
+            phases: list[Callable[[], object]] = [
+                functools.partial(check_resume, work, sheet, engine=engine)
+            ]
             if engine:
-                check_rejected_fragments(work, sheet, base_url, engine=engine)
-                check_duplicate_barcodes(work, sheet, base_url, engine=engine)
+                phases += [
+                    functools.partial(
+                        check_rejected_fragments, work, sheet, base_url, engine=engine
+                    ),
+                    functools.partial(
+                        check_duplicate_barcodes, work, sheet, base_url, engine=engine
+                    ),
+                ]
             else:
-                check_failures(work, sheet)
+                phases.append(functools.partial(check_failures, work, sheet))
+            in_parallel(phases)
+            if not engine:
                 # Stub runs never publish into the references folder.
                 assert sorted(p.name for p in (work / "references").iterdir()) == [
                     "genes.bed",

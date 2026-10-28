@@ -136,6 +136,19 @@ git diff --check
 git status --short
 ```
 
+While editing, `pixi run checks-fast` runs everything except the Nextflow pipeline
+regressions in about 15 seconds. The test scripts run in parallel, and each runs its
+independent phases and Nextflow cases in parallel, each in its own launch folder. At most
+`GENESIS_CHECK_JOBS` (default 4) run at once at each level, and a failing script's full
+output is printed at the end. Each test run of Nextflow may use half the CPUs and half of
+the memory, of Docker's VM for Docker validation and of the machine otherwise. Set
+`GENESIS_CHECK_JOBS=1` on a shared machine such as a login node:
+
+```bash
+pixi run checks-fast
+GENESIS_CHECK_JOBS=1 pixi run checks
+```
+
 Use [Nextflow conventions](nextflow-style.md) when editing a workflow. Keep generated
 outputs and machine-specific configuration outside Git. Commit a reviewable change
 with the commands actually tested and any remaining limitations.
