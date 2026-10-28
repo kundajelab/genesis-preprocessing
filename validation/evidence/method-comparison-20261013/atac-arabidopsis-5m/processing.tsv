@@ -1,9 +1,0 @@
-arm	repetition	status	wall_seconds	scope	resume
-macs2	1	COMPLETE	1803.1895347670652	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-picard	1	COMPLETE	1646.6431580849458	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-bowtie2	1	COMPLETE	2092.916956047062	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-genrich	1	COMPLETE	1924.574205107987	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-cutadapt	1	COMPLETE	1897.1342153020669	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-fastp	1	COMPLETE	1911.9237081990577	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-bwa	1	COMPLETE	1965.4711072351784	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False
-baseline	1	COMPLETE	1921.9469651000109	all libraries: trimming, alignment, marking, selection, calling and task hashing; excludes indexes and common evaluation	False

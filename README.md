@@ -19,9 +19,12 @@ It is not a validated plant foundation model or an MPRA platform.
 
 Nextflow runs the supported scientific workflows.
 
-| Implemented capability | Evidence scope | Evidence revision/source | Remaining acceptance |
-| --- | --- | --- | --- |
-| DAP and bulk ATAC workflows | Real tools on synthetic inputs; selected public subsets | [Study acceptance](validation/reports/real-study-validation.md); [public comparisons](validation/reports/expanded-plant-comparison.md), archived in `b9d0cf7` | Full-depth biological and task-specific acceptance |
+| Implemented capability | Evidence scope | Remaining acceptance |
+| --- | --- | --- |
+| DAP and bulk ATAC workflows | Real tools on synthetic inputs; selected public subsets | Full-depth biological and task-specific acceptance |
+
+Earlier validation reports and evidence were removed from this repository; see
+`validation/` at commit e2e2aa9.
 
 Read the [scientific overview](docs/scientific-overview.md) for measurement
 semantics, three evidence-backed observations, and what remains between files,
@@ -217,8 +220,7 @@ between tools or studies.
 | Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |
 
-The [documentation index](docs/README.md) also links to reference material and
-validation records.
+The [documentation index](docs/README.md) also links to reference material.
 
 <a id="verification"></a>
 
@@ -231,16 +233,12 @@ commands. It distinguishes package comparisons from parameter sensitivity and so
 tests. A higher mapping rate or more peaks alone is not evidence that one method is
 better.
 
-The [plant comparison report](validation/reports/expanded-plant-comparison.md)
-contains 64 completed Arabidopsis method/depth cases, independent TF motif evidence,
-biological ATAC replicate measurements, and comparisons of reference assemblies
-and annotation releases. Tables distinguish completed results from the ongoing
-A. lyrata, sorghum and maize runs. The current evidence does not establish a better
-replacement for the BWA-MEM2/MACS3 defaults across assays.
-The [optimized MACS3 comparison](validation/reports/macs3-optimization.md) measures
-caller speed, memory use and output equivalence at matched CPU allocations.
-The [complete-workflow comparison](validation/reports/pipeline-method-comparison.md)
-scores Genesis and nf-core ATAC using common metric definitions.
+Earlier comparisons covered 64 Arabidopsis method/depth cases with independent TF
+motif evidence, biological ATAC replicates, reference assemblies and annotation
+releases. They did not establish a better replacement for the BWA-MEM2/MACS3
+defaults across assays. Optimized MACS3 builds were compared for speed, memory use
+and output equivalence at matched CPU allocations, and complete workflows were
+scored against nf-core ATAC with common metric definitions.
 
 ## Troubleshooting
 

@@ -1,9 +1,0 @@
-{
-  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
-  "packages": {
-    "pyBigWig": "0.3.26",
-    "numpy": "2.5.3"
-  },
-  "status": "PASS",
-  "scope": "local binary validator tests; not the full pinned track container"
-}

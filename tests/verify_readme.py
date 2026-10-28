@@ -49,34 +49,13 @@ def anchors(text: str) -> set[str]:
     return result
 
 
-# Moved to genesis-curation in October 2026. Dated validation reports keep their original
-# links; current documentation links to the new repository instead.
-MOVED = (
-    "benchmarks/",
-    "docs/curation/",
-    "docs/usage/ai-providers.md",
-    "docs/usage/curation.md",
-    "docs/usage/execution.md",
-    "docs/usage/llm-deployment.md",
-    "docs/usage/scatac.md",
-    "docs/usage/scatac-model-handoff.md",
-    "docs/usage/studies.md",
-    "tests/study_pipeline_fixture.py",
-    "tests/verify_study.py",
-)
-
-
 def check_links(document: Path) -> None:
     prose = re.sub(r"^```.*?^```[^\n]*$", "", document.read_text(), flags=re.M | re.S)
-    historical = document.resolve().is_relative_to(ROOT / "validation")
     for target in re.findall(r"\]\(([^)]+)\)", prose):
         if "://" in target or target.startswith("mailto:"):
             continue
         relative, separator, fragment = unquote(target).partition("#")
         path = (document.parent / relative).resolve() if relative else document
-        if not path.exists() and historical and path.is_relative_to(ROOT):
-            if str(path.relative_to(ROOT)).startswith(MOVED):
-                continue
         if not path.exists():
             raise AssertionError(f"Broken documentation link in {document.name}: {target}")
         if separator and path.suffix == ".md" and fragment not in anchors(path.read_text()):

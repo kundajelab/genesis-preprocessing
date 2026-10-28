@@ -1,5 +1,0 @@
-PASS: prepared input registration, scoped review, stale evidence, v3 migration and restore
-PASS: two workers, exact campaign compilation, restart, automatic collection, metadata preservation and bounded revalidation
-PASS: shared-control DAP grouping and three separately cataloged libraries
-PASS: changed-input launch gate, failed-job isolation and interrupted collection recovery
-Scientific pipelines / live SSH / biological accuracy: NOT RUN; fixtures are synthetic
