@@ -1,7 +1,7 @@
 sample_id	species	read1_url	read2_url	strandedness	reference_fasta	reference_annotation	organelle_contigs
-GSE184725_shoot_control_1	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/024/SRR16039924/SRR16039924.fastq.gz	-	reverse	Sorghum_bicolor_NCBIv3_PtMt.fa.gz	Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz	Pt,Mt
-GSE184725_shoot_control_2	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/025/SRR16039925/SRR16039925.fastq.gz	-	reverse	Sorghum_bicolor_NCBIv3_PtMt.fa.gz	Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz	Pt,Mt
-GSE184725_shoot_control_3	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/026/SRR16039926/SRR16039926.fastq.gz	-	reverse	Sorghum_bicolor_NCBIv3_PtMt.fa.gz	Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz	Pt,Mt
-GSE184725_shoot_sulfur_deficient_1	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/027/SRR16039927/SRR16039927.fastq.gz	-	reverse	Sorghum_bicolor_NCBIv3_PtMt.fa.gz	Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz	Pt,Mt
-GSE184725_shoot_sulfur_deficient_2	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/028/SRR16039928/SRR16039928.fastq.gz	-	reverse	Sorghum_bicolor_NCBIv3_PtMt.fa.gz	Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz	Pt,Mt
-GSE184725_shoot_sulfur_deficient_3	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/029/SRR16039929/SRR16039929.fastq.gz	-	reverse	Sorghum_bicolor_NCBIv3_PtMt.fa.gz	Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz	Pt,Mt
+GSE184725_shoot_control_1	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/024/SRR16039924/SRR16039924.fastq.gz	-	reverse	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+GSE184725_shoot_control_2	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/025/SRR16039925/SRR16039925.fastq.gz	-	reverse	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+GSE184725_shoot_control_3	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/026/SRR16039926/SRR16039926.fastq.gz	-	reverse	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+GSE184725_shoot_sulfur_deficient_1	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/027/SRR16039927/SRR16039927.fastq.gz	-	reverse	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+GSE184725_shoot_sulfur_deficient_2	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/028/SRR16039928/SRR16039928.fastq.gz	-	reverse	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+GSE184725_shoot_sulfur_deficient_3	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR160/029/SRR16039929/SRR16039929.fastq.gz	-	reverse	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt

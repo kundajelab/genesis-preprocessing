@@ -45,7 +45,7 @@ SHEET_DIGESTS = {
         "4ceb6b00bb6393ce8702293a0d38dbc9c64c27b30bce5b842fa0bc9dc850cf6f"
     ),
     "Sorghum_bicolor/dap-seq-PRJNA1177471": (
-        "20df482448afde0a126e9f61de367115ff7803c12449fe1d63e732b0883c233d"
+        "3cde1f1b8a95a9dcb09c71fb749537b3a1afc0347b469570f70bd910523d7cd9"
     ),
 }
 SAMPLES = {

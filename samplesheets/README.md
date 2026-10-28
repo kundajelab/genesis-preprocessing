@@ -65,43 +65,42 @@ row; sum the two runs of a sample for sample-level counts.
 
 ## Sorghum reference
 
-All Sorghum sheets use one reference: Ensembl Plants release 63 `Sorghum_bicolor_NCBIv3`
-(BTx623), with the chloroplast (RefSeq NC_008602, renamed `Pt`) and mitochondrion (NC_008360,
-renamed `Mt`) appended, because the Ensembl FASTA has neither. Without them, organelle reads
-would align to nuclear copies of organelle DNA and the organelle QC would read zero. The DAP
-plants are RTx430, so their reads are aligned to the BTx623 assembly.
+All Sorghum sheets use Phytozome genome 730 (BTx623 v5.0 assembly, v5.1 genes), the latest
+Phytozome release, with the organelles handled as agreed with Alex Borowsky and Gabriel
+Ferreras Garrucho:
 
-Build the references folder with:
+- **Mitochondrion:** 47 of v5's 55 unplaced scaffolds (2.5 Mb, 291 genes) are pieces of the
+  mitochondrial genome, about 5 copies' worth: at least 90% of each matches RefSeq NC_008360 at
+  at least 99% identity. They are removed, and the complete RefSeq mitochondrion is appended as
+  `Mt`, so mitochondrial reads have one place to map. Kept with them, every such read would be a
+  multi-mapper (MAPQ 0) and be filtered out.
+- **Chloroplast:** v5 has none (one 580 bp nuclear insertion only); RefSeq NC_008602 is
+  appended as `Pt`.
+- **Organelle genes:** the RefSeq gene models are added, so RNA-seq counts chloroplast and
+  mitochondrial genes. Trans-spliced genes (mitochondrial nad1, nad2, nad5; chloroplast
+  rps12) become one transcript per piece under one gene, so no annotated intron joins pieces
+  that are far apart or on opposite strands. The longest annotated intron stays 43 kb.
+- The other 8 scaffolds are kept. The DAP plants are RTx430, aligned to the BTx623 assembly.
 
-```bash
-ens=https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-63
-efetch='https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&rettype=fasta&retmode=text&id='
-curl -fsSLO "$ens/fasta/sorghum_bicolor/dna/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz"
-curl -fsSLO "$ens/gff3/sorghum_bicolor/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz"
-curl -fsSL -o NC_008602.fa "${efetch}NC_008602"
-curl -fsSL -o NC_008360.fa "${efetch}NC_008360"
-{
-    gzip -dc Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
-    sed '1s/^>.*/>Pt NC_008602 Sorghum bicolor chloroplast/' NC_008602.fa
-    sed '1s/^>.*/>Mt NC_008360 Sorghum bicolor mitochondrion/' NC_008360.fa
-} | gzip -n > Sorghum_bicolor_NCBIv3_PtMt.fa.gz
-gzip -dc Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz |
-    awk -v OFS='\t' '$3 == "gene" {print $1, $4 - 1, $5, ".", 0, $7}' > Sorghum_bicolor_NCBIv3.63.genes.bed
-```
+[`Sorghum_bicolor/reference/`](Sorghum_bicolor/reference/) builds it. Phytozome needs a JGI
+login (ORCID works): download `Sbicolor_730_v5.0.fa.gz` and
+`Sbicolor_730_v5.1.gene_exons.gff3.gz` from the
+[Phytozome portal](https://phytozome-next.jgi.doe.gov/info/Sbicolor_v5_1) into an empty folder,
+then run `samplesheets/Sorghum_bicolor/reference/build.sh` there. It checks JGI's MD5s,
+downloads the RefSeq organelle FASTA and GFF3, and writes the three reference files.
+`mito-scaffolds.txt` lists the removed scaffolds.
 
 | File | SHA-256 |
 | --- | --- |
-| `Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz` (download) | `ad40aa753793907fee06b3fe18a57d97f2f72798f4bcef15417a87fe36df73fb` |
-| `NC_008602.fa` (download) | `8c99da486f7f773c2978aafc6eb2ed4b71037d8ae631b4209810f377dcefffcd` |
-| `NC_008360.fa` (download) | `35432359b7fe450b8c4df7fc8ddd62a440c4e5e24248939639a6597ae152a87d` |
-| `Sorghum_bicolor_NCBIv3_PtMt.fa.gz`, decompressed | `1376e335a646121b519f659f8fd52c9cce41385b985bb80728356217708bbdd9` |
-| `Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz` | `f178e26b4fa3f227c365f585d27ccbd1bd95e39e8023115e38f17e4a6e7d7339` |
-| `Sorghum_bicolor_NCBIv3.63.genes.bed` | `3de15e99825dafa4567022a98e4760df05ece066139c7a9ea051cc4bb6db18ee` |
+| `Sbicolor_730_v5.0_PtMt.fa.gz`, decompressed | `73fa0491ad14c1747d1774f8d5fb6eb8cf90188e2ef576f9ffa71bb9efde130b` |
+| `Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz`, decompressed | `1c03fb965fd5687d789f9ea36ce10b8e0dc3b8bc8675527fa806c5658e4ae93b` |
+| `Sbicolor_730_v5.1_PtMt.genes.bed` | `bd27df170c5583d97bab10c8fb8b5cd638325a0899961f0b9dd8d33bb3f485b0` |
 
-Check the FASTA with `gzip -dc Sorghum_bicolor_NCBIv3_PtMt.fa.gz | sha256sum`: the compressed
-file's hash depends on the gzip version. The result has 869 contigs (chromosomes `1`–`10`, 857
-scaffolds, `Pt` 140,754 bp and `Mt` 468,628 bp; 709,344,700 bp in all), every GFF3 sequence is
-in it, and the BED has 34,118 genes.
+Check the compressed files with `gzip -dc FILE | sha256sum`: their own hash depends on the gzip
+version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 bp and `Pt`
+140,754 bp; 717,997,770 bp in all), every GFF3 sequence is in it, and the annotation has
+32,062 genes, 193 of them on `Mt` and `Pt`. Gene IDs carry a suffix, as in
+`Sobic.001G000100.v5.1`. The BED lists each piece of a trans-spliced gene separately.
 
 ## Not yet available
 
