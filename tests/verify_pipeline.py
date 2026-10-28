@@ -29,23 +29,23 @@ from genesis_tools.samples import SAMPLE_HEADER, load_samples
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED = {
-    "01-Arabidopsis_thaliana-GSE60141": (936, 934, "SE"),
-    "15-Arabidopsis_lyrata-PRJNA1177479": (405, 378, "PE"),
-    "16-Arabidopsis_thaliana-PRJNA1177481": (800, 748, "PE"),
-    "24-Sorghum_bicolor-PRJNA1177471": (142, 134, "PE"),
+    "Arabidopsis_thaliana/dap-seq-GSE60141": (936, 934, "SE"),
+    "Arabidopsis_lyrata/dap-seq-PRJNA1177479": (405, 378, "PE"),
+    "Arabidopsis_thaliana/dap-seq-PRJNA1177481": (800, 748, "PE"),
+    "Sorghum_bicolor/dap-seq-PRJNA1177471": (142, 134, "PE"),
 }
 SHEET_DIGESTS = {
-    "01-Arabidopsis_thaliana-GSE60141": (
+    "Arabidopsis_thaliana/dap-seq-GSE60141": (
         "fcb598098b6943241633f66d1a9882a1329ec9fc738658e3a7aaf3526a245a3c"
     ),
-    "15-Arabidopsis_lyrata-PRJNA1177479": (
+    "Arabidopsis_lyrata/dap-seq-PRJNA1177479": (
         "ee3323ecfbf0010dd727291da44699065c17e017b4ad155b6391f9289098ab9f"
     ),
-    "16-Arabidopsis_thaliana-PRJNA1177481": (
+    "Arabidopsis_thaliana/dap-seq-PRJNA1177481": (
         "9150a1ec44a26af02f0996d98a07e2f83e9a265a9ed271d77ccb51a794145a62"
     ),
-    "24-Sorghum_bicolor-PRJNA1177471": (
-        "48a02373ead600ec41af5b230f9e2f2c43415af5c86c090b5de450af4bf2bf07"
+    "Sorghum_bicolor/dap-seq-PRJNA1177471": (
+        "20df482448afde0a126e9f61de367115ff7803c12449fe1d63e732b0883c233d"
     ),
 }
 SAMPLES = {
@@ -85,7 +85,7 @@ def check_sheets(work: Path) -> None:
     references = work / "sheet-references"
     references.mkdir()
     for dataset, (count, treatments, layout) in EXPECTED.items():
-        sheet = ROOT / f"{dataset}.tsv"
+        sheet = ROOT / "samplesheets" / f"{dataset}.tsv"
         with sheet.open() as stream:
             rows = list(csv.DictReader(stream, delimiter="\t"))
         for row in rows:
@@ -108,7 +108,7 @@ def check_sheets(work: Path) -> None:
         assert digest == SHEET_DIGESTS[dataset], f"Changed sample identity or assignment: {dataset}"
         assert len(samples) == count
         assert sum(row["control_sample"] != "-" for row in samples) == treatments
-        assert {row["species"] for row in samples} == {dataset.split("-")[1]}
+        assert {row["species"] for row in samples} == {dataset.split("/")[0]}
         assert all((row["read2_url"] == "-") == (layout == "SE") for row in samples)
     # Exercise control validation independently of the real sheets.
     good = {

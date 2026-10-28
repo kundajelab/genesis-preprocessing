@@ -13,13 +13,14 @@ calls MACS3 peaks against each treatment's assigned control, and quantifies peak
 
 | Sample sheet | Layout | Libraries | Treatments |
 | --- | --- | ---: | ---: |
-| `01-Arabidopsis_thaliana-GSE60141.tsv` | SE | 936 | 934 |
-| `15-Arabidopsis_lyrata-PRJNA1177479.tsv` | PE | 405 | 378 |
-| `16-Arabidopsis_thaliana-PRJNA1177481.tsv` | PE | 800 | 748 |
-| `24-Sorghum_bicolor-PRJNA1177471.tsv` | PE | 142 | 134 |
+| `samplesheets/Arabidopsis_thaliana/dap-seq-GSE60141.tsv` | SE | 936 | 934 |
+| `samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv` | PE | 405 | 378 |
+| `samplesheets/Arabidopsis_thaliana/dap-seq-PRJNA1177481.tsv` | PE | 800 | 748 |
+| `samplesheets/Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | PE | 142 | 134 |
 
 These six-column sheets contain the source sample IDs, read URLs and assigned
-controls. Use one sheet per analysis.
+controls. Use one sheet per analysis. [samplesheets/README.md](../../samplesheets/README.md)
+lists every sheet, its source and the references it needs.
 
 ## Install and run
 
@@ -53,16 +54,16 @@ give sheets elsewhere as absolute paths:
 pixi run pipeline --help
 
 # Run test data with default profile: local Docker.
-pixi run pipeline test-Sorghum_bicolor-PRJNA1177471.tsv
+pixi run pipeline samplesheets/Sorghum_bicolor/dap-seq-PRJNA1177471-test.tsv
 
 # Local execution with micromamba/conda environments.
-pixi run pipeline -p local,conda 15-Arabidopsis_lyrata-PRJNA1177479.tsv
+pixi run pipeline -p local,conda samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv
 
 # Continue a previous run using Nextflow's task cache.
-pixi run pipeline 15-Arabidopsis_lyrata-PRJNA1177479.tsv -resume
+pixi run pipeline samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv -resume
 
 # Submit tasks from Sherlock using accessible container images.
-pixi run pipeline -p sherlock,apptainer 15-Arabidopsis_lyrata-PRJNA1177479.tsv
+pixi run pipeline -p sherlock,apptainer samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv
 ```
 
 You can also call `scripts/run-pipeline.sh` directly, from any folder; relative paths

@@ -1,0 +1,70 @@
+# Sample sheets
+
+One folder per species, one sheet per study and modality:
+`samplesheets/<Species>/<modality>-<study>.tsv`. Each sheet uses its workflow's exact header
+(see the [DAP-seq](../docs/usage/dapseq-reference.md), [bulk ATAC](../docs/usage/bulk-atac.md)
+and [scATAC](../docs/usage/scatac-seq.md) guides). Read URLs point to ENA over HTTPS, or to
+GSA (China) for CRA studies. Reference files are named in the sheet and looked up in the
+folder given by `--references`; they are not downloaded automatically.
+
+| Sheet | Workflow | Libraries | Source |
+| --- | --- | ---: | --- |
+| `Arabidopsis_thaliana/dap-seq-GSE60141.tsv` | dap-seq | 936 (SE) | O'Malley 2016 |
+| `Arabidopsis_thaliana/dap-seq-PRJNA1177481.tsv` | dap-seq | 800 (PE) | multiDAP |
+| `Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv` | dap-seq | 405 (PE) | multiDAP |
+| `Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | dap-seq | 142 (PE) | multiDAP, RTx430 plants; Genesis DAP-seq set 24 |
+| `Sorghum_bicolor/dap-seq-PRJNA1177471-test.tsv` | dap-seq | 6 (PE) | Subset of the sheet above, for a quick test |
+| `Sorghum_bicolor/atac-seq-curated.tsv` | atac-seq | 24 (PE) | Genesis "Bulk ATAC Fable Curated" tab: CRA002789, SRP110225, SRP188687, SRP308654, SRP674033 |
+| `Sorghum_bicolor/rna-seq-GSE184725.tsv` | rna-seq | 6 (SE) | GSE184725, BTx623 shoot, control and sulfur-deficient, 3 each; NEBNext Ultra II Directional (`reverse`) |
+
+Sample IDs in the curated Sorghum ATAC sheet are `<study>_<tissue>_<replicate>`. The Genesis
+metadata sheet lists 25 Sorghum ATAC runs; SRR8742452 (SRP188687) is left out because it is the
+study's genomic input control, not an ATAC library.
+
+## Sorghum reference
+
+All Sorghum sheets use one reference: Ensembl Plants release 63 `Sorghum_bicolor_NCBIv3`
+(BTx623), with the chloroplast (RefSeq NC_008602, renamed `Pt`) and mitochondrion (NC_008360,
+renamed `Mt`) appended, because the Ensembl FASTA has neither. Without them, organelle reads
+would align to nuclear copies of organelle DNA and the organelle QC would read zero. The DAP
+plants are RTx430, so their reads are aligned to the BTx623 assembly.
+
+Build the references folder with:
+
+```bash
+ens=https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-63
+efetch='https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&rettype=fasta&retmode=text&id='
+curl -fsSLO "$ens/fasta/sorghum_bicolor/dna/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz"
+curl -fsSLO "$ens/gff3/sorghum_bicolor/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz"
+curl -fsSL -o NC_008602.fa "${efetch}NC_008602"
+curl -fsSL -o NC_008360.fa "${efetch}NC_008360"
+{
+    gzip -dc Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
+    sed '1s/^>.*/>Pt NC_008602 Sorghum bicolor chloroplast/' NC_008602.fa
+    sed '1s/^>.*/>Mt NC_008360 Sorghum bicolor mitochondrion/' NC_008360.fa
+} | gzip -n > Sorghum_bicolor_NCBIv3_PtMt.fa.gz
+gzip -dc Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz |
+    awk -v OFS='\t' '$3 == "gene" {print $1, $4 - 1, $5, ".", 0, $7}' > Sorghum_bicolor_NCBIv3.63.genes.bed
+```
+
+| File | SHA-256 |
+| --- | --- |
+| `Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz` (download) | `ad40aa753793907fee06b3fe18a57d97f2f72798f4bcef15417a87fe36df73fb` |
+| `NC_008602.fa` (download) | `8c99da486f7f773c2978aafc6eb2ed4b71037d8ae631b4209810f377dcefffcd` |
+| `NC_008360.fa` (download) | `35432359b7fe450b8c4df7fc8ddd62a440c4e5e24248939639a6597ae152a87d` |
+| `Sorghum_bicolor_NCBIv3_PtMt.fa.gz`, decompressed | `1376e335a646121b519f659f8fd52c9cce41385b985bb80728356217708bbdd9` |
+| `Sorghum_bicolor.Sorghum_bicolor_NCBIv3.63.gff3.gz` | `f178e26b4fa3f227c365f585d27ccbd1bd95e39e8023115e38f17e4a6e7d7339` |
+| `Sorghum_bicolor_NCBIv3.63.genes.bed` | `3de15e99825dafa4567022a98e4760df05ece066139c7a9ea051cc4bb6db18ee` |
+
+Check the FASTA with `gzip -dc Sorghum_bicolor_NCBIv3_PtMt.fa.gz | sha256sum`: the compressed
+file's hash depends on the gzip version. The result has 869 contigs (chromosomes `1`–`10`, 857
+scaffolds, `Pt` 140,754 bp and `Mt` 468,628 bp; 709,344,700 bp in all), every GFF3 sequence is
+in it, and the BED has 34,118 genes.
+
+## Not yet available
+
+Sorghum scATAC has no sheet. The scATAC workflow starts from published fragment files, and
+neither Sorghum study in the Genesis "scATAC Fable Curated" tab has them:
+
+- Mendieta 2024 (PRJNA1063172, BTx623 leaf): raw FASTQs from a plate-based design only.
+- Swift 2023 (GSE248919, seedling multiome): R objects only.
