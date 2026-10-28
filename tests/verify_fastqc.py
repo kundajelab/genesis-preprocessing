@@ -29,8 +29,8 @@ def check_fastqc_inputs(work: Path) -> None:
     )
     image_line = next(
         line
-        for line in (ROOT / "conf/dap-images.lock").read_text().splitlines()
-        if line.startswith("DAP_SEQ_FASTQC_IMAGE=")
+        for line in (ROOT / "conf/genesis-images.lock").read_text().splitlines()
+        if line.startswith("GENESIS_FASTQC_IMAGE=")
     )
     (work / "images.lock").write_text(image_line + "\n")
     config = work / "nextflow.config"

@@ -1,4 +1,4 @@
-name: dap_seq_peaks
+name: genesis_macs3
 channels:
   - conda-forge
   - bioconda

@@ -4,8 +4,8 @@ process MULTIQC_REPORT {
     cpus 1
     memory '2 GB'
     time '1h'
-    conda "${moduleDir}/../../environments/DAP_SEQ_MULTIQC.yaml"
-    container "${dotenv('DAP_SEQ_MULTIQC_IMAGE')}"
+    conda "${moduleDir}/../../environments/GENESIS_MULTIQC.yaml"
+    container "${dotenv('GENESIS_MULTIQC_IMAGE')}"
     publishDir "${params.run_dir}/output/multiqc", mode: 'copy', pattern: 'multiqc*'
     input:
     path reports, stageAs: 'inputs/*'

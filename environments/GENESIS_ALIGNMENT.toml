@@ -1,6 +1,6 @@
 [workspace]
 channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/bioconda", "https://conda.anaconda.org/conda-forge"]
-name = "dap_seq_alignment"
+name = "genesis_alignment"
 platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 

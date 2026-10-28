@@ -241,8 +241,8 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
         ):
             assert (library / name).is_file(), library / name
     assert (published / "multiqc/multiqc_report.html").stat().st_size > 0
-    assert (published / "dap-images.lock").read_bytes() == (
-        ROOT / "conf/dap-images.lock"
+    assert (published / "genesis-images.lock").read_bytes() == (
+        ROOT / "conf/genesis-images.lock"
     ).read_bytes()
     status = (published / "git-status.txt").read_text().splitlines()
     assert status[0].startswith("branch: ") and status[1].startswith("commit: "), status

@@ -1,6 +1,6 @@
 [workspace]
 channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/conda-forge", "https://conda.anaconda.org/bioconda"]
-name = "dap_seq_qc"
+name = "genesis_spp"
 platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 

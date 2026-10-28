@@ -1,4 +1,4 @@
-name: dap_seq_tracks
+name: genesis_deeptools
 channels:
   - conda-forge
   - bioconda

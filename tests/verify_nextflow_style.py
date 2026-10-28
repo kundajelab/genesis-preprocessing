@@ -40,7 +40,7 @@ elif name == "pixi":
         manifest.with_name("pixi.lock").write_text("mock lock\n")
 elif name == "docker":
     if args[0] == "build":
-        if os.environ.get("FAIL_BUILD") and "ENV_NAME=DAP_SEQ_ALIGNMENT" in args:
+        if os.environ.get("FAIL_BUILD") and "ENV_NAME=GENESIS_ALIGNMENT" in args:
             sys.exit(7)
     elif args[0] == "images":
         print("REPOSITORY TAG DIGEST IMAGE_ID CREATED SIZE")
@@ -78,7 +78,7 @@ def check_public_configuration(work: Path) -> None:
         assert not private, f"Local configuration must not be tracked: {name}"
 
     pins: dict[str, str] = {}
-    for line in (ROOT / "conf/dap-images.lock").read_text().splitlines():
+    for line in (ROOT / "conf/genesis-images.lock").read_text().splitlines():
         if not line or line.startswith("#"):
             continue
         key, separator, value = line.partition("=")
@@ -116,7 +116,7 @@ def check_public_configuration(work: Path) -> None:
             ".codex/rules/default.rules",
         )
     ]
-    public_paths = ["conf/dap-images.lock", "AGENTS.md"]
+    public_paths = ["conf/genesis-images.lock", "AGENTS.md"]
     ignored = subprocess.check_output(
         ["git", "check-ignore", "--no-index", "--stdin"],
         cwd=work,
@@ -210,16 +210,16 @@ def check_builds(work: Path, bash: str) -> None:
     (repo / "dockers").mkdir()
     (repo / "dockers" / ".dockerignore").write_text(".venv/\n")
     (repo / "environments").mkdir()
-    (repo / "environments" / "DAP_SEQ_ALIGNMENT.yaml").write_text("name: dap_seq_alignment\n")
+    (repo / "environments" / "GENESIS_ALIGNMENT.yaml").write_text("name: genesis_alignment\n")
     (repo / "environments" / "GENESIS_TOOLS.yaml").write_text("name: genesis_tools\n")
     project = repo / "genesis_tools"
     project.mkdir()
     for name in ("pyproject.toml", "uv.lock"):
         (project / name).write_text("mock\n")
     (repo / "conf").mkdir()
-    image_lock = repo / "conf/dap-images.lock"
+    image_lock = repo / "conf/genesis-images.lock"
     unrelated = "OTHER_IMAGE=example/other@sha256:" + "b" * 64
-    image_lock.write_text(unrelated + "\nDAP_SEQ_ALIGNMENT_IMAGE=old\n")
+    image_lock.write_text(unrelated + "\nGENESIS_ALIGNMENT_IMAGE=old\n")
     private_env = repo / ".env"
     private_env.write_text("LOCAL_SETTING=private-test-fixture\n")
     binaries = work / "bin"
@@ -252,7 +252,7 @@ def check_builds(work: Path, bash: str) -> None:
     assert unrelated in contents
     assert "LOCAL_SETTING" not in contents
     assert private_env.read_text() == "LOCAL_SETTING=private-test-fixture\n"
-    assert "DAP_SEQ_ALIGNMENT_IMAGE=kundajelab/dap_seq_alignment@sha256:" in contents
+    assert "GENESIS_ALIGNMENT_IMAGE=kundajelab/genesis_alignment@sha256:" in contents
     assert "GENESIS_TOOLS_IMAGE=kundajelab/genesis_tools@sha256:" in contents
     commands = [json.loads(line) for line in log.read_text().splitlines()]
     assert not any(command[0] == "docker" and command[1][0] == "push" for command in commands)
@@ -260,7 +260,7 @@ def check_builds(work: Path, bash: str) -> None:
     assert len(builds) == 2
     for args in builds:
         assert args[args.index("--platform") + 1] == "linux/amd64,linux/arm64"
-    assert (repo / "environments" / "DAP_SEQ_ALIGNMENT.lock").read_text() == "mock lock\n"
+    assert (repo / "environments" / "GENESIS_ALIGNMENT.lock").read_text() == "mock lock\n"
     assert not (project / ".dockerignore").exists()
     log.write_text("")
     result = run(["--tag", "published", "--push", "--", "genesis_tools"])
@@ -268,7 +268,7 @@ def check_builds(work: Path, bash: str) -> None:
     commands = [json.loads(line) for line in log.read_text().splitlines()]
     assert sum(name == "docker" and args[0] == "push" for name, args in commands) == 1
     assert sum(name == "docker" and args[0] == "build" for name, args in commands) == 1
-    assert "DAP_SEQ_ALIGNMENT_IMAGE=kundajelab/dap_seq_alignment@sha256:" in image_lock.read_text()
+    assert "GENESIS_ALIGNMENT_IMAGE=kundajelab/genesis_alignment@sha256:" in image_lock.read_text()
     log.write_text("")
     result = run(["--no-push", "--", "genesis_tools"])
     assert result.returncode == 0, result.stderr

@@ -1,6 +1,6 @@
 [workspace]
 channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/conda-forge"]
-name = "dap_seq_peaks"
+name = "genesis_macs3"
 platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 

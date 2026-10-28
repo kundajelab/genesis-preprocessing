@@ -116,8 +116,8 @@ def docker_cases(source: Path, manifest_path: Path, work: Path) -> None:
     """Run production aggregation with optional omissions and hostile sample identities."""
     image = next(
         line.split("=", 1)[1]
-        for line in (ROOT / "conf/dap-images.lock").read_text().splitlines()
-        if line.startswith("DAP_SEQ_MULTIQC_IMAGE=")
+        for line in (ROOT / "conf/genesis-images.lock").read_text().splitlines()
+        if line.startswith("GENESIS_MULTIQC_IMAGE=")
     )
     baseline = json.loads(manifest_path.read_text())
     observations = {}

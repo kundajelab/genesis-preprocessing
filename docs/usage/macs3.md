@@ -1,20 +1,20 @@
 # MACS3 builds and peak-calling resources
 
 DAP-seq peak calling builds MACS3 from upstream source. The DAP environment,
-`environments/DAP_SEQ_PEAKS.yaml`, and its image pin revision
+`environments/GENESIS_MACS3.yaml`, and its image pin revision
 `da19e1dcbf3a2ff06ab906abc0658edb0c7e82d1`. It includes the callpeak
 optimization, later fixes to worker cleanup, process safety and concurrent
 scoring, and a CPU budget (`--threads`) that bounds MACS3's threads and worker
 processes. The package still reports `macs3 3.0.5`; the pinned revision in the
-environment lock and `dap-images.lock` distinguishes it from the released 3.0.5
+environment lock and `genesis-images.lock` distinguishes it from the released 3.0.5
 package.
 
 ## Profiles and images
 
 The DAP profiles (`local,conda`, `local,docker`, `sherlock,apptainer`) use this
 environment or its image. Until a rebuilt image is published,
-`conf/dap-images.lock` may still name an earlier peak-calling image for container
-profiles. Each run copies that lock to its output folder as `dap-images.lock`
+`conf/genesis-images.lock` may still name an earlier peak-calling image for container
+profiles. Each run copies that lock to its output folder as `genesis-images.lock`
 (see [DAP run records](dapseq-reference.md#run-records)).
 
 Source builds require a C compiler, zlib headers and the pinned SIMDe Git
