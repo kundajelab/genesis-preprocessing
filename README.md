@@ -41,6 +41,18 @@ model training and experimental validation.
 
 [View full size](docs/images/genesis_atac_metro_map.svg) · [Bulk ATAC-seq guide](docs/usage/bulk-atac.md)
 
+### scATAC workflow
+
+![Genesis scATAC pseudobulk metro map](docs/images/genesis_scatac_metro_map.svg)
+
+[View full size](docs/images/genesis_scatac_metro_map.svg) · [scATAC guide](docs/usage/scatac-seq.md)
+
+### Bulk RNA-seq workflow
+
+![Genesis bulk RNA-seq pipeline metro map](docs/images/genesis_rna_metro_map.svg)
+
+[View full size](docs/images/genesis_rna_metro_map.svg) · [Bulk RNA-seq guide](docs/usage/rna-seq.md)
+
 <a id="install-and-run"></a>
 <a id="environments-and-docker-builds"></a>
 

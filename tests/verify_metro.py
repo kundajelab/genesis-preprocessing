@@ -21,7 +21,7 @@ def main() -> None:
             [sys.executable, str(ROOT / "docs/diagrams/render_metro.py"), "--output-dir", folder],
             check=True,
         )
-        assert len(list(out.glob("*.svg"))) == 7
+        assert len(list(out.glob("*.svg"))) == 11
         for generated in out.glob("*.svg"):
             source = ROOT / "docs/images" / generated.name
             assert generated.read_bytes() == source.read_bytes(), f"Stale map: {source}"
@@ -38,6 +38,8 @@ def main() -> None:
         for stem, workflow in [
             ("genesis", "workflows/dap-seq.nf"),
             ("genesis_atac", "workflows/atac-seq.nf"),
+            ("genesis_rna", "workflows/rna-seq.nf"),
+            ("genesis_scatac", "workflows/scatac-seq.nf"),
         ]:
             static = ET.parse(out / f"{stem}_metro_map.svg").getroot()
             animated = ET.parse(out / f"{stem}_metro_map_animated.svg").getroot()
@@ -55,7 +57,7 @@ def main() -> None:
                 hashlib.sha256(code.encode()).hexdigest()
                 in (out / f"{stem}_metro_map.svg").read_text()
             )
-    print("PASS: seven deterministic accessible maps; actual DAP/ATAC process coverage")
+    print("PASS: 11 deterministic accessible maps; actual DAP/ATAC/RNA/scATAC process coverage")
 
 
 if __name__ == "__main__":
