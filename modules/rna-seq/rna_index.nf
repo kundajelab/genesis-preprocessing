@@ -34,8 +34,11 @@ process RNA_INDEX {
     tag "${ref.id}"
     // GET_STAR_INDEX reuses a published index only while its record matches; stub runs never
     // publish into the shared references folder.
+    // Runs resume by default (nextflow.config), and publishDir then keeps existing files;
+    // overwrite, so a task taken from the cache still replaces the stale products that sent it
+    // here.
     publishDir params.references, mode: 'copy', pattern: '{*.star,*.star.sha256}',
-        enabled: !workflow.stubRun
+        overwrite: true, enabled: !workflow.stubRun
     input:
     // ref.star holds the index parameters and ref.star_index the folder name (GET_STAR_INDEX).
     tuple val(ref), path(fasta), path(gtf)

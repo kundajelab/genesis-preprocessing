@@ -31,9 +31,10 @@ process CHROMAP_INDEX {
     container "${dotenv('GENESIS_CHROMAP_IMAGE')}"
     tag "${ref.id}"
     // GET_CHROMAP_INDEX reuses a published index only while its record matches; stub runs never
-    // publish into the shared references folder. Runs resume by default (nextflow.config), and
-    // publishDir then keeps existing files; overwrite, so a task taken from the cache still
-    // replaces the stale index and record that sent it here.
+    // publish into the shared references folder.
+    // Runs resume by default (nextflow.config), and publishDir then keeps existing files;
+    // overwrite, so a task taken from the cache still replaces the stale products that sent it
+    // here.
     publishDir params.references, mode: 'copy', pattern: '{*.chromap,*.chromap.sha256}',
         overwrite: true, enabled: !workflow.stubRun
     input:
