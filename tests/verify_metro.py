@@ -66,7 +66,10 @@ def main() -> None:
                 hashlib.sha256(code.encode()).hexdigest()
                 in (out / f"{stem}_metro_map.svg").read_text()
             )
-    print("PASS: 15 deterministic accessible maps; actual DAP/ATAC/RNA/scATAC/scATAC-reads/TSS process coverage")
+    print(
+        "PASS: 15 deterministic accessible maps; "
+        "actual DAP/ATAC/RNA/scATAC/scATAC-reads/TSS process coverage"
+    )
 
 
 if __name__ == "__main__":

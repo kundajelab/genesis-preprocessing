@@ -384,7 +384,7 @@ def main() -> None:
              "Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.",
              "Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions."],
             ["conf/execution.config"], animated))
-    print("Rendered 13 Genesis SVG maps")
+    print("Rendered 15 Genesis SVG maps")
 
 
 if __name__ == "__main__":
