@@ -41,6 +41,20 @@ process TSS_QC {
     near100=\$(bedtools window -a ctss.bed -b starts.bed -w 100 -sm -u | sum)
     near500=\$(bedtools window -a ctss.bed -b starts.bed -w 500 -sm -u | sum)
     antisense500=\$(bedtools window -a ctss.bed -b starts.bed -w 500 -Sm -u | sum)
+    # The most common position of tags within 10 bases of an annotated start, strand-aware
+    # (positive = downstream): 0 when trim_5p and the G correction are right, as a wrong trim_5p
+    # moves every 5' end by the same number of bases. Ties go to the nearest, then upstream.
+    offset=\$(bedtools window -a ctss.bed -b starts.bed -w 10 -sm \\
+        | awk '{d = (\$6 == "+") ? \$3 - \$9 : \$9 - \$3; n[d] += \$5}
+            END {
+                for (d in n) {
+                    x = d + 0; a = x < 0 ? -x : x
+                    if (!found || n[d] > top || (n[d] == top && (a < nearest || (a == nearest && x < best)))) {
+                        found = 1; best = x; top = n[d]; nearest = a
+                    }
+                }
+                print found ? best : "NA"
+            }')
     organelle=\$(awk -v list='${organelles}' 'BEGIN {n = split(list, o, ","); for (i = 1; i <= n; i++) org[o[i]] = 1}
         \$1 in org {t += \$5} END {print t + 0}' ctss.bed)
     # rRNA genes (RNA_ANNOTATION's list) over their exons, strand-aware; NA without any.
@@ -53,21 +67,23 @@ process TSS_QC {
     else
         rrna=NA
     fi
-    clustered=\$(awk '{n += \$5} END {print n + 0}' '${clusters}')
+    # The cluster's exact tags (column 10); the BED score is capped at 1000.
+    clustered=\$(awk '{n += \$10} END {print n + 0}' '${clusters}')
     cluster_count=\$(grep -c . '${clusters}' || true)
     input=\$(awk -F ':' '/^Total reads processed/ {gsub(/[^0-9]/, "", \$2); print \$2}' '${trim_log}')
     trimmed=\$(awk -F ':' '/^Reads written/ {sub(/\\(.*/, "", \$2); gsub(/[^0-9]/, "", \$2); print \$2}' '${trim_log}')
     unique=\$(awk -F '|' 'index(\$1, "Uniquely mapped reads number") {gsub(/[ \\t]/, "", \$2); print \$2}' '${star_log}')
     {
         printf '# id: tss_qc\\n# section_name: TSS libraries\\n# plot_type: table\\n'
-        printf 'sample\\tmethod\\tinput_reads\\ttrimmed_reads\\tunique_reads\\ttags\\tnear_TSS_100\\tnear_TSS_500\\tantisense_500\\torganelle\\trRNA\\tclusters\\tin_clusters\\n'
+        printf 'sample\\tmethod\\tinput_reads\\ttrimmed_reads\\tunique_reads\\ttags\\tnear_TSS_100\\tnear_TSS_500\\tTSS_offset\\tantisense_500\\torganelle\\trRNA\\tclusters\\tin_clusters\\n'
         awk -v OFS='\\t' -v id='${meta.id}' -v method='${meta.method}' -v input="\$input" \\
             -v trimmed="\$trimmed" -v unique="\$unique" -v tags="\$tags" -v n100="\$near100" \\
-            -v n500="\$near500" -v anti="\$antisense500" -v org="\$organelle" -v rrna="\$rrna" \\
+            -v n500="\$near500" -v offset="\$offset" -v anti="\$antisense500" -v org="\$organelle" \\
+            -v rrna="\$rrna" \\
             -v clusters="\$cluster_count" -v clustered="\$clustered" 'BEGIN {
                 f = "%.4f"
                 print id, method, input, trimmed, unique, tags, sprintf(f, n100 / tags),
-                    sprintf(f, n500 / tags), sprintf(f, anti / tags), sprintf(f, org / tags),
+                    sprintf(f, n500 / tags), offset, sprintf(f, anti / tags), sprintf(f, org / tags),
                     (rrna == "NA" ? "NA" : sprintf(f, rrna / tags)), clusters, sprintf(f, clustered / tags)
             }'
     } > '${meta.id}.tss_qc_mqc.tsv'

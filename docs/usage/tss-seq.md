@@ -89,6 +89,7 @@ The `qc/*.tss_qc_mqc.tsv` table, also shown in MultiQC, reports per library:
 | `input_reads`, `trimmed_reads`, `unique_reads` | Reads before and after trimming, and uniquely aligned |
 | `tags` | Tags at TSSs: the unique reads (unique molecules for Smar2C2) |
 | `near_TSS_100`, `near_TSS_500` | Fraction of tags within 100 or 500 bases of an annotated transcript start, on its strand |
+| `TSS_offset` | The most common position of tags within 10 bases of an annotated start, on its strand (positive is downstream). Expect 0; a wrong `trim_5p`, or a G correction the method does not need, moves it by the same number of bases. `NA` without tags near any start |
 | `antisense_500` | Fraction of tags within 500 bases of an annotated start on the opposite strand |
 | `organelle` | Fraction of tags on organelle contigs |
 | `rRNA` | Fraction of tags in rRNA genes' exons; `NA` when the annotation names none (Phytozome) |
@@ -116,8 +117,8 @@ Under `WORKSPACE/RUN_NAME/output/<species>/<sample_id>/`:
 - `*.ctss.tsv.gz`: tags per TSS (contig, strand, 1-based position, count);
 - `*.ctss.plus.bw`, `*.ctss.minus.bw`: tags per base on each strand, and `*.cpm.bw`
   versions in tags per million;
-- `*.tss_clusters.bed`: clusters as BED6 (score = tags) plus TPM, the dominant TSS
-  (0-based) and its tags;
+- `*.tss_clusters.bed`: clusters as BED6 (score = tags, capped at 1000 as BED requires)
+  plus TPM, the dominant TSS (0-based) and its tags, and the cluster's exact tags;
 - `qc/`: the cutadapt and STAR logs, the TSS QC table, FastQC reports and, for Smar2C2,
   the extraction counts (`*.tso.log`).
 

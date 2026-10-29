@@ -27,7 +27,8 @@ process TSS_CLUSTERS {
         'BEGIN {m = tpm * t / 1e6; m = (m == int(m)) ? m : int(m) + 1; print (m < 2 ? 2 : m)}')
     paraclu "\$min" ctss.tsv > paraclu.txt
     paraclu-cut -l ${params.tss_cluster_max_length} -d 2 paraclu.txt > clusters.txt
-    # BED6+3: score is the cluster's tags, then its TPM and dominant TSS (0-based) and its tags.
+    # BED6+4: score is the cluster's tags, capped at BED's 1000; then its TPM, its dominant TSS
+    # (0-based) and that TSS's tags, and the cluster's exact tags.
     awk -v OFS='\\t' '!/^#/ {print \$1, \$3 - 1, \$4, \$2, \$6}' clusters.txt \\
         | LC_ALL=C sort -k1,1 -k2,2n > clusters.bed
     awk -v OFS='\\t' '{print \$1, \$3 - 1, \$3, \$2, \$4}' ctss.tsv | LC_ALL=C sort -k1,1 -k2,2n > ctss.bed
@@ -39,12 +40,12 @@ process TSS_CLUSTERS {
         END {for (key in best) print key, at[key], best[key]}' \\
         | LC_ALL=C sort -k1,1 -k2,2n -k6,6 \\
         | awk -v OFS='\\t' -v id='${meta.id}' -v total="\$total" '{
-            printf "%s\\t%d\\t%d\\t%s_%d\\t%d\\t%s\\t%.4f\\t%d\\t%d\\n",
-                \$1, \$2, \$3, id, NR, \$5, \$4, \$5 * 1e6 / total, \$6, \$7
+            printf "%s\\t%d\\t%d\\t%s_%d\\t%d\\t%s\\t%.4f\\t%d\\t%d\\t%d\\n",
+                \$1, \$2, \$3, id, NR, (\$5 > 1000 ? 1000 : \$5), \$4, \$5 * 1e6 / total, \$6, \$7, \$5
         }' > '${meta.id}.tss_clusters.bed'
     """
     stub:
     """
-    printf 'chr1\\t90\\t110\\t${meta.id}_1\\t5\\t+\\t1.0\\t99\\t5\\n' > '${meta.id}.tss_clusters.bed'
+    printf 'chr1\\t90\\t110\\t${meta.id}_1\\t5\\t+\\t1.0\\t99\\t5\\t5\\n' > '${meta.id}.tss_clusters.bed'
     """
 }

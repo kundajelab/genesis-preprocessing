@@ -39,9 +39,15 @@ HEADER = [
 BARCODE = "ACGCAGCAG"
 ADAPTER = "TCGTATGCCGTCTTCTGCTTG"
 SMART = "AAGCAGTGGTATCAACGCAGAGTAC"
-# (sample, method): CAGE carries a barcode, the cap G and an adapter; TSS-seq starts at the TSS;
-# RAMPAGE adds template-switch Gs; Smar2C2 hides its TSS reads among Tn5 fragments in either mate.
-LIBRARIES = (("cage", "CAGE"), ("tssseq", "TSS-seq"), ("rampage", "RAMPAGE"), ("smar", "Smar2C2"))
+# (sample, method, trim_5p): CAGE carries a barcode, the cap G and an adapter; TSS-seq starts at
+# the TSS; RAMPAGE adds template-switch Gs; Smar2C2 hides its TSS reads among Tn5 fragments in
+# either mate.
+LIBRARIES = (
+    ("cage", "CAGE", "9"),
+    ("tssseq", "TSS-seq", "-"),
+    ("rampage", "RAMPAGE", "-"),
+    ("smar", "Smar2C2", "-"),
+)
 # (gene, strand, transcript start, transcript end), 1-based on chr1.
 GENES = [
     ("geneA", "+", 20001, 22000),
@@ -113,7 +119,12 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
     sites += [("ChrC", "+", 1000 + 300 * index, 1) for index in range(12)]
     expected: dict[str, Counter] = {}
     rows = []
-    for sample, method in LIBRARIES:
+    libraries = list(LIBRARIES)
+    if conda:
+        # The CAGE reads trimmed past the cap's G and the first transcribed base: every TSS moves
+        # 1 base downstream. (Trimming just the cap's G, 10, changes nothing: it is not templated.)
+        libraries.append(("overtrimmed", "CAGE", "11"))
+    for sample, method, trim in libraries:
         first: list[str] = []
         second: list[str] = []
         tags: Counter = Counter()
@@ -155,7 +166,8 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
             with gzip.open(folder / f"{name}.fastq.gz", "wt") as stream:
                 for index, read in enumerate(reads):
                     stream.write(f"@{sample}{index}\n{read}\n+\n{'I' * len(read)}\n")
-        expected[sample] = tags
+        if sample != "overtrimmed":
+            expected[sample] = tags
         rows.append(
             {
                 "sample_id": sample,
@@ -163,7 +175,7 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
                 "read1_url": f"{base_url}/{sample}/reads.fastq.gz",
                 "read2_url": f"{base_url}/{sample}/mates.fastq.gz" if second else "-",
                 "method": method,
-                "trim_5p": "9" if method == "CAGE" else "-",
+                "trim_5p": trim,
                 "adapter_3p": ADAPTER if method == "CAGE" else "-",
                 "reference_fasta": "plant.fa.gz",
                 "reference_annotation": "plant.gff3",
@@ -232,7 +244,7 @@ def run_tss(
     return result
 
 
-def check_trace(work: Path) -> None:
+def check_trace(work: Path, libraries: int) -> None:
     rows = trace_rows(work)
     assert all(row["status"] == "COMPLETED" for row in rows), rows
     counts = Counter(row["name"].split(" ")[0] for row in rows)
@@ -242,13 +254,14 @@ def check_trace(work: Path) -> None:
         "RNA_ANNOTATION": 1,
         "GET_STAR_INDEX:RNA_INDEX": 1,
         "DOWNLOAD": 1,
-        "FASTQC": 5,
+        # Smar2C2 reads both mates and extracts its TSS reads first.
+        "FASTQC": libraries + 1,
         "TSS_EXTRACT": 1,
-        "TSS_TRIM": 4,
-        "TSS_ALIGN": 4,
-        "TSS_CTSS": 4,
-        "TSS_CLUSTERS": 4,
-        "TSS_QC": 4,
+        "TSS_TRIM": libraries,
+        "TSS_ALIGN": libraries,
+        "TSS_CTSS": libraries,
+        "TSS_CLUSTERS": libraries,
+        "TSS_QC": libraries,
         "MULTIQC_REPORT": 1,
     }, counts
 
@@ -278,7 +291,8 @@ def check_results(work: Path, expected: dict[str, Counter]) -> None:
             assert cluster[5] == strand, cluster
             # The dominant TSS (0-based) is the annotated start, and the cluster holds every tag.
             assert int(cluster[7]) + 1 == tss, (sample, cluster)
-            assert int(cluster[4]) == sum(PROFILE.values()), (sample, cluster)
+            assert int(cluster[9]) == sum(PROFILE.values()), (sample, cluster)
+            assert int(cluster[4]) == min(sum(PROFILE.values()), 1000), (sample, cluster)
         with (output / sample / "qc" / f"{sample}.tss_qc_mqc.tsv").open() as stream:
             rows = [line for line in stream if not line.startswith("#")]
         qc = next(csv.DictReader(rows, delimiter="\t"))
@@ -286,9 +300,16 @@ def check_results(work: Path, expected: dict[str, Counter]) -> None:
         organelle = sum(n for (contig, _s, _p), n in tags.items() if contig == "ChrC")
         assert int(qc["tags"]) == total, qc
         assert float(qc["near_TSS_100"]) == round((total - organelle) / total, 4), qc
+        # Every nuclear tag is in its gene's cluster.
+        assert float(qc["in_clusters"]) == round((total - organelle) / total, 4), qc
         assert float(qc["antisense_500"]) == 0, qc
         assert float(qc["organelle"]) == round(organelle / total, 4), qc
         assert qc["rRNA"] == "NA", qc
+        assert qc["TSS_offset"] == "0", qc
+    # A wrong trim_5p shows as the tags' most common offset from the annotated starts.
+    with (output / "overtrimmed" / "qc" / "overtrimmed.tss_qc_mqc.tsv").open() as stream:
+        rows = [line for line in stream if not line.startswith("#")]
+    assert next(csv.DictReader(rows, delimiter="\t"))["TSS_offset"] == "1"
 
 
 def check_failures(work: Path, sheet: Path) -> None:
@@ -341,7 +362,8 @@ def main() -> None:
         with serve(work / "inputs", docker=False) as base_url:
             sheet, expected = create_fixture(work, base_url, conda=args.conda)
             assert run_tss(work, sheet, conda=args.conda).returncode == 0
-            check_trace(work)
+            # The real-tool run adds a library with a wrong trim_5p.
+            check_trace(work, len(LIBRARIES) + 1 if args.conda else len(LIBRARIES))
             if args.conda:
                 check_results(work, expected)
             else:
