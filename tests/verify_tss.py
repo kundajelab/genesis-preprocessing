@@ -89,7 +89,12 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
     (references / "plant.gff3").write_text("".join(lines))
     expected: dict[str, Counter] = {}
     rows = []
-    for sample, method in (("cage", "CAGE"), ("tssseq", "TSS-seq")):
+    libraries = [("cage", "CAGE", "9"), ("tssseq", "TSS-seq", "-")]
+    if conda:
+        # The CAGE reads trimmed past the cap's G and the first transcribed base: every TSS moves
+        # 1 base downstream. (Trimming just the cap's G, 10, changes nothing: it is not templated.)
+        libraries.append(("overtrimmed", "CAGE", "11"))
+    for sample, method, trim in libraries:
         reads: list[str] = []
         tags: Counter = Counter()
         for _gene, strand, start, end in GENES:
@@ -119,14 +124,15 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
         with gzip.open(folder / "reads.fastq.gz", "wt") as stream:
             for index, read in enumerate(reads):
                 stream.write(f"@{sample}{index}\n{read}\n+\n{'I' * len(read)}\n")
-        expected[sample] = tags
+        if sample != "overtrimmed":
+            expected[sample] = tags
         rows.append(
             {
                 "sample_id": sample,
                 "species": "Plant_synthetic",
                 "read1_url": f"{base_url}/{sample}/reads.fastq.gz",
                 "method": method,
-                "trim_5p": "9" if method == "CAGE" else "-",
+                "trim_5p": trim,
                 "adapter_3p": ADAPTER if method == "CAGE" else "-",
                 "reference_fasta": "plant.fa.gz",
                 "reference_annotation": "plant.gff3",
@@ -195,7 +201,7 @@ def run_tss(
     return result
 
 
-def check_trace(work: Path) -> None:
+def check_trace(work: Path, libraries: int) -> None:
     rows = trace_rows(work)
     assert all(row["status"] == "COMPLETED" for row in rows), rows
     counts = Counter(row["name"].split(" ")[0] for row in rows)
@@ -205,12 +211,12 @@ def check_trace(work: Path) -> None:
         "RNA_ANNOTATION": 1,
         "GET_STAR_INDEX:RNA_INDEX": 1,
         "DOWNLOAD": 1,
-        "FASTQC": 2,
-        "TSS_TRIM": 2,
-        "TSS_ALIGN": 2,
-        "TSS_CTSS": 2,
-        "TSS_CLUSTERS": 2,
-        "TSS_QC": 2,
+        "FASTQC": libraries,
+        "TSS_TRIM": libraries,
+        "TSS_ALIGN": libraries,
+        "TSS_CTSS": libraries,
+        "TSS_CLUSTERS": libraries,
+        "TSS_QC": libraries,
         "MULTIQC_REPORT": 1,
     }, counts
 
@@ -254,6 +260,11 @@ def check_results(work: Path, expected: dict[str, Counter]) -> None:
         assert float(qc["antisense_500"]) == 0, qc
         assert float(qc["organelle"]) == round(organelle / total, 4), qc
         assert qc["rRNA"] == "NA", qc
+        assert qc["TSS_offset"] == "0", qc
+    # A wrong trim_5p shows as the tags' most common offset from the annotated starts.
+    with (output / "overtrimmed" / "qc" / "overtrimmed.tss_qc_mqc.tsv").open() as stream:
+        rows = [line for line in stream if not line.startswith("#")]
+    assert next(csv.DictReader(rows, delimiter="\t"))["TSS_offset"] == "1"
 
 
 def check_failures(work: Path, sheet: Path) -> None:
@@ -304,7 +315,8 @@ def main() -> None:
         with serve(work / "inputs", docker=False) as base_url:
             sheet, expected = create_fixture(work, base_url, conda=args.conda)
             assert run_tss(work, sheet, conda=args.conda).returncode == 0
-            check_trace(work)
+            # The real-tool run adds a library with a wrong trim_5p.
+            check_trace(work, 3 if args.conda else 2)
             if args.conda:
                 check_results(work, expected)
             else:

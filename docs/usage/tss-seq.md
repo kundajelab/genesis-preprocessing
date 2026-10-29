@@ -71,6 +71,7 @@ The `qc/*.tss_qc_mqc.tsv` table, also shown in MultiQC, reports per library:
 | `input_reads`, `trimmed_reads`, `unique_reads` | Reads before and after trimming, and uniquely aligned |
 | `tags` | Tags at TSSs: the unique reads |
 | `near_TSS_100`, `near_TSS_500` | Fraction of tags within 100 or 500 bases of an annotated transcript start, on its strand |
+| `TSS_offset` | The most common position of tags within 10 bases of an annotated start, on its strand (positive is downstream). Expect 0; a wrong `trim_5p`, or a G correction the method does not need, moves it by the same number of bases. `NA` without tags near any start |
 | `antisense_500` | Fraction of tags within 500 bases of an annotated start on the opposite strand |
 | `organelle` | Fraction of tags on organelle contigs |
 | `rRNA` | Fraction of tags in rRNA genes' exons; `NA` when the annotation names none (Phytozome) |
