@@ -1,0 +1,8 @@
+name: genesis_chromap
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::chromap=0.3.2
+  - bioconda::htslib>=1.22,<2

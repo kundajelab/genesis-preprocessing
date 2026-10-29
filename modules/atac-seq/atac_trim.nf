@@ -19,7 +19,7 @@ process ATAC_TRIM {
     tuple val(meta), path("${meta.id}.trimmed.read{1,2}.fastq.gz"), emit: reads
     tuple val(meta), path("${meta.id}.cutadapt.log"), emit: report
     script:
-    def files = reads.sort { it.name }
+    def files = reads.sort { read -> read.name }
     // Tn5 inserts the same Nextera adapter at both ends. ENCODE ATAC drops pairs where either mate
     // is shorter than 5 bases after trimming.
     """
@@ -28,7 +28,7 @@ process ATAC_TRIM {
         '${files[0]}' '${files[1]}' > '${meta.id}.cutadapt.log'
     """
     stub:
-    def files = reads.sort { it.name }
+    def files = reads.sort { read -> read.name }
     """
     cp '${files[0]}' '${meta.id}.trimmed.read1.fastq.gz'
     cp '${files[1]}' '${meta.id}.trimmed.read2.fastq.gz'

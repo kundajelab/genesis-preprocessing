@@ -1,0 +1,8 @@
+name: genesis_sra
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::sra-tools=3.4.1
+  - conda-forge::pigz>=2.8,<3

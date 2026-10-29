@@ -3,7 +3,7 @@
 One folder per species, one sheet per study and modality:
 `samplesheets/<Species>/<modality>-<study>.tsv`. Each sheet uses its workflow's exact header
 (see the [DAP-seq](../docs/usage/dapseq-reference.md), [TSS mapping](../docs/usage/tss-seq.md), [bulk ATAC](../docs/usage/bulk-atac.md),
-[scATAC](../docs/usage/scatac-seq.md) and [RNA-seq](../docs/usage/rna-seq.md) guides). Read URLs
+[scATAC, including from raw 10x reads](../docs/usage/scatac-seq.md) and [RNA-seq](../docs/usage/rna-seq.md) guides). Read URLs
 point to ENA over HTTPS, or to GSA (China) for CRA studies. Reference files are named in the sheet and looked up in the
 folder given by `--references`; they are not downloaded automatically.
 
@@ -12,12 +12,14 @@ folder given by `--references`; they are not downloaded automatically.
 | `Arabidopsis_thaliana/dap-seq-GSE60141.tsv` | dap-seq | 936 (SE) | O'Malley 2016 |
 | `Arabidopsis_thaliana/dap-seq-PRJNA1177481.tsv` | dap-seq | 800 (PE) | multiDAP |
 | `Arabidopsis_thaliana/atac-seq-curated.tsv` | atac-seq | 439 (PE), 62 studies | Genesis "Bulk ATAC Fable Curated" tab: wild-type Col-0, untreated (below) |
+| `Arabidopsis_thaliana/scatac-reads-GSE155304.tsv` | scatac-reads | 2 (10x ATAC v1) | GSE155304 (Farmer 2021), root nuclei, rep1 and rep2, 2 runs each |
 | `Arabidopsis_thaliana/tss-seq-GSE136356.tsv` | tss-seq | 9 (SE CAGE) | GSE136356 (Thieffry 2020), Col-0 seedlings: wild type, hen2-4 and rrp4-2, 3 replicates each; reads start with a 3-base barcode and `CAGCAG` (`trim_5p` 9) |
 | `Arabidopsis_thaliana/rna-seq-GSE206323.tsv` | rna-seq | 16 (PE) | GSE206323, Col-0 inflorescence stem, the 8 wild-type samples, 2 runs each; TruSeq stranded mRNA (`reverse`) |
 | `Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv` | dap-seq | 405 (PE) | multiDAP |
 | `Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | dap-seq | 142 (PE) | multiDAP, RTx430 plants; Genesis DAP-seq set 24 |
 | `Sorghum_bicolor/dap-seq-PRJNA1177471-test.tsv` | dap-seq | 6 (PE) | Subset of the sheet above, for a quick test |
 | `Sorghum_bicolor/atac-seq-curated.tsv` | atac-seq | 24 (PE) | Genesis "Bulk ATAC Fable Curated" tab: CRA002789, SRP110225, SRP188687, SRP308654, SRP674033 |
+| `Sorghum_bicolor/scatac-reads-SRP474955.tsv` | scatac-reads | 11 (10x multiome ATAC) | Swift 2023 (GSE248919), BTx623 seedlings during de-etiolation, 0 h (6 libraries) and 12 h (5) |
 | `Sorghum_bicolor/rna-seq-GSE184725.tsv` | rna-seq | 6 (SE) | GSE184725, BTx623 shoot, control and sulfur-deficient, 3 each; NEBNext Ultra II Directional (`reverse`) |
 
 Sample IDs in the curated Sorghum ATAC sheet are `<study>_<tissue>_<replicate>`. The Genesis
@@ -103,15 +105,22 @@ version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 
 32,062 genes, 193 of them on `Mt` and `Pt`. Gene IDs carry a suffix, as in
 `Sobic.001G000100.v5.1`. The BED lists each piece of a trans-spliced gene separately.
 
-## Not yet available
+## scATAC
 
-A. thaliana scATAC has no sheet. GSE155304, which the workflow was validated on, has its
-fragments only inside GEO tar archives, on Ensembl contig names (`1`–`5`, not Phytozome's
-`Chr1`), and its cell clusters only in the authors' R object. The studies in the "scATAC Fable
-Curated" tab list raw single-cell reads, not fragment files.
+The scATAC sheets start from raw 10x reads on NCBI SRA (`pixi run pipeline-scatac-reads`), as
+no curated study publishes usable fragment files. Copy the 10x barcode list into the
+references folder: `737K-cratac-v1.txt` for 10x ATAC (from Cell Ranger ATAC). 10x does not
+allow redistributing it, so it is not in this repository.
 
-Sorghum scATAC has no sheet. The scATAC workflow starts from published fragment files, and
-neither Sorghum study in the Genesis "scATAC Fable Curated" tab has them:
+- GSE155304 uses `737K-cratac-v1.txt`. Its fragments from these reads were checked against
+  the authors' Cell Ranger output (see the PR that added `workflows/scatac-reads.nf`).
+- SRP474955 is multiome ATAC, whose barcode list (`737K-arc-v1.txt`) only ships inside Cell
+  Ranger ARC, so the sheet uses `-`: barcodes are not corrected, and reads with a barcode
+  error are dropped. With Cell Ranger ARC's list in the references folder, set
+  `barcode_whitelist` to its name. The study's 2025 runs (mixed rice and Sorghum nuclei, and
+  numbered "technical replicates") are left out; only the 10x Multiome ATAC libraries are
+  listed.
+- Plate-based studies (sci-ATAC-seq, such as Sorghum Mendieta 2024) have no 10x barcode read
+  and are not supported. Other A. thaliana 10x studies in the curated tab (Marand 2021, Dorrity
+  2021, Nobori 2025 and others) can be added the same way.
 
-- Mendieta 2024 (PRJNA1063172, BTx623 leaf): raw FASTQs from a plate-based design only.
-- Swift 2023 (GSE248919, seedling multiome): R objects only.

@@ -1,0 +1,3 @@
+sample_id	species	sra_runs	chemistry	cells_url	reference_fasta	reference_genes	organelle_contigs	barcode_whitelist
+GSE155304_rep1	Arabidopsis_thaliana	SRR12340627,SRR12340628	10x-atac-v1	-	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.genes.bed	ChrC,ChrM	737K-cratac-v1.txt
+GSE155304_rep2	Arabidopsis_thaliana	SRR12340629,SRR12340630	10x-atac-v1	-	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.genes.bed	ChrC,ChrM	737K-cratac-v1.txt

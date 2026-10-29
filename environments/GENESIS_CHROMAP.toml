@@ -1,0 +1,11 @@
+[workspace]
+channels = ["conda-forge", "bioconda", "nodefaults", "https://conda.anaconda.org/bioconda"]
+name = "genesis_chromap"
+platforms = ["linux-64", "osx-64", "osx-arm64", "linux-aarch64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+chromap = { version = "0.3.2.*", channel = "bioconda" }
+htslib = { version = ">=1.22,<2", channel = "bioconda" }

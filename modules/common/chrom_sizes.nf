@@ -8,7 +8,11 @@ process CHROM_SIZES {
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"
     // Stub runs never publish into the shared references folder: their fake products would be reused.
-    publishDir params.references, mode: 'copy', pattern: '*.chrom.sizes', enabled: !workflow.stubRun
+    // Runs resume by default (nextflow.config), and publishDir then keeps existing files;
+    // overwrite, so a task taken from the cache still replaces the stale products that sent it
+    // here.
+    publishDir params.references, mode: 'copy', pattern: '*.chrom.sizes', overwrite: true,
+        enabled: !workflow.stubRun
     input:
     tuple val(ref), path(fasta)
     output:

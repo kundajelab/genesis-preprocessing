@@ -26,8 +26,8 @@ process BWA_MEM2_ALIGN {
     tuple val(meta), path("${meta.id}.spp.bam"), emit: spp
     tuple val(meta), path("${meta.id}.alignment.tsv"), emit: provenance
     script:
-    def files = reads instanceof List ? reads.sort { it.name } : [reads]
-    def inputs = files.collect { "'${it}'" }.join(' ')
+    def files = reads instanceof List ? reads.sort { read -> read.name } : [reads]
+    def inputs = files.collect { read -> "'${read}'" }.join(' ')
     def threads = Math.max(1, task.cpus - 1)
     def options = "-K ${bwa_options.batch_size} -k ${bwa_options.seed_length} " +
         "-c ${bwa_options.max_seed_occurrences} -T ${bwa_options.score_threshold}"
