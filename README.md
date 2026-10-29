@@ -193,12 +193,12 @@ including strandedness, rRNA and organelle fractions. The
 
 ### TSS mapping
 
-TSS mapping takes single-read CAGE, TSS-seq or csRNA-seq libraries, with the fixed
-bases to trim from each read's start and the 3' adapter:
+TSS mapping takes CAGE, TSS-seq, csRNA-seq, RAMPAGE or Smar2C2 libraries, with the
+fixed bases to trim from each read's start and the 3' adapter:
 
 ```tsv
-sample_id	species	read1_url	method	trim_5p	adapter_3p	reference_fasta	reference_annotation	organelle_contigs
-wt_rep1	Arabidopsis_thaliana	https://example.org/wt1.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	TAIR10.fa.gz	Araport11.gff3	ChrC,ChrM
+sample_id	species	read1_url	read2_url	method	trim_5p	adapter_3p	reference_fasta	reference_annotation	organelle_contigs
+wt_rep1	Arabidopsis_thaliana	https://example.org/wt1.fastq.gz	-	CAGE	9	TCGTATGCCGTCTTCTGCTTG	TAIR10.fa.gz	Araport11.gff3	ChrC,ChrM
 ```
 
 ```bash
@@ -206,7 +206,8 @@ pixi run pipeline-tss -w /scratch/genesis -n tss-A /data/tss.tsv --references /d
 ```
 
 Each library gets per-base TSS tags on each strand, paraclu TSS clusters and QC. The
-[TSS mapping guide](docs/usage/tss-seq.md) explains the methods, trimming and metrics.
+[TSS mapping guide](docs/usage/tss-seq.md) explains the methods, trimming, paired-end
+layouts and metrics.
 ## Find and interpret your results
 
 Start with the MultiQC report, then inspect the library-level QC and signal

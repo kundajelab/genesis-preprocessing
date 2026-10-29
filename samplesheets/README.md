@@ -18,6 +18,8 @@ folder given by `--references`; they are not downloaded automatically.
 | `Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | dap-seq | 142 (PE) | multiDAP, RTx430 plants; Genesis DAP-seq set 24 |
 | `Sorghum_bicolor/dap-seq-PRJNA1177471-test.tsv` | dap-seq | 6 (PE) | Subset of the sheet above, for a quick test |
 | `Sorghum_bicolor/atac-seq-curated.tsv` | atac-seq | 24 (PE) | Genesis "Bulk ATAC Fable Curated" tab: CRA002789, SRP110225, SRP188687, SRP308654, SRP674033 |
+| `Sorghum_bicolor/tss-seq-ERP126061.tsv` | tss-seq | 4 (RAMPAGE) | ERP126061, cultivars RTx436 and Tx2783, 2 runs each, on the BTx623 reference; `read1_url` is the TSS read, the library's read 2 |
+| `Sorghum_bicolor/tss-seq-SRP360924.tsv` | tss-seq | 4 (PE Smar2C2) | GSE197144 (Murray 2022), shoot and root, 2 replicates each; TSS reads in either mate, 12-base UMI |
 | `Sorghum_bicolor/rna-seq-GSE184725.tsv` | rna-seq | 6 (SE) | GSE184725, BTx623 shoot, control and sulfur-deficient, 3 each; NEBNext Ultra II Directional (`reverse`) |
 
 Sample IDs in the curated Sorghum ATAC sheet are `<study>_<tissue>_<replicate>`. The Genesis

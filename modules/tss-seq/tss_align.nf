@@ -21,10 +21,12 @@ process TSS_ALIGN {
     script:
     def sortMemory = Math.max(256L, (task.memory.toMega() * 3 / 4 / task.cpus) as long)
     // Extend5pOfRead1: the 5' end is never soft-clipped, so a mismatched cap G stays visible
-    // (MD tag) for TSS_CTSS to correct. Introns no longer than the longest annotated one.
+    // (MD tag) for TSS_CTSS to correct. Template-switching methods align locally instead, which
+    // soft-clips the added Gs that the genome lacks. Introns no longer than the longest annotated.
+    def ends = meta.soft_clip_5p ? 'Local' : 'Extend5pOfRead1'
     """
     STAR --runThreadN ${task.cpus} --genomeDir '${index}' --readFilesCommand gunzip -c \\
-        --readFilesIn '${reads}' --alignEndsType Extend5pOfRead1 \\
+        --readFilesIn '${reads}' --alignEndsType ${ends} \\
         --alignIntronMax ${meta.max_intron} --outFilterMultimapNmax 20 \\
         --outSAMattributes NH HI AS nM MD --outSAMtype BAM Unsorted \\
         --outFileNamePrefix star. --outTmpDir star.tmp
