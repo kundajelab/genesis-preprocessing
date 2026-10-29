@@ -85,7 +85,7 @@ workflow {
     SCATAC_PSEUDOBULKS(SCATAC_DOWNLOAD.out.downloads, sizes_ch, referencesDir, resources)
     // Collect channels, not publishDir contents: wait for every library's reports.
     multiqcFiles = SCATAC_PSEUDOBULKS.out.multiqc
-        .flatten().collect().map { paths -> paths.sort { it.name } }
+        .flatten().collect().map { paths -> paths.sort { path -> path.name } }
     // Record what produced this run beside its outputs, as workflows/dap-seq.nf does.
     def git = { List args ->
         try {
@@ -93,7 +93,7 @@ workflow {
             // Trim only the end: porcelain status lines start with positional status columns.
             def text = process.text.stripTrailing()
             return process.waitFor() == 0 ? text : null
-        } catch (IOException ignored) {
+        } catch (IOException _ignored) {
             return null
         }
     }

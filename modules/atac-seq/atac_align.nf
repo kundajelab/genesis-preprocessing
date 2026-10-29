@@ -21,7 +21,7 @@ process ATAC_ALIGN {
     tuple val(meta), path("${meta.id}.marked.bam"), path("${meta.id}.marked.bam.bai"), emit: bam
     tuple val(meta), path("${meta.id}.marked.*.txt"), emit: reports
     script:
-    def files = reads.sort { it.name }
+    def files = reads.sort { read -> read.name }
     def threads = Math.max(1, task.cpus - 1)
     def options = "-K ${bwa_options.batch_size} -k ${bwa_options.seed_length} " +
         "-c ${bwa_options.max_seed_occurrences} -T ${bwa_options.score_threshold}"

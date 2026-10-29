@@ -127,7 +127,7 @@ workflow {
     inferred = METADATA.out.metadata.map { meta, path ->
         def lines = path.readLines()
         def values = [lines[0].split('\t').toList(), lines[1].split('\t').toList()]
-            .transpose().collectEntries { it }
+            .transpose().collectEntries { pair -> pair }
         tuple(meta.id, meta + [
             genome_size: values.genome_size.toLong(),
             read_length: values.analysis_read_length.toInteger()
@@ -152,11 +152,11 @@ workflow {
     multiqcFiles = FASTQC.out.reports.map { _meta, _mate, _html, zip -> zip }
         .mix(QC.out.reports.map { _meta, reports -> reports })
         .mix(METADATA.out.metadata.map { _meta, path -> path })
-        .flatten().collect().map { paths -> paths.sort { it.name } }
+        .flatten().collect().map { paths -> paths.sort { path -> path.name } }
     multiqcSamples = samples.map { meta ->
         [id: meta.id, species: meta.species, ref_id: meta.ref_id,
          reference_fasta: meta.reference_fasta, layout: meta.layout, control: meta.control]
-    }.collect().map { rows -> rows.sort { it.id } }
+    }.collect().map { rows -> rows.sort { row -> row.id } }
     // Record what produced this run beside its outputs: the container image pins, and the
     // checkout's branch, commit and uncommitted changes. Local runs can have a null commitId.
     def git = { List args ->
@@ -165,7 +165,7 @@ workflow {
             // Trim only the end: porcelain status lines start with positional status columns.
             def text = process.text.stripTrailing()
             return process.waitFor() == 0 ? text : null
-        } catch (IOException ignored) {
+        } catch (IOException _ignored) {
             return null
         }
     }
