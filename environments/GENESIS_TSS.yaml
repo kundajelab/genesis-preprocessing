@@ -1,0 +1,11 @@
+name: genesis_tss
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bioconda::paraclu=10
+  - bioconda::ucsc-bedgraphtobigwig=482
+  - bioconda::bedtools>=2.31,<3
+  - bioconda::samtools>=1.22,<2
+  - conda-forge::gawk>=5,<6

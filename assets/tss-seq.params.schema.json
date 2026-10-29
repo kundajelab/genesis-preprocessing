@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Genesis TSS-mapping parameters",
+  "type": "object",
+  "$defs": {
+    "input_output_options": {
+      "title": "Input/output options",
+      "type": "object",
+      "description": "Sample sheet, references, and run locations.",
+      "required": [
+        "input"
+      ],
+      "properties": {
+        "input": {
+          "type": "string",
+          "format": "file-path",
+          "exists": true,
+          "pattern": "^[^,]+\\.tsv$",
+          "errorMessage": "Supply exactly one input TSV with --input INPUT.tsv",
+          "description": "Exactly one sample TSV."
+        },
+        "run_name": {
+          "type": "string",
+          "pattern": "^[^/]+$",
+          "description": "Run folder under workspace. Defaults to the input sheet's basename without .tsv."
+        },
+        "references": {
+          "type": "string",
+          "format": "directory-path",
+          "exists": true,
+          "description": "Compressed genomes and derived files."
+        },
+        "workspace": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Root for run folders holding work, published output, and trace files."
+        }
+      }
+    },
+    "resource_options": {
+      "title": "Resource options",
+      "type": "object",
+      "description": "Task resources and SLURM queue.",
+      "properties": {
+        "cpus": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "CPUs for QC and tracks."
+        },
+        "memory": {
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+)?\\s*(K|M|G|T)?B$",
+          "default": "8 GB",
+          "description": "Memory for QC and tracks."
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?\\s*(ms|s|m|h|d)\\s*)+$",
+          "default": "4h",
+          "description": "Walltime for QC and tracks."
+        },
+        "slurm_queue": {
+          "type": "string",
+          "default": "normal",
+          "description": "SLURM queue used by the sherlock profile."
+        },
+        "download_batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8,
+          "description": "Samples fetched by each DOWNLOAD task."
+        }
+      }
+    },
+    "cluster_options": {
+      "title": "TSS clusters",
+      "type": "object",
+      "description": "paraclu clustering of each library's TSS tags.",
+      "properties": {
+        "tss_cluster_min_tpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1,
+          "description": "Least tags per million in a cluster (at least 2 tags)."
+        },
+        "tss_cluster_max_length": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 200,
+          "description": "Longest cluster kept, in bases (FANTOM's paraclu-cut default)."
+        }
+      }
+    },
+    "internal_options": {
+      "title": "Internal options",
+      "type": "object",
+      "description": "Set automatically by nextflow.config.",
+      "properties": {
+        "trace_timestamp": {
+          "type": "string",
+          "hidden": true,
+          "description": "Timestamp for trace file names. Set automatically."
+        },
+        "run_dir": {
+          "type": "string",
+          "hidden": true,
+          "description": "workspace/run_name. Set automatically; use --workspace and --run_name instead."
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/input_output_options"
+    },
+    {
+      "$ref": "#/$defs/resource_options"
+    },
+    {
+      "$ref": "#/$defs/cluster_options"
+    },
+    {
+      "$ref": "#/$defs/internal_options"
+    }
+  ]
+}

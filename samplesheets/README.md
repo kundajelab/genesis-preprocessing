@@ -2,7 +2,7 @@
 
 One folder per species, one sheet per study and modality:
 `samplesheets/<Species>/<modality>-<study>.tsv`. Each sheet uses its workflow's exact header
-(see the [DAP-seq](../docs/usage/dapseq-reference.md), [bulk ATAC](../docs/usage/bulk-atac.md),
+(see the [DAP-seq](../docs/usage/dapseq-reference.md), [TSS mapping](../docs/usage/tss-seq.md), [bulk ATAC](../docs/usage/bulk-atac.md),
 [scATAC, including from raw 10x reads](../docs/usage/scatac-seq.md) and [RNA-seq](../docs/usage/rna-seq.md) guides). Read URLs
 point to ENA over HTTPS, or to GSA (China) for CRA studies. Reference files are named in the sheet and looked up in the
 folder given by `--references`; they are not downloaded automatically.
@@ -13,6 +13,7 @@ folder given by `--references`; they are not downloaded automatically.
 | `Arabidopsis_thaliana/dap-seq-PRJNA1177481.tsv` | dap-seq | 800 (PE) | multiDAP |
 | `Arabidopsis_thaliana/atac-seq-curated.tsv` | atac-seq | 439 (PE), 62 studies | Genesis "Bulk ATAC Fable Curated" tab: wild-type Col-0, untreated (below) |
 | `Arabidopsis_thaliana/scatac-reads-GSE155304.tsv` | scatac-reads | 2 (10x ATAC v1) | GSE155304 (Farmer 2021), root nuclei, rep1 and rep2, 2 runs each |
+| `Arabidopsis_thaliana/tss-seq-GSE136356.tsv` | tss-seq | 9 (SE CAGE) | GSE136356 (Thieffry 2020), Col-0 seedlings: wild type, hen2-4 and rrp4-2, 3 replicates each; reads start with a 3-base barcode and `CAGCAG` (`trim_5p` 9) |
 | `Arabidopsis_thaliana/rna-seq-GSE206323.tsv` | rna-seq | 16 (PE) | GSE206323, Col-0 inflorescence stem, the 8 wild-type samples, 2 runs each; TruSeq stranded mRNA (`reverse`) |
 | `Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv` | dap-seq | 405 (PE) | multiDAP |
 | `Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | dap-seq | 142 (PE) | multiDAP, RTx430 plants; Genesis DAP-seq set 24 |
