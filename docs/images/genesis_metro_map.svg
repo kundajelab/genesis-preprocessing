@@ -9,7 +9,6 @@
     .detail{font-size:16px;fill:var(--muted)}
     .station{fill:var(--bg);stroke-width:4}
     .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
-    .planned{stroke-dasharray:9 9}
     .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
     @keyframes travel{to{stroke-dashoffset:-400}}
     @media(prefers-reduced-motion:reduce){.flow{display:none}}
@@ -20,24 +19,43 @@
 <text class="title" x="48" y="52">GENESIS / DAP-seq</text>
 <text class="subtitle" x="48" y="85">Implemented workflow · raw-read QC · explicit controls and reference identity</text>
 <path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 586 330 Q 600 330 614 330 L 830 330"><title>Validated libraries download and align</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 140 330 L 586 330 Q 600 330 614 330 L 830 330"/>
 <path id="route-1" class="line" stroke="#ce6030" d="M 830 330 L 1046 330 Q 1060 330 1074 330 L 1290 330"><title>Treatment/control peaks and quantification</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 830 330 L 1046 330 Q 1060 330 1074 330 L 1290 330"/>
 <path id="route-2" class="line" stroke="#9260b7" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 194 Q 715 180 701 180 L 600 180"><title>Raw mates independently feed FastQC</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 194 Q 715 180 701 180 L 600 180"/>
 <path id="route-3" class="line" stroke="#9260b7" d="M 600 180 L 701 180 Q 715 180 715 194 L 715 216 Q 715 230 729 230 L 1391 230 Q 1405 230 1405 216 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-3s" d="M 600 180 L 701 180 Q 715 180 715 194 L 715 216 Q 715 230 729 230 L 1391 230 Q 1405 230 1405 216 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
 <path id="route-4" class="line" stroke="#9260b7" d="M 1060 180 L 1290 180"><title>Native samtools reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-4s" d="M 1060 180 L 1290 180"/>
 <path id="route-5" class="line" stroke="#9260b7" d="M 830 330 L 931 330 Q 945 330 945 316 L 945 194 Q 945 180 959 180 L 1060 180"><title>Alignment QC feeds MultiQC</title></path>
+<path class="flow" style="animation-delay:-5s" d="M 830 330 L 931 330 Q 945 330 945 316 L 945 194 Q 945 180 959 180 L 1060 180"/>
 <path id="route-6" class="line" stroke="#087f8c" d="M 600 330 L 499 330 Q 485 330 485 344 L 485 496 Q 485 510 499 510 L 600 510"><title>Read metadata</title></path>
+<path class="flow" style="animation-delay:-6s" d="M 600 330 L 499 330 Q 485 330 485 344 L 485 496 Q 485 510 499 510 L 600 510"/>
 <path id="route-7" class="line" stroke="#087f8c" d="M 600 510 L 701 510 Q 715 510 715 496 L 715 344 Q 715 330 729 330 L 830 330"><title>Metadata accompanies alignment</title></path>
+<path class="flow" style="animation-delay:-7s" d="M 600 510 L 701 510 Q 715 510 715 496 L 715 344 Q 715 330 729 330 L 830 330"/>
 <path id="route-8" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 344 Q 255 330 269 330 L 370 330"><title>Reference identity is validated</title></path>
+<path class="flow" style="animation-delay:-8s" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 344 Q 255 330 269 330 L 370 330"/>
 <path id="route-9" class="line" stroke="#4169b1" d="M 370 330 L 269 330 Q 255 330 255 344 L 255 496 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path class="flow" style="animation-delay:-9s" d="M 370 330 L 269 330 Q 255 330 255 344 L 255 496 Q 255 510 241 510 L 140 510"/>
 <path id="route-10" class="line" stroke="#4169b1" d="M 370 330 L 269 330 Q 255 330 255 344 L 255 676 Q 255 690 269 690 L 370 690"><title>Build or verify index</title></path>
+<path class="flow" style="animation-delay:-10s" d="M 370 330 L 269 330 Q 255 330 255 344 L 255 676 Q 255 690 269 690 L 370 690"/>
 <path id="route-11" class="line" stroke="#4169b1" d="M 140 510 L 600 510"><title>Chromosome sizes feed metadata and index resources</title></path>
+<path class="flow" style="animation-delay:-11s" d="M 140 510 L 600 510"/>
 <path id="route-12" class="line" stroke="#4169b1" d="M 370 690 L 701 690 Q 715 690 715 676 L 715 344 Q 715 330 729 330 L 830 330"><title>Verified index feeds alignment</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 370 690 L 701 690 Q 715 690 715 676 L 715 344 Q 715 330 729 330 L 830 330"/>
 <path id="route-13" class="line" stroke="#bd527d" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 496 Q 945 510 931 510 L 830 510"><title>Separate shortened-read alignment feeds SPP</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 496 Q 945 510 931 510 L 830 510"/>
 <path id="route-14" class="line" stroke="#438362" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 676 Q 945 690 959 690 L 1060 690"><title>Full-read coverage</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 676 Q 945 690 959 690 L 1060 690"/>
 <path id="route-15" class="line" stroke="#087f8c" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 376 Q 945 390 959 390 L 1391 390 Q 1405 390 1405 376 L 1405 344 Q 1405 330 1391 330 L 1290 330"><title>Primary treatment BAM feeds quantification</title></path>
+<path class="flow" style="animation-delay:-3s" d="M 830 330 L 931 330 Q 945 330 945 344 L 945 376 Q 945 390 959 390 L 1391 390 Q 1405 390 1405 376 L 1405 344 Q 1405 330 1391 330 L 1290 330"/>
 <path id="route-16" class="line" stroke="#4169b1" d="M 140 510 L 241 510 Q 255 510 255 524 L 255 721 Q 255 735 269 735 L 1391 735 Q 1405 735 1405 721 L 1405 344 Q 1405 330 1391 330 L 1290 330"><title>Chromosome sizes bound quantification</title></path>
+<path class="flow" style="animation-delay:-4s" d="M 140 510 L 241 510 Q 255 510 255 524 L 255 721 Q 255 735 269 735 L 1391 735 Q 1405 735 1405 721 L 1405 344 Q 1405 330 1391 330 L 1290 330"/>
 <path id="route-17" class="line" stroke="#438362" d="M 1060 690 L 1391 690 Q 1405 690 1405 676 L 1405 344 Q 1405 330 1391 330 L 1290 330"><title>Coverage and chromosome bounds support quantification</title></path>
+<path class="flow" style="animation-delay:-5s" d="M 1060 690 L 1391 690 Q 1405 690 1405 676 L 1405 344 Q 1405 330 1391 330 L 1290 330"/>
 <path id="route-18" class="line" stroke="#9260b7" d="M 600 510 L 499 510 Q 485 510 485 496 L 485 119 Q 485 105 499 105 L 1391 105 Q 1405 105 1405 119 L 1405 166 Q 1405 180 1391 180 L 1290 180"><title>Metadata joins run-level reporting</title></path>
+<path class="flow" style="animation-delay:-6s" d="M 600 510 L 499 510 Q 485 510 485 496 L 485 119 Q 485 105 499 105 L 1391 105 Q 1405 105 1405 119 L 1405 166 Q 1405 180 1391 180 L 1290 180"/>
 <g id="samples"><title>Sample sheet: SE / PE + controls</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>

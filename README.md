@@ -36,37 +36,37 @@ model training and experimental validation.
 
 ![Genesis DAP-seq pipeline metro map](docs/images/genesis_metro_map.svg)
 
-[View full size](docs/images/genesis_metro_map.svg) · [DAP-seq guide](docs/usage/dapseq-reference.md)
+[DAP-seq guide](docs/usage/dapseq-reference.md)
 
 ### Bulk ATAC-seq workflow
 
 ![Genesis bulk ATAC-seq pipeline metro map](docs/images/genesis_atac_metro_map.svg)
 
-[View full size](docs/images/genesis_atac_metro_map.svg) · [Bulk ATAC-seq guide](docs/usage/bulk-atac.md)
+[Bulk ATAC-seq guide](docs/usage/bulk-atac.md)
 
 ### scATAC workflow
 
 ![Genesis scATAC pseudobulk metro map](docs/images/genesis_scatac_metro_map.svg)
 
-[View full size](docs/images/genesis_scatac_metro_map.svg) · [scATAC guide](docs/usage/scatac-seq.md)
+[scATAC guide](docs/usage/scatac-seq.md)
 
 From raw 10x reads on NCBI SRA, the same steps follow download, chromap and cell calling:
 
 ![Genesis scATAC from 10x reads metro map](docs/images/genesis_scatac_reads_metro_map.svg)
 
-[View full size](docs/images/genesis_scatac_reads_metro_map.svg) · [From raw 10x reads](docs/usage/scatac-seq.md#from-raw-10x-reads)
+[From raw 10x reads](docs/usage/scatac-seq.md#from-raw-10x-reads)
 
 ### Bulk RNA-seq workflow
 
 ![Genesis bulk RNA-seq pipeline metro map](docs/images/genesis_rna_metro_map.svg)
 
-[View full size](docs/images/genesis_rna_metro_map.svg) · [Bulk RNA-seq guide](docs/usage/rna-seq.md)
+[Bulk RNA-seq guide](docs/usage/rna-seq.md)
 
 ### TSS mapping workflow
 
 ![Genesis TSS mapping metro map](docs/images/genesis_tss_metro_map.svg)
 
-[View full size](docs/images/genesis_tss_metro_map.svg) · [TSS mapping guide](docs/usage/tss-seq.md)
+[TSS mapping guide](docs/usage/tss-seq.md)
 
 <a id="install-and-run"></a>
 <a id="environments-and-docker-builds"></a>

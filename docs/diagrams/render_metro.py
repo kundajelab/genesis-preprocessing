@@ -9,13 +9,12 @@ ROOT = Path(__file__).resolve().parents[2]
 COLORS = {
     "reads": "#087f8c", "reference": "#4169b1", "qc": "#9260b7",
     "peaks": "#ce6030", "tracks": "#438362", "spp": "#bd527d",
-    "future": "#81909f",
 }
 
 
 Point = tuple[int, int]
 Node = tuple[str, int, int, str, str, str]
-Edge = tuple[str, list[Point], str, bool]
+Edge = tuple[str, list[Point], str]
 
 
 def route(points: list[Point]) -> str:
@@ -34,7 +33,7 @@ def route(points: list[Point]) -> str:
 
 
 def document(title: str, subtitle: str, nodes: list[Node], edges: list[Edge],
-             notes: list[str], workflows: list[str], animated: bool = False) -> str:
+             notes: list[str], workflows: list[str]) -> str:
     css = """
     svg{--bg:#fbfcfe;--text:#172c3d;--muted:#536779;--panel:#e2e8ef;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
     .title{font-size:32px;font-weight:700;letter-spacing:1px;fill:var(--text)}
@@ -43,7 +42,6 @@ def document(title: str, subtitle: str, nodes: list[Node], edges: list[Edge],
     .detail{font-size:16px;fill:var(--muted)}
     .station{fill:var(--bg);stroke-width:4}
     .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
-    .planned{stroke-dasharray:9 9}
     .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
     @keyframes travel{to{stroke-dashoffset:-400}}
     @media(prefers-reduced-motion:reduce){.flow{display:none}}
@@ -59,12 +57,10 @@ def document(title: str, subtitle: str, nodes: list[Node], edges: list[Edge],
         f'<text class="title" x="48" y="52">{escape(title)}</text>',
         f'<text class="subtitle" x="48" y="85">{escape(subtitle)}</text>',
     ]
-    for i, (color, points, label, planned) in enumerate(edges):
+    for i, (color, points, label) in enumerate(edges):
         geometry = route(points)
-        cls = "line planned" if planned else "line"
-        parts.append(f'<path id="route-{i}" class="{cls}" stroke="{COLORS[color]}" d="{geometry}"><title>{escape(label)}</title></path>')
-        if animated and not planned:
-            parts.append(f'<path class="flow" style="animation-delay:-{i % 12}s" d="{geometry}"/>')
+        parts.append(f'<path id="route-{i}" class="line" stroke="{COLORS[color]}" d="{geometry}"><title>{escape(label)}</title></path>')
+        parts.append(f'<path class="flow" style="animation-delay:-{i % 12}s" d="{geometry}"/>')
     for ident, x, y, label, detail, color in nodes:
         parts.extend([
             f'<g id="{ident}"><title>{escape(label + ": " + detail)}</title>',
@@ -83,8 +79,8 @@ def document(title: str, subtitle: str, nodes: list[Node], edges: list[Edge],
     return "\n".join(parts) + "\n"
 
 
-def edge(color: str, points: list[Point], label: str, planned: bool = False) -> Edge:
-    return color, points, label, planned
+def edge(color: str, points: list[Point], label: str) -> Edge:
+    return color, points, label
 
 
 DAP_NODES = [
@@ -272,56 +268,6 @@ TSS_EDGES = [
     edge("reference",[(600,690),(715,690),(715,420),(830,420),(830,330)],"Verified index and intron limit feed alignment"),
     edge("reference",[(370,510),(370,780),(1350,780),(1350,510),(1290,510)],"Annotated transcript starts feed QC"),
 ]
-CONTROL_NODES = [
-    ("inputs",140,330,"Datasets","Exact references + policy","reads"),
-    ("controller",370,330,"Controller","Queue + durable status","reads"),
-    ("local",830,180,"Local Linux","Default Docker execution","reads"),
-    ("scheduler",830,330,"Cluster scheduler","Slurm / PBS / LSF / SGE","reference"),
-    ("ssh",830,510,"SSH workers","Existing verified access","tracks"),
-    ("outputs",1290,330,"Results","QC + provenance","peaks"),
-    ("monitor",1060,690,"Monitor","Read-only status page","qc"),
-    ("review",370,690,"Human review","Investigate + retry","spp"),
-    ("retry",600,180,"Bounded retries","Confirmed transient errors","qc"),
-]
-CONTROL_EDGES = [
-    edge("reads",[(140,330),(370,330),(485,330),(485,180),(830,180)],"Default local execution"),
-    edge("reference",[(370,330),(830,330)],"Native scheduler submits tasks to managed compute nodes"),
-    edge("tracks",[(370,330),(485,330),(485,510),(830,510)],"Independent Linux workers run isolated datasets over existing SSH"),
-    edge("reads",[(830,180),(1175,180),(1175,330),(1290,330)],"Local results"),
-    edge("reference",[(830,330),(1290,330)],"Cluster results"),
-    edge("tracks",[(830,510),(1175,510),(1175,330),(1290,330)],"Worker results"),
-    edge("qc",[(1290,330),(1405,330),(1405,690),(1060,690),(370,690)],"Status and unresolved issues flow to human review"),
-    edge("spp",[(370,690),(255,690),(255,330),(370,330)],"Explicit resolution returns confirmed failed datasets to the queue"),
-]
-ROAD_NODES = [
-    ("manifest",140,330,"Manifest","Biological library IDs","reads"),
-    ("acquisition",370,330,"Acquisition + QC","Original reads retained","reads"),
-    ("dap",600,180,"DAP-seq","Implemented","reads"),
-    ("dap_outputs",1060,180,"Peaks + quantification","Per treatment","reads"),
-    ("bulk_atac",600,330,"Bulk ATAC","Paired-end libraries","tracks"),
-    ("bulk_outputs",1060,330,"Fragments + ATAC QC","Separate biological replicates","tracks"),
-    ("single_cell",600,510,"scATAC","Fragments or 10x reads","tracks"),
-    ("cells",1060,510,"Cell groups","From the cell list","tracks"),
-    ("pseudobulk",1290,510,"Pseudobulks","Group × library","tracks"),
-    ("multiome",140,690,"Multiome identity","Tested linking contract","future"),
-    ("rna",600,690,"Bulk RNA-seq","STAR + featureCounts","reads"),
-    ("tss",830,780,"TSS mapping","CAGE, TSS-seq, csRNA","reads"),
-    ("reference_registry",140,180,"Reference registry","Tested schema","reference"),
-    ("models",1290,690,"Model inputs","Model-specific export","future"),
-]
-ROAD_EDGES = [
-    edge("reads",[(140,330),(370,330),(485,330),(485,180),(600,180),(1060,180)],"Implemented DAP route"),
-    edge("tracks",[(370,330),(600,330),(1060,330)],"Paired-end libraries bulk ATAC route"),
-    edge("tracks",[(370,330),(485,330),(485,510),(600,510),(1060,510),(1290,510)],"scATAC from published fragments to group pseudobulks"),
-    edge("reads",[(370,330),(485,330),(485,690),(600,690)],"Bulk RNA-seq route"),
-    edge("reads",[(485,690),(485,780),(830,780)],"TSS mapping route"),
-    edge("reference",[(140,180),(255,180),(255,330),(370,330)],"Versioned registry contract",True),
-    edge("future",[(140,690),(600,690),(945,690),(945,510),(1060,510)],"Modality-specific QC with shared annotation provenance",True),
-    edge("future",[(1060,330),(1175,330),(1175,690),(1290,690)],"Proposed bulk model export",True),
-    edge("future",[(1290,510),(1405,510),(1405,690),(1290,690)],"Replicate-specific pseudobulk export",True),
-]
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "docs/images")
@@ -365,26 +311,9 @@ def main() -> None:
           "Without an authors' cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied."],
          ["workflows/scatac-reads.nf"]),
     ]:
-        for animated, suffix in [(False, ""), (True, "_animated")]:
-            (out / f"genesis{assay}_metro_map{suffix}.svg").write_text(
-                document(title, subtitle, nodes, edges, notes, workflows, animated))
-    (out / "genesis_architecture_metro_map.svg").write_text(document(
-        "GENESIS / ARCHITECTURE", "Available assay routes and future contracts · biological replicates remain separate",
-        ROAD_NODES, ROAD_EDGES,
-        ["Solid: available assay processing. Dashed: contracts or planned integration.",
-         "RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.",
-         "Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments or 10x reads on NCBI SRA; model export is not a production workflow."],
-        ["workflows/dap-seq.nf", "workflows/atac-seq.nf", "workflows/rna-seq.nf", "workflows/scatac-seq.nf",
-         "workflows/scatac-reads.nf", "workflows/tss-seq.nf"]))
-    for animated, suffix in [(False, ""), (True, "_animated")]:
-        (out / f"genesis_execution{suffix}.svg").write_text(document(
-            "GENESIS / RUN AND REVIEW", "Start on one Linux server. Add managed clusters or independent workers when needed.",
-            CONTROL_NODES, CONTROL_EDGES,
-            ["Authentication stays under site control. No keys, permissions or cluster services are changed by Genesis.",
-             "Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.",
-             "Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions."],
-            ["conf/execution.config"], animated))
-    print("Rendered 15 Genesis SVG maps")
+        (out / f"genesis{assay}_metro_map.svg").write_text(
+            document(title, subtitle, nodes, edges, notes, workflows))
+    print("Rendered 6 Genesis workflow maps")
 
 
 if __name__ == "__main__":

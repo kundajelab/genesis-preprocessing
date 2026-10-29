@@ -9,7 +9,6 @@
     .detail{font-size:16px;fill:var(--muted)}
     .station{fill:var(--bg);stroke-width:4}
     .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
-    .planned{stroke-dasharray:9 9}
     .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
     @keyframes travel{to{stroke-dashoffset:-400}}
     @media(prefers-reduced-motion:reduce){.flow{display:none}}
@@ -20,17 +19,29 @@
 <text class="title" x="48" y="52">GENESIS / TSS MAPPING</text>
 <text class="subtitle" x="48" y="85">Single-read CAGE, TSS-seq and csRNA-seq · per-base TSS tags · paraclu clusters</text>
 <path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 1060 330"><title>Reads are trimmed, aligned and reduced to their 5&#x27; ends</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 140 330 L 1060 330"/>
 <path id="route-1" class="line" stroke="#ce6030" d="M 1060 330 L 1290 330"><title>Tags per strand give clusters</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 1060 330 L 1290 330"/>
 <path id="route-2" class="line" stroke="#9260b7" d="M 1290 330 L 1290 510"><title>Clusters feed QC</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 1290 330 L 1290 510"/>
 <path id="route-3" class="line" stroke="#9260b7" d="M 1060 330 L 1060 586 Q 1060 600 1074 600 L 1161 600 Q 1175 600 1175 586 L 1175 524 Q 1175 510 1189 510 L 1290 510"><title>Tags feed QC</title></path>
+<path class="flow" style="animation-delay:-3s" d="M 1060 330 L 1060 586 Q 1060 600 1074 600 L 1161 600 Q 1175 600 1175 586 L 1175 524 Q 1175 510 1189 510 L 1290 510"/>
 <path id="route-4" class="line" stroke="#9260b7" d="M 370 330 L 370 180"><title>Raw reads feed FastQC</title></path>
+<path class="flow" style="animation-delay:-4s" d="M 370 330 L 370 180"/>
 <path id="route-5" class="line" stroke="#9260b7" d="M 370 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-5s" d="M 370 180 L 1290 180"/>
 <path id="route-6" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>TSS QC, cutadapt and STAR logs feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-6s" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
 <path id="route-7" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path class="flow" style="animation-delay:-7s" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"/>
 <path id="route-8" class="line" stroke="#4169b1" d="M 140 510 L 370 510"><title>Annotation contigs must be in the FASTA</title></path>
+<path class="flow" style="animation-delay:-8s" d="M 140 510 L 370 510"/>
 <path id="route-9" class="line" stroke="#4169b1" d="M 370 510 L 471 510 Q 485 510 485 524 L 485 676 Q 485 690 499 690 L 600 690"><title>Annotated junctions feed the STAR index</title></path>
+<path class="flow" style="animation-delay:-9s" d="M 370 510 L 471 510 Q 485 510 485 524 L 485 676 Q 485 690 499 690 L 600 690"/>
 <path id="route-10" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 676 L 715 434 Q 715 420 729 420 L 816 420 Q 830 420 830 406 L 830 330"><title>Verified index and intron limit feed alignment</title></path>
+<path class="flow" style="animation-delay:-10s" d="M 600 690 L 701 690 Q 715 690 715 676 L 715 434 Q 715 420 729 420 L 816 420 Q 830 420 830 406 L 830 330"/>
 <path id="route-11" class="line" stroke="#4169b1" d="M 370 510 L 370 766 Q 370 780 384 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Annotated transcript starts feed QC</title></path>
+<path class="flow" style="animation-delay:-11s" d="M 370 510 L 370 766 Q 370 780 384 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"/>
 <g id="samples"><title>Sample sheet: Method + trimming</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
