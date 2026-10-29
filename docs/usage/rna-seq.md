@@ -5,6 +5,10 @@ first. RNA-seq runs like DAP-seq and bulk ATAC: the same launcher, profiles, wor
 layout, reference folder and image pins, with `workflows/rna-seq.nf` as the workflow and
 `conf/rna-seq.config` for its settings.
 
+![Genesis bulk RNA-seq workflow metro map](../../docs/images/genesis_rna_metro_map.svg)
+
+[Diagram source and interpretation](../../docs/diagrams/README.md)
+
 ```bash
 pixi run pipeline-rna -w /scratch/genesis -n rna-A /data/rna.tsv --references /data/references
 # Continue the same analysis after an interruption.

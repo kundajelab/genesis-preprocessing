@@ -4,6 +4,10 @@ Complete the [one-time installation](../../README.md#install-and-check-your-envi
 first. Bulk ATAC runs like DAP-seq: the same launcher, profiles, workspace layout,
 reference cache and image pins, with `workflows/atac-seq.nf` as the workflow and `conf/atac-seq.config` for its settings.
 
+![Genesis bulk ATAC-seq workflow metro map](../../docs/images/genesis_atac_metro_map.svg)
+
+[Diagram source and interpretation](../../docs/diagrams/README.md)
+
 ```bash
 pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references
 # Continue the same analysis after an interruption.

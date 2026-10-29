@@ -21,7 +21,7 @@ def main() -> None:
             [sys.executable, str(ROOT / "docs/diagrams/render_metro.py"), "--output-dir", folder],
             check=True,
         )
-        assert len(list(out.glob("*.svg"))) == 15
+        assert len(list(out.glob("*.svg"))) == 6
         for generated in out.glob("*.svg"):
             source = ROOT / "docs/images" / generated.name
             assert generated.read_bytes() == source.read_bytes(), f"Stale map: {source}"
@@ -33,6 +33,8 @@ def main() -> None:
             assert svg.find("s:desc", NS) is not None
             assert not svg.findall(".//s:script", NS) and not svg.findall(".//s:image", NS)
             text = source.read_text()
+            # One animated map per workflow; the motion stops for reduced motion and print.
+            assert 'class="flow"' in text
             assert "prefers-reduced-motion:reduce" in text
             assert "prefers-color-scheme:dark" in text
         for stem, workflow in [
@@ -43,16 +45,10 @@ def main() -> None:
             ("genesis_scatac_reads", "workflows/scatac-reads.nf"),
             ("genesis_tss", "workflows/tss-seq.nf"),
         ]:
-            static = ET.parse(out / f"{stem}_metro_map.svg").getroot()
-            animated = ET.parse(out / f"{stem}_metro_map_animated.svg").getroot()
-
-            def paths(svg: ET.Element) -> list[str]:
-                return [p.attrib["d"] for p in svg.findall("s:path", NS) if "id" in p.attrib]
-
-            assert paths(static) == paths(animated)
+            svg = ET.parse(out / f"{stem}_metro_map.svg").getroot()
             code = (ROOT / workflow).read_text()
             include = r"include\s*\{\s*(\w+)\s*\}\s*from '\.\./modules/([\w-]+/[\w-]+)'"
-            stations = {g.attrib["id"] for g in static.findall("s:g", NS)}
+            stations = {g.attrib["id"] for g in svg.findall("s:g", NS)}
             expected = set()
             for name, module in re.findall(include, code):
                 source = (ROOT / "modules" / f"{module}.nf").read_text()
@@ -67,7 +63,7 @@ def main() -> None:
                 in (out / f"{stem}_metro_map.svg").read_text()
             )
     print(
-        "PASS: 15 deterministic accessible maps; "
+        "PASS: 6 deterministic accessible animated maps; "
         "actual DAP/ATAC/RNA/scATAC/scATAC-reads/TSS process coverage"
     )
 

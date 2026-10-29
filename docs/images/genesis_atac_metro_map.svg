@@ -9,7 +9,6 @@
     .detail{font-size:16px;fill:var(--muted)}
     .station{fill:var(--bg);stroke-width:4}
     .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
-    .planned{stroke-dasharray:9 9}
     .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
     @keyframes travel{to{stroke-dashoffset:-400}}
     @media(prefers-reduced-motion:reduce){.flow{display:none}}
@@ -20,19 +19,33 @@
 <text class="title" x="48" y="52">GENESIS / BULK ATAC</text>
 <text class="subtitle" x="48" y="85">Paired-end libraries · ENCODE-style filtering · separate biological replicates</text>
 <path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 1060 330"><title>Libraries download, trim, align and filter</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 140 330 L 1060 330"/>
 <path id="route-1" class="line" stroke="#ce6030" d="M 1060 330 L 1290 330"><title>Usable fragments feed BAMPE peaks</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 1060 330 L 1290 330"/>
 <path id="route-2" class="line" stroke="#9260b7" d="M 370 330 L 370 180"><title>Raw mates independently feed FastQC</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 370 330 L 370 180"/>
 <path id="route-3" class="line" stroke="#9260b7" d="M 370 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-3s" d="M 370 180 L 1290 180"/>
 <path id="route-4" class="line" stroke="#9260b7" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 264 Q 715 250 729 250 L 1391 250 Q 1405 250 1405 236 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>Trimming, alignment and filter reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-4s" d="M 600 330 L 701 330 Q 715 330 715 316 L 715 264 Q 715 250 729 250 L 1391 250 Q 1405 250 1405 236 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
 <path id="route-5" class="line" stroke="#438362" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1161 690 L 1060 690"><title>Usable reads give shifted cut sites</title></path>
+<path class="flow" style="animation-delay:-5s" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1161 690 L 1060 690"/>
 <path id="route-6" class="line" stroke="#9260b7" d="M 1290 330 L 1290 510"><title>Peaks give FRiP</title></path>
+<path class="flow" style="animation-delay:-6s" d="M 1290 330 L 1290 510"/>
 <path id="route-7" class="line" stroke="#9260b7" d="M 1060 690 L 1276 690 Q 1290 690 1290 676 L 1290 510"><title>Cut sites give the TSS profile</title></path>
+<path class="flow" style="animation-delay:-7s" d="M 1060 690 L 1276 690 Q 1290 690 1290 676 L 1290 510"/>
 <path id="route-8" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>ATAC QC table and TSS profile feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-8s" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
 <path id="route-9" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path class="flow" style="animation-delay:-9s" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"/>
 <path id="route-10" class="line" stroke="#4169b1" d="M 140 690 L 370 690"><title>Build or verify index</title></path>
+<path class="flow" style="animation-delay:-10s" d="M 140 690 L 370 690"/>
 <path id="route-11" class="line" stroke="#4169b1" d="M 370 690 L 370 614 Q 370 600 384 600 L 816 600 Q 830 600 830 586 L 830 330"><title>Verified index feeds alignment</title></path>
+<path class="flow" style="animation-delay:-11s" d="M 370 690 L 370 614 Q 370 600 384 600 L 816 600 Q 830 600 830 586 L 830 330"/>
 <path id="route-12" class="line" stroke="#4169b1" d="M 140 510 L 931 510 Q 945 510 945 496 L 945 344 Q 945 330 959 330 L 1060 330"><title>Chromosome sizes give nuclear contigs and genome size</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 140 510 L 931 510 Q 945 510 945 496 L 945 344 Q 945 330 959 330 L 1060 330"/>
 <path id="route-13" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 721 Q 715 735 729 735 L 1336 735 Q 1350 735 1350 721 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Gene starts define strand-aware TSS windows</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 721 Q 715 735 729 735 L 1336 735 Q 1350 735 1350 721 L 1350 524 Q 1350 510 1336 510 L 1290 510"/>
 <g id="samples"><title>Sample sheet: Paired-end libraries</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>

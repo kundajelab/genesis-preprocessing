@@ -5,10 +5,8 @@ It downloads libraries, derives reference indexes and chromosome sizes, aligns
 with bwa-mem2, inspects raw reads with FastQC, runs SPP and alignment QC, generates deepTools coverage tracks,
 calls MACS3 peaks against each treatment's assigned control, and quantifies peaks.
 
-![Genesis DAP-seq workflow metro map](../../docs/images/genesis_metro_map_animated.svg)
+![Genesis DAP-seq workflow metro map](../../docs/images/genesis_metro_map.svg)
 
-[Static workflow map](../../docs/images/genesis_metro_map.svg) ·
-[Architecture and implementation status](../../docs/images/genesis_architecture_metro_map.svg) ·
 [Diagram source and interpretation](../../docs/diagrams/README.md)
 
 | Sample sheet | Layout | Libraries | Treatments |

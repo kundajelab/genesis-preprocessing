@@ -5,6 +5,10 @@ first. scATAC runs like DAP-seq and bulk ATAC: the same launcher, profiles, work
 layout, reference folder and image pins, with `workflows/scatac-seq.nf` as the workflow
 and `conf/scatac-seq.config` for its settings.
 
+![Genesis scATAC pseudobulk workflow metro map](../../docs/images/genesis_scatac_metro_map.svg)
+
+[Diagram source and interpretation](../../docs/diagrams/README.md)
+
 It starts from published single-cell fragment files, such as the 10x Cell Ranger ATAC
 `fragments.tsv.gz`; [another workflow](#from-raw-10x-reads) starts from raw 10x reads. Each library's cells are grouped into pseudobulks,
 for example one per cell type, and each pseudobulk gets peaks, a cut-site track and QC.
@@ -113,6 +117,8 @@ timeline and DAG.
 Most plant scATAC studies publish only reads. `workflows/scatac-reads.nf` (`pixi run
 pipeline-scatac-reads`, `conf/scatac-reads.config`) makes each library's fragments from its
 10x reads on NCBI SRA, calls cells, then runs the steps above unchanged.
+
+![Genesis scATAC from 10x reads workflow metro map](../../docs/images/genesis_scatac_reads_metro_map.svg)
 
 ```bash
 pixi run pipeline-scatac-reads -w /scratch/genesis -n scatac-B /data/scatac-reads.tsv --references /data/references
