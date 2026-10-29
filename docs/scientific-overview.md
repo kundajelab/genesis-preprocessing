@@ -34,20 +34,18 @@ do not invent values or interpret a single species field as all four.
 
 ## Implemented does not mean demonstrated at every scope
 
-| Capability or claim | Evidence scope | Evidence revision/source | Remaining acceptance |
-| --- | --- | --- | --- |
-| Contracts, fragment ingestion, replicate grouping and inspection | Synthetic software fixtures | Current tests and inspection report's implementation hash; [scATAC record](../validation/reports/scatac-delivery-validation.md), baseline `37ef720` and listed implementation commits | Real-data scientific suitability |
-| Scientific pipeline integration | Actual DAP/ATAC tools on synthetic inputs | [Real-study validation](../validation/reports/real-study-validation.md), exact revisions/commands in linked receipts | Representative biological cohorts; synthetic peaks are not biological truth |
-| Public-data component comparisons | Six Arabidopsis matrices, 1M/5M template caps; seeded nested sampling, seed 60141 | [Results and definitions](../validation/reports/expanded-plant-comparison.md); structured archives in snapshot `b9d0cf7` | Broader species, full-depth tests and independent accuracy evidence |
-| Full real-data analysis | Historical full fragment scans exist for the Arabidopsis scATAC candidate; they are not a full pseudobulk/model release | [Candidate audit](../validation/reports/scatac-delivery-validation.md#real-data-acceptance-gates), 2026-10-10; source paths are historical | Re-establish accessible inputs, labels and reference/annotation evidence; reviewed release absent |
-| A model loader reads data | Both pinned loaders read synthetic positive/background windows in three folds | [Loader acceptance](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac-model-handoff.md#reproduce-loader-acceptance); historical scripts/receipts | Exact-bundle, exact-model real-data loading; no transfer of fixture PASS |
-| Model training and independent experimental validation | Not demonstrated by these results | No training/design-validation receipt in the cited evidence | Training evaluation and independent biological/experimental tests |
-| Live SSH, scheduler, API or GPU operation | Local-worker, parsed-profile, fake-HTTP and lifecycle tests have narrower scope | [Execution](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/execution.md), [AI](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/ai-providers.md), [service](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/llm-deployment.md) guides | Explicit site/provider/hardware acceptance; no inference from mocks |
+| Capability or claim | Evidence scope | Remaining acceptance |
+| --- | --- | --- |
+| Contracts, fragment ingestion, replicate grouping and inspection | Synthetic software fixtures | Real-data scientific suitability |
+| Scientific pipeline integration | Actual DAP/ATAC tools on synthetic inputs | Representative biological cohorts; synthetic peaks are not biological truth |
+| Public-data component comparisons | Six Arabidopsis matrices, 1M/5M template caps; seeded nested sampling, seed 60141 | Broader species, full-depth tests and independent accuracy evidence |
+| Full real-data analysis | Historical full fragment scans exist for the Arabidopsis scATAC candidate; they are not a full pseudobulk/model release | Re-establish accessible inputs, labels and reference/annotation evidence; reviewed release absent |
+| A model loader reads data | Both pinned loaders read synthetic positive/background windows in three folds | Exact-bundle, exact-model real-data loading; no transfer of fixture PASS |
+| Model training and independent experimental validation | Not demonstrated by these results | Training evaluation and independent biological/experimental tests |
 
 The six archived `results.json` records reconcile to **64 method/repetition
 cases**: SE DAP 12 + 4, PE DAP 12 + 4, bulk ATAC 24 + 8 at the 1M/5M caps.
-Their stored result hashes and the [64-row timing table](../validation/evidence/method-comparison-20261014/figures/cost-observations.tsv)
-agree. This is inspection of completed records, not a new pipeline rerun.
+Their stored result hashes and the 64-row timing table agree. This is inspection of completed records, not a new pipeline rerun.
 Technical repetitions and depth/method cases are not extra biological experiments.
 The sampling selects lowest seeded hashes of record index and template name from
 verified inputs, preserves mates and nests the lower cap inside the higher cap;
@@ -61,19 +59,15 @@ actual retained/input denominators are recorded rather than inferred from a cap.
 | Greater depth improves peak discovery and replicate agreement in this cohort | Two Arabidopsis ATAC biological replicates: peaks rise 4,997→14,805 and 3,043→11,551 from 1M→5M input pairs each. Peak-base-pair Jaccard rises 0.2404→0.4858; cross-replicate FRiP rises 0.143339→0.460099 and 0.163293→0.402303. | Peak coverage also increases; higher held-out FRiP alone is insufficient. TSS ratios are comparatively stable. This is one biological pair, not a universal depth rule. |
 | Annotation/reference choices change reported measurements | On the same Col-CEN alignments, all-transcript Araport11/TAIR10 TSS sets contain 46,558/32,986 eligible positions. Ratios are 3.6894/3.8027 and 2.7517/3.2096 for the two libraries. | These are different denominators. For the 18,428 matched eligible single-start genes, positions can still differ between annotation releases. A higher ratio is not proof of better annotation. |
 
-Sources: [motif hits and matched controls](../validation/evidence/method-comparison-20261014/dap-se-5m-motifs/motif-metrics.tsv),
-[quality and denominator table](../validation/evidence/method-comparison-20261014/figures/quality-summary.tsv),
-[annotation profiles and selections](../validation/evidence/method-comparison-20261014/annotation-sensitivity-1m.json).
-The [depth figure](../validation/evidence/method-comparison-20261014/figures/atac-depth.svg)
-shows the existing measured results; no new biological metrics were calculated.
+These results come from the 2026-10-14 method comparison. Earlier validation
+reports and evidence were removed from this repository; see `validation/` at commit
+e2e2aa9.
 
 Cross-assembly agreement applies only after reciprocal coordinate conversion:
 for the first ATAC library, 4,992/4,997 TAIR10 and 5,586/5,596 Col-CEN peaks pass;
 for the second, 3,040/3,043 and 2,968/2,977 pass. Failed/ambiguous mappings stay
 excluded and counted. Matched-region agreement is not ground truth. Keep those
-[exclusions and mapping assumptions](../validation/evidence/method-comparison-20261014/reference-concordance-1m.json)
-with any comparison. Historical reports retain their original pending-status
-snapshots; they are not live progress monitors.
+exclusions and mapping assumptions with any comparison.
 
 ## What this evidence does not yet establish
 

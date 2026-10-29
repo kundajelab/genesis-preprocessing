@@ -43,7 +43,6 @@ def checkSamples(sheet, rows, references) {
     }
 }
 
-// Bowtie 1 modules deliberately have no imports or calls here.
 workflow {
     // This script lives in workflows/; everything else it uses is relative to the repository.
     def repoDir = projectDir.parent

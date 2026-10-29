@@ -1,2 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-1	88/afc20c	3702146	VALIDATE_SHEET	FAILED	1	2026-10-12 22:56:01.975	1.2s	1.2s	-	-	-	-	-

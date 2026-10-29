@@ -1,2 +1,0 @@
-PASS: installed Pixi preserves caller cwd and literal argv
-PASS: CLI installation, conflicts, independent cwd, DAP/ATAC forwarding, resume, exits, interrupts, benchmark delegation and offline core commands
