@@ -225,6 +225,7 @@ SCATAC_READS_NODES = [
     ("whitelist",370,510,"Barcode list","User-supplied","reference"),
     ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
     ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
+    ("GET_CHROMAP_INDEX",370,690,"chromap index","Hash-checked reuse","reference"),
     ("genes",600,690,"Gene starts","Optional BED6","reference"),
     ("SCATAC_TRACKS",1060,690,"Tn5 cut sites","Per-base bigWig","tracks"),
 ]
@@ -237,7 +238,8 @@ SCATAC_READS_EDGES = [
     edge("qc",[(1290,510),(1405,510),(1405,180),(1290,180)],"Group QC and TSS profiles feed MultiQC"),
     edge("reference",[(370,510),(485,510),(485,330),(600,330)],"Barcodes are corrected against the list"),
     edge("reference",[(140,690),(255,690),(255,510),(140,510)],"Build or verify chromosome sizes"),
-    edge("reference",[(140,690),(540,690),(540,330),(600,330)],"chromap indexes the FASTA"),
+    edge("reference",[(140,690),(370,690)],"The FASTA gives the chromap index"),
+    edge("reference",[(370,690),(540,690),(540,330),(600,330)],"Verified index feeds chromap"),
     edge("reference",[(140,510),(255,510),(255,600),(945,600),(945,330),(1060,330)],"Every fragment must lie on a contig"),
     edge("reference",[(600,690),(715,690),(715,780),(1350,780),(1350,510),(1290,510)],"Gene starts define strand-aware TSS windows"),
 ]

@@ -139,11 +139,17 @@ The other columns are as above. A run may be listed for one library only.
    are separate tasks, so a failed conversion, or `-resume` after one, reuses the download;
    a failed download is tried again. `fasterq-dump` needs temporary disk of about the FASTQs'
    size, about 100 GB for a 116-million-spot run, and takes about 1.5 hours with 4 threads.
+   Intermediate FASTQS (tens of GB) are also stored in work/ until the run is cleaned up.
 2. **Fragments.** chromap `--preset atac` trims adapters, maps the pairs, corrects barcodes
    against the whitelist and removes duplicates per cell. It writes 10x fragments: BED0, Tn5
    offsets applied (start + 4, end − 5). Sequencers read the barcode on either strand; the
    strand that matches the whitelist for most of the first 200,000 barcodes is used, and a
-   library where neither matches half of them stops.
+   library where neither matches half of them stops. The chromap index, about 5 bytes per
+   reference base, is built once per reference and published beside the FASTA as
+   `<id>.chromap/`, with `<id>.chromap.sha256` recording the FASTA's SHA-256, the chromap
+   release and the index's size. Later runs reuse it only while that record matches the FASTA,
+   the release pinned in `environments/GENESIS_CHROMAP.yaml` and the index file; otherwise it
+   is rebuilt.
 3. **Cells.** With `cells_url`, the authors' list is used, after removing Cell Ranger's `-1`
    suffix, which chromap does not write. Otherwise barcodes with at least
    `--scatac_min_fragments` nuclear fragments (default 1000, as in ArchR) are cells, at most

@@ -3,6 +3,7 @@ nextflow.enable.dsl = 2
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
+include { GET_CHROMAP_INDEX } from '../modules/scatac-seq/get_chromap_index'
 include { SCATAC_SRA } from '../modules/scatac-seq/scatac_sra'
 include { SCATAC_CHROMAP } from '../modules/scatac-seq/scatac_chromap'
 include { SCATAC_CELLS } from '../modules/scatac-seq/scatac_cells'
@@ -92,8 +93,8 @@ workflow {
                organelles: row.organelle_contigs == '-' ? [] : row.organelle_contigs.tokenize(','),
                runs: row.sra_runs.tokenize(','), barcode_length: barcodeLength(row.chemistry)]
     })
-    // chromap indexes the FASTA itself; the shared reference step gives chromosome sizes, reusing
-    // existing products, and leaves the bwa-mem2 index for other modalities.
+    // The shared reference step gives chromosome sizes, reusing existing products, and builds the
+    // bwa-mem2 index for other modalities; the chromap index is reused the same way.
     references = samples.unique { sample -> sample.ref_id }
         .map { meta ->
             def ref = [id: meta.ref_id, filename: meta.reference_fasta]
@@ -101,6 +102,13 @@ workflow {
         }
     GET_REFERENCES(references, referencesDir)
     sizes_ch = GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) }
+    // Keep the ref GET_REFERENCES emits: its FASTA hash keys the chromap index record.
+    GET_CHROMAP_INDEX(references.map { ref, fasta -> tuple(ref.id, fasta) }
+        .join(GET_REFERENCES.out.sizes, failOnDuplicate: true, failOnMismatch: true)
+        .map { _id, fasta, ref, sizes ->
+            def length = sizes.readLines().sum(0L) { line -> line.tokenize('\t')[1].toLong() }
+            tuple(ref + [length: length], fasta)
+        }, referencesDir)
     // One task per run (lane); a library's runs are mapped together.
     SCATAC_SRA(samples.flatMap { meta -> meta.runs.collect { run -> tuple(meta, run) } })
     libraries = SCATAC_SRA.out.reads
@@ -116,12 +124,13 @@ workflow {
                   order.collect { i -> barcodes[i] })
         }
         .combine(sizes_ch, by: 0)
-        .map { _refId, meta, r1, r2, barcodes, sizes ->
+        .combine(GET_CHROMAP_INDEX.out.index, by: 0)
+        .map { _refId, meta, r1, r2, barcodes, sizes, index ->
             def length = sizes.readLines().sum(0L) { line -> line.tokenize('\t')[1].toLong() }
             def whitelist = meta.barcode_whitelist == '-' ? [] :
                 file("${referencesDir}/${meta.barcode_whitelist}")
             tuple(meta + [genome_length: length], r1, r2, barcodes,
-                  file("${referencesDir}/${meta.reference_fasta}"), whitelist)
+                  file("${referencesDir}/${meta.reference_fasta}"), index, whitelist)
         }
     SCATAC_CHROMAP(libraries)
     SCATAC_CELLS(SCATAC_CHROMAP.out.fragments)

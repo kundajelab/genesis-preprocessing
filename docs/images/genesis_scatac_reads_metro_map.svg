@@ -27,9 +27,10 @@
 <path id="route-5" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>Group QC and TSS profiles feed MultiQC</title></path>
 <path id="route-6" class="line" stroke="#4169b1" d="M 370 510 L 471 510 Q 485 510 485 496 L 485 344 Q 485 330 499 330 L 600 330"><title>Barcodes are corrected against the list</title></path>
 <path id="route-7" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
-<path id="route-8" class="line" stroke="#4169b1" d="M 140 690 L 526 690 Q 540 690 540 676 L 540 344 Q 540 330 554 330 L 600 330"><title>chromap indexes the FASTA</title></path>
-<path id="route-9" class="line" stroke="#4169b1" d="M 140 510 L 241 510 Q 255 510 255 524 L 255 586 Q 255 600 269 600 L 931 600 Q 945 600 945 586 L 945 344 Q 945 330 959 330 L 1060 330"><title>Every fragment must lie on a contig</title></path>
-<path id="route-10" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 766 Q 715 780 729 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Gene starts define strand-aware TSS windows</title></path>
+<path id="route-8" class="line" stroke="#4169b1" d="M 140 690 L 370 690"><title>The FASTA gives the chromap index</title></path>
+<path id="route-9" class="line" stroke="#4169b1" d="M 370 690 L 526 690 Q 540 690 540 676 L 540 344 Q 540 330 554 330 L 600 330"><title>Verified index feeds chromap</title></path>
+<path id="route-10" class="line" stroke="#4169b1" d="M 140 510 L 241 510 Q 255 510 255 524 L 255 586 Q 255 600 269 600 L 931 600 Q 945 600 945 586 L 945 344 Q 945 330 959 330 L 1060 330"><title>Every fragment must lie on a contig</title></path>
+<path id="route-11" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 766 Q 715 780 729 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Gene starts define strand-aware TSS windows</title></path>
 <g id="samples"><title>Sample sheet: SRA runs + chemistry</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
@@ -74,6 +75,10 @@
 <circle class="station" cx="140" cy="690" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="140" y="650">Reference FASTA</text>
 <text class="detail" text-anchor="middle" x="140" y="673">Hash-checked reuse</text></g>
+<g id="GET_CHROMAP_INDEX"><title>chromap index: Hash-checked reuse</title>
+<circle class="station" cx="370" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="370" y="650">chromap index</text>
+<text class="detail" text-anchor="middle" x="370" y="673">Hash-checked reuse</text></g>
 <g id="genes"><title>Gene starts: Optional BED6</title>
 <circle class="station" cx="600" cy="690" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="600" y="650">Gene starts</text>
@@ -86,4 +91,4 @@
 <text class="note" x="48" y="798">Runs come from NCBI SRA, which keeps the 10x barcode read; the barcode and genomic reads are told apart by length.</text>
 <text class="note" x="48" y="823">chromap writes 10x fragments (Tn5 offsets applied), corrects barcodes against a user-supplied list and removes duplicates per cell.</text>
 <text class="note" x="48" y="848">Without an authors&#x27; cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied.</text>
-<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 fe9f514db32b721537fc5687561cb93ffdaad535b71b1045d3578b3057366ea0; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 1e56c6015c2e2e24d1533c9cdbd9fd43f46dd1f0b5a1a235fb909aefb817b736; schematic animation.</metadata></svg>

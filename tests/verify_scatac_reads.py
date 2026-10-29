@@ -11,8 +11,10 @@ import argparse
 import csv
 import functools
 import gzip
+import hashlib
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +25,11 @@ from pathlib import Path
 from verify_pipeline import executor_limits, in_parallel, launch_folder, trace_rows
 
 ROOT = Path(__file__).resolve().parents[1]
+CHROMAP_PIN = re.search(
+    r"chromap=([^\s,<>]+)", (ROOT / "environments/GENESIS_CHROMAP.yaml").read_text()
+)
+assert CHROMAP_PIN, "environments/GENESIS_CHROMAP.yaml does not pin a chromap version"
+CHROMAP_VERSION = CHROMAP_PIN.group(1)
 HEADER = [
     "sample_id",
     "species",
@@ -152,6 +159,7 @@ def check_stub(work: Path) -> None:
         "GET_REFERENCES:BWA_MEM2_INDEX": 1,
         "SCATAC_SRA:SRA_PREFETCH": 3,
         "SCATAC_SRA:SRA_FASTQ": 3,
+        "GET_CHROMAP_INDEX:CHROMAP_INDEX": 1,
         "SCATAC_CHROMAP": 2,
         "SCATAC_CELLS": 2,
         "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 2,
@@ -174,6 +182,44 @@ def check_stub(work: Path) -> None:
         "genes.bed",
         "sc.fa.gz",
     ]
+
+
+def chromap_record(references: Path, ref_id: str, version: str = CHROMAP_VERSION) -> str:
+    """The <ref_id>.chromap.sha256 CHROMAP_INDEX writes: FASTA hash, release, index file sizes."""
+    fasta = f"{ref_id}.fa.gz"
+    lines = [f"{hashlib.sha256((references / fasta).read_bytes()).hexdigest()}  {fasta}"]
+    lines.append(f"{version}  chromap")
+    index = references / f"{ref_id}.chromap"
+    lines += [
+        f"{path.stat().st_size}  {index.name}/{path.name}"
+        for path in sorted(index.iterdir())
+        if path.is_file()
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def check_index_reuse(work: Path, sheet: Path) -> None:
+    """A published chromap index is reused only while its record matches the FASTA and release."""
+
+    def case(name: str, version: str, rebuilt: bool) -> None:
+        folder = work / "index-reuse" / name
+        references = folder / "references"
+        references.mkdir(parents=True)
+        for path in (work / "references").iterdir():
+            shutil.copy2(path, references / path.name)
+        (references / "sc.chromap").mkdir()
+        (references / "sc.chromap/genome.index").write_text("index\n")
+        (references / "sc.chromap.sha256").write_text(chromap_record(references, "sc", version))
+        assert run_workflow(folder, sheet).returncode == 0, name
+        names = [row["name"] for row in trace_rows(folder)]
+        assert ("GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in names) == rebuilt, (name, names)
+
+    in_parallel(
+        [
+            functools.partial(case, "current", CHROMAP_VERSION, False),
+            functools.partial(case, "other-release", "0.0.0", True),
+        ]
+    )
 
 
 def check_failures(work: Path, sheet: Path) -> None:
@@ -265,29 +311,48 @@ def check_real_tools(work: Path) -> None:
     limits.write_text(
         executor_limits(docker=False) + f"conda.cacheDir = '{work.parent / 'conda_cache'}'\n"
     )
-    command = [
-        "run",
-        str(ROOT / "tests/scatac_reads_harness.nf"),
-        "-c",
-        str(ROOT / "conf/scatac-reads.config"),
-        "-profile",
-        "local,test,conda",
-        "-c",
-        str(limits),
-        "--inputs",
-        str(work / "inputs"),
-        "--fasta",
-        str(work / "sc.fa.gz"),
-        "--libraries",
-        "v1:16:whitelist.txt,arc:24:whitelist.txt",
-        "--run_dir",
-        str(work / "published"),
-        "--scatac_min_fragments",
-        "30",
-        "-work-dir",
-        str(work / "work"),
-    ]
-    assert nextflow(work, command, "real").returncode == 0
+
+    def harness(suffix: str) -> list[str]:
+        # The FASTA's folder is the references folder, where the chromap index is published.
+        assert (
+            nextflow(
+                work,
+                [
+                    "run",
+                    str(ROOT / "tests/scatac_reads_harness.nf"),
+                    "-c",
+                    str(ROOT / "conf/scatac-reads.config"),
+                    "-profile",
+                    "local,test,conda",
+                    "-c",
+                    str(limits),
+                    "--inputs",
+                    str(work / "inputs"),
+                    "--fasta",
+                    str(work / "sc.fa.gz"),
+                    "--references",
+                    str(work),
+                    "--libraries",
+                    "v1:16:whitelist.txt,arc:24:whitelist.txt",
+                    "--run_dir",
+                    str(work / f"published-{suffix}"),
+                    "--scatac_min_fragments",
+                    "30",
+                    "-work-dir",
+                    str(work / ("work" if suffix == "real" else f"work-{suffix}")),
+                    "-with-trace",
+                    str(work / f"trace-{suffix}.tsv"),
+                ],
+                suffix,
+            ).returncode
+            == 0
+        )
+        return [row["name"] for row in trace_rows(work, suffix)]
+
+    assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in harness("real")
+    # The index is published with a record of the FASTA, the pinned release and its size.
+    record = work / "sc.chromap.sha256"
+    assert record.read_text() == chromap_record(work, "sc"), record.read_text()
     for library, fragments in expected.items():
         # Each output once: later tasks stage it as a symlink.
         work_files = [
@@ -309,6 +374,11 @@ def check_real_tools(work: Path) -> None:
         nuclear = Counter(b for (contig, _s, _e, b) in fragments if contig != "ChrM")
         assert called == {b for b, n in nuclear.items() if n >= 30}, (library, called)
         assert {group for _b, group in rows} == {"all"}
+    # A later run reuses the published index; a record from another release rebuilds it.
+    assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" not in harness("reuse")
+    record.write_text(record.read_text().replace(f"{CHROMAP_VERSION}  chromap", "0.0.0  chromap"))
+    assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in harness("rebuild")
+    assert record.read_text() == chromap_record(work, "sc")
 
 
 def main() -> None:
@@ -328,6 +398,7 @@ def main() -> None:
         sheet = create_stub_fixture(work)
         assert run_workflow(work, sheet).returncode == 0
         check_stub(work)
+        check_index_reuse(work, sheet)
         check_failures(work, sheet)
         if args.conda:
             real = work / "real"

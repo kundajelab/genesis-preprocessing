@@ -7,8 +7,8 @@ def joined(files, separator) {
 
 process SCATAC_CHROMAP {
     cpus 16
-    // The index is small (about 2 bytes per base); the barcode whitelist and per-cell duplicate
-    // removal need most of the memory, which grows with the library's fragments.
+    // The index (GET_CHROMAP_INDEX) is about 5 bytes per base; the barcode whitelist and per-cell
+    // duplicate removal need most of the memory, which grows with the library's fragments.
     memory { (16.GB + 4.B * meta.genome_length) * task.attempt }
     time { 4.h * task.attempt }
     // retry with more memory and time when killed (OOM, walltime, or preemption)
@@ -24,9 +24,10 @@ process SCATAC_CHROMAP {
         pattern: '*.source.fragments.gz',
         saveAs: { name -> name.replace('.source.fragments.gz', '.all_barcodes.fragments.tsv.gz') }
     input:
-    // One library: the R1, R2 and barcode FASTQs of all its runs, in run order.
+    // One library: the R1, R2 and barcode FASTQs of all its runs, in run order, and its
+    // reference's FASTA and chromap index.
     tuple val(meta), path(r1, stageAs: 'r1/*'), path(r2, stageAs: 'r2/*'),
-        path(barcodes, stageAs: 'barcodes/*'), path(fasta), path(whitelist)
+        path(barcodes, stageAs: 'barcodes/*'), path(fasta), path(index), path(whitelist)
     output:
     tuple val(meta), path("${meta.id}.source.fragments.gz"), emit: fragments
     tuple val(meta), path("${meta.id}.chromap.log"), emit: log
@@ -37,7 +38,6 @@ process SCATAC_CHROMAP {
     def start = meta.barcode_length - 16
     """
     gzip -dc '${fasta}' > genome.fa
-    chromap -i -r genome.fa -o genome.index
     orientation=+
     if ${corrected}; then
         gzip -dcf '${whitelist}' > known-barcodes.txt
@@ -65,12 +65,12 @@ process SCATAC_CHROMAP {
     fi
     # --preset atac: adapter trimming, per-cell duplicate removal, and 10x fragments (BED0, Tn5
     # offsets applied: start + 4, end - 5), as Cell Ranger writes them.
-    chromap --preset atac -t ${task.cpus} -x genome.index -r genome.fa \\
+    chromap --preset atac -t ${task.cpus} -x '${index}/genome.index' -r genome.fa \\
         -1 '${joined(r1, ',')}' -2 '${joined(r2, ',')}' -b '${joined(barcodes, ',')}' \\
         --read-format "r1:0:-1,bc:${start}:${meta.barcode_length - 1}:\$orientation,r2:0:-1" \\
         ${corrected ? '--barcode-whitelist known-barcodes.txt' : ''} \\
         -o fragments.tsv 2> '${meta.id}.chromap.log'
-    rm -f genome.fa genome.index known-barcodes.txt
+    rm -f genome.fa known-barcodes.txt
     test -s fragments.tsv || { cat '${meta.id}.chromap.log' >&2; exit 1; }
     bgzip --threads ${task.cpus} -c fragments.tsv > '${meta.id}.source.fragments.gz'
     rm fragments.tsv
