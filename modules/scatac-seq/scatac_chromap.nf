@@ -1,5 +1,10 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
+// A library's runs as one argument list: chromap takes them comma-separated, gzip space-separated.
+def joined(files, separator) {
+    return (files instanceof List ? files : [files]).join(separator)
+}
+
 process SCATAC_CHROMAP {
     cpus 16
     // The index is small (about 2 bytes per base); the barcode whitelist and per-cell duplicate
@@ -26,7 +31,6 @@ process SCATAC_CHROMAP {
     tuple val(meta), path("${meta.id}.source.fragments.gz"), emit: fragments
     tuple val(meta), path("${meta.id}.chromap.log"), emit: log
     script:
-    def join = { files -> (files instanceof List ? files : [files]).join(',') }
     def corrected = meta.barcode_whitelist != '-'
     // The cell barcode is the last 16 bases of the barcode read: all of a 10x ATAC barcode read,
     // and after the 8-base spacer in a multiome ATAC one.
@@ -38,8 +42,9 @@ process SCATAC_CHROMAP {
     if ${corrected}; then
         gzip -dcf '${whitelist}' > known-barcodes.txt
         # Sequencers read the barcode on either strand; use the one that matches the whitelist.
-        # Only the first 200,000 barcodes: the reader stops early, so zcat's SIGPIPE is expected.
-        { zcat ${join(barcodes).replace(',', ' ')} || [ \$? -eq 141 ]; } | head -n 800000 |
+        # Only the first 200,000 barcodes: the reader stops early, so gzip's SIGPIPE is expected.
+        # gzip -dc, not zcat, which on macOS expects .Z files.
+        { gzip -dc ${joined(barcodes, ' ')} || [ \$? -eq 141 ]; } | head -n 800000 |
             awk -v start=${start} '
             NR == FNR {list[\$1] = 1; next}
             FNR % 4 == 2 {
@@ -61,7 +66,7 @@ process SCATAC_CHROMAP {
     # --preset atac: adapter trimming, per-cell duplicate removal, and 10x fragments (BED0, Tn5
     # offsets applied: start + 4, end - 5), as Cell Ranger writes them.
     chromap --preset atac -t ${task.cpus} -x genome.index -r genome.fa \\
-        -1 '${join(r1)}' -2 '${join(r2)}' -b '${join(barcodes)}' \\
+        -1 '${joined(r1, ',')}' -2 '${joined(r2, ',')}' -b '${joined(barcodes, ',')}' \\
         --read-format "r1:0:-1,bc:${start}:${meta.barcode_length - 1}:\$orientation,r2:0:-1" \\
         ${corrected ? '--barcode-whitelist known-barcodes.txt' : ''} \\
         -o fragments.tsv 2> '${meta.id}.chromap.log'

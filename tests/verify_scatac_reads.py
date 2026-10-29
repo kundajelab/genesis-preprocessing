@@ -150,7 +150,8 @@ def check_stub(work: Path) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 1,
         "GET_REFERENCES:BWA_MEM2_INDEX": 1,
-        "SCATAC_SRA": 3,
+        "SCATAC_SRA:SRA_PREFETCH": 3,
+        "SCATAC_SRA:SRA_FASTQ": 3,
         "SCATAC_CHROMAP": 2,
         "SCATAC_CELLS": 2,
         "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 2,
@@ -159,13 +160,14 @@ def check_stub(work: Path) -> None:
         "SCATAC_PSEUDOBULKS:SCATAC_QC": 2,
         "MULTIQC_REPORT": 1,
     }, counts
-    # Runs are downloaded one task each and mapped per library.
-    names = sorted(row["name"] for row in rows if row["name"].startswith("SCATAC_SRA "))
-    assert names == [
-        "SCATAC_SRA (lanes:SRR0000001)",
-        "SCATAC_SRA (lanes:SRR0000002)",
-        "SCATAC_SRA (multiome:SRR0000003)",
-    ], names
+    # Runs are downloaded and converted one task each, then mapped per library.
+    for process in ("SCATAC_SRA:SRA_PREFETCH", "SCATAC_SRA:SRA_FASTQ"):
+        names = sorted(row["name"] for row in rows if row["name"].startswith(f"{process} "))
+        assert names == [
+            f"{process} (lanes:SRR0000001)",
+            f"{process} (lanes:SRR0000002)",
+            f"{process} (multiome:SRR0000003)",
+        ], names
     # Stub runs never publish into the references folder.
     assert sorted(p.name for p in (work / "references").iterdir()) == [
         "atac.whitelist.txt",

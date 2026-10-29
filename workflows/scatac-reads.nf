@@ -37,7 +37,7 @@ def checkSamples(sheet, rows, references) {
         if (row.barcode_whitelist != '-' && !references.resolve(row.barcode_whitelist).isFile()) {
             error("${sheet}: barcode whitelist missing: ${row.barcode_whitelist}")
         }
-        for (run in row.sra_runs.tokenize(',')) {
+        row.sra_runs.tokenize(',').each { run ->
             def owner = runs.putIfAbsent(run, row.id)
             if (owner != null) {
                 error("${sheet}: run ${run} is listed for both ${owner} and ${row.id}")
@@ -128,7 +128,7 @@ workflow {
     SCATAC_PSEUDOBULKS(SCATAC_CELLS.out.cells, sizes_ch, referencesDir, resources)
     // Collect channels, not publishDir contents: wait for every library's reports.
     multiqcFiles = SCATAC_PSEUDOBULKS.out.multiqc
-        .flatten().collect().map { paths -> paths.sort { it.name } }
+        .flatten().collect().map { paths -> paths.sort { path -> path.name } }
     // Record what produced this run beside its outputs, as workflows/dap-seq.nf does.
     def git = { List args ->
         try {
@@ -136,7 +136,7 @@ workflow {
             // Trim only the end: porcelain status lines start with positional status columns.
             def text = process.text.stripTrailing()
             return process.waitFor() == 0 ? text : null
-        } catch (IOException ignored) {
+        } catch (IOException _ignored) {
             return null
         }
     }

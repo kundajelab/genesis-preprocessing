@@ -86,4 +86,4 @@
 <text class="note" x="48" y="798">Runs come from NCBI SRA, which keeps the 10x barcode read; the barcode and genomic reads are told apart by length.</text>
 <text class="note" x="48" y="823">chromap writes 10x fragments (Tn5 offsets applied), corrects barcodes against a user-supplied list and removes duplicates per cell.</text>
 <text class="note" x="48" y="848">Without an authors&#x27; cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied.</text>
-<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 487b391ec5976ef4c77148afaadacc19e365d1bcf98fe2d8b957d6731f9cf868; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 fe9f514db32b721537fc5687561cb93ffdaad535b71b1045d3578b3057366ea0; schematic animation.</metadata></svg>

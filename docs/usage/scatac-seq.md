@@ -135,9 +135,10 @@ The other columns are as above. A run may be listed for one library only.
 1. **Download.** `prefetch` and `fasterq-dump --include-technical` from NCBI SRA, which keeps
    the 10x barcode read; ENA's FASTQs drop it. Submitters order the reads differently, so the
    barcode read is the one of the chemistry's length and the genomic reads are the two
-   longest. A run without such a barcode read stops the library. `fasterq-dump` needs
-   temporary disk of about the FASTQs' size, about 100 GB for a 116-million-spot run, and
-   takes about 1.5 hours with 4 threads.
+   longest. A run without such a barcode read stops the library. Downloading and converting
+   are separate tasks, so a failed conversion, or `-resume` after one, reuses the download;
+   a failed download is tried again. `fasterq-dump` needs temporary disk of about the FASTQs'
+   size, about 100 GB for a 116-million-spot run, and takes about 1.5 hours with 4 threads.
 2. **Fragments.** chromap `--preset atac` trims adapters, maps the pairs, corrects barcodes
    against the whitelist and removes duplicates per cell. It writes 10x fragments: BED0, Tn5
    offsets applied (start + 4, end − 5). Sequencers read the barcode on either strand; the
