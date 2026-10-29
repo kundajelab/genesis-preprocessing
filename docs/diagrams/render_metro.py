@@ -213,6 +213,34 @@ SCATAC_EDGES = [
     edge("reference",[(140,510),(485,510),(485,330),(600,330)],"Every fragment must lie on a contig"),
     edge("reference",[(600,690),(715,690),(715,735),(1350,735),(1350,330),(1290,330)],"Gene starts define strand-aware TSS windows"),
 ]
+SCATAC_READS_NODES = [
+    ("samples",140,330,"Sample sheet","SRA runs + chemistry","reads"),
+    ("SCATAC_SRA",370,330,"SRA download","Barcode read kept","reads"),
+    ("SCATAC_CHROMAP",600,330,"chromap","10x fragments","reads"),
+    ("SCATAC_CELLS",830,330,"Cells","Called or listed","reads"),
+    ("SCATAC_FRAGMENTS",1060,330,"Fragments","Cells, nuclear","reads"),
+    ("SCATAC_PEAKS",1290,330,"MACS3 peaks","Per group","peaks"),
+    ("SCATAC_QC",1290,510,"scATAC QC","FRiP, TSS enrichment","qc"),
+    ("MULTIQC_REPORT",1290,180,"MultiQC","HTML + parsed data","qc"),
+    ("whitelist",370,510,"Barcode list","User-supplied","reference"),
+    ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
+    ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
+    ("genes",600,690,"Gene starts","Optional BED6","reference"),
+    ("SCATAC_TRACKS",1060,690,"Tn5 cut sites","Per-base bigWig","tracks"),
+]
+SCATAC_READS_EDGES = [
+    edge("reads",[(140,330),(1060,330)],"Runs are downloaded, mapped per library, then cells are called"),
+    edge("peaks",[(1060,330),(1290,330)],"Each group's fragments give peaks"),
+    edge("qc",[(1290,330),(1290,510)],"Peaks give FRiP"),
+    edge("tracks",[(1060,330),(1060,690)],"Each group's fragments give cut sites"),
+    edge("qc",[(1060,690),(1290,690),(1290,510)],"Cut sites give the TSS profile"),
+    edge("qc",[(1290,510),(1405,510),(1405,180),(1290,180)],"Group QC and TSS profiles feed MultiQC"),
+    edge("reference",[(370,510),(485,510),(485,330),(600,330)],"Barcodes are corrected against the list"),
+    edge("reference",[(140,690),(255,690),(255,510),(140,510)],"Build or verify chromosome sizes"),
+    edge("reference",[(140,690),(540,690),(540,330),(600,330)],"chromap indexes the FASTA"),
+    edge("reference",[(140,510),(255,510),(255,600),(945,600),(945,330),(1060,330)],"Every fragment must lie on a contig"),
+    edge("reference",[(600,690),(715,690),(715,780),(1350,780),(1350,510),(1290,510)],"Gene starts define strand-aware TSS windows"),
+]
 CONTROL_NODES = [
     ("inputs",140,330,"Datasets","Exact references + policy","reads"),
     ("controller",370,330,"Controller","Queue + durable status","reads"),
@@ -241,7 +269,7 @@ ROAD_NODES = [
     ("dap_outputs",1060,180,"Peaks + quantification","Per treatment","reads"),
     ("bulk_atac",600,330,"Bulk ATAC","Paired-end libraries","tracks"),
     ("bulk_outputs",1060,330,"Fragments + ATAC QC","Separate biological replicates","tracks"),
-    ("single_cell",600,510,"scATAC","Published fragments","tracks"),
+    ("single_cell",600,510,"scATAC","Fragments or 10x reads","tracks"),
     ("cells",1060,510,"Cell groups","From the cell list","tracks"),
     ("pseudobulk",1290,510,"Pseudobulks","Group × library","tracks"),
     ("multiome",140,690,"Multiome identity","Tested linking contract","future"),
@@ -291,6 +319,12 @@ def main() -> None:
           "Each group gets MACS3 peaks, a per-base cut-site bigWig (first and last fragment base), FRiP and TSS enrichment.",
           "QC is diagnostic, with no plant thresholds. Groups stay within one library; libraries are never pooled."],
          ["workflows/scatac-seq.nf"]),
+        ("_scatac_reads", "GENESIS / scATAC FROM 10x READS", "NCBI SRA runs with the barcode read · chromap fragments · shared pseudobulk steps",
+         SCATAC_READS_NODES, SCATAC_READS_EDGES,
+         ["Runs come from NCBI SRA, which keeps the 10x barcode read; the barcode and genomic reads are told apart by length.",
+          "chromap writes 10x fragments (Tn5 offsets applied), corrects barcodes against a user-supplied list and removes duplicates per cell.",
+          "Without an authors' cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied."],
+         ["workflows/scatac-reads.nf"]),
     ]:
         for animated, suffix in [(False, ""), (True, "_animated")]:
             (out / f"genesis{assay}_metro_map{suffix}.svg").write_text(
@@ -300,8 +334,9 @@ def main() -> None:
         ROAD_NODES, ROAD_EDGES,
         ["Solid: available assay processing. Dashed: contracts or planned integration.",
          "RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.",
-         "Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments; raw-read barcode processing and model export are not production workflows."],
-        ["workflows/dap-seq.nf", "workflows/atac-seq.nf", "workflows/rna-seq.nf", "workflows/scatac-seq.nf"]))
+         "Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments or 10x reads on NCBI SRA; model export is not a production workflow."],
+        ["workflows/dap-seq.nf", "workflows/atac-seq.nf", "workflows/rna-seq.nf", "workflows/scatac-seq.nf",
+         "workflows/scatac-reads.nf"]))
     for animated, suffix in [(False, ""), (True, "_animated")]:
         (out / f"genesis_execution{suffix}.svg").write_text(document(
             "GENESIS / RUN AND REVIEW", "Start on one Linux server. Add managed clusters or independent workers when needed.",
@@ -310,7 +345,7 @@ def main() -> None:
              "Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.",
              "Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions."],
             ["conf/execution.config"], animated))
-    print("Rendered 11 Genesis SVG maps")
+    print("Rendered 13 Genesis SVG maps")
 
 
 if __name__ == "__main__":

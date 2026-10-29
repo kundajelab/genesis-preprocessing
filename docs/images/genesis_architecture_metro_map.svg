@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 870" role="img" aria-labelledby="title description">
 <title id="title">GENESIS / ARCHITECTURE</title>
-<desc id="description">Available assay routes and future contracts · biological replicates remain separate. Solid: available assay processing. Dashed: contracts or planned integration. RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling. Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments; raw-read barcode processing and model export are not production workflows.</desc>
+<desc id="description">Available assay routes and future contracts · biological replicates remain separate. Solid: available assay processing. Dashed: contracts or planned integration. RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling. Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments or 10x reads on NCBI SRA; model export is not a production workflow.</desc>
 <style>
     svg{--bg:#fbfcfe;--text:#172c3d;--muted:#536779;--panel:#e2e8ef;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
     .title{font-size:32px;font-weight:700;letter-spacing:1px;fill:var(--text)}
@@ -51,10 +51,10 @@
 <circle class="station" cx="1060" cy="330" r="9" stroke="#438362"/>
 <text class="label" text-anchor="middle" x="1060" y="290">Fragments + ATAC QC</text>
 <text class="detail" text-anchor="middle" x="1060" y="313">Separate biological replicates</text></g>
-<g id="single_cell"><title>scATAC: Published fragments</title>
+<g id="single_cell"><title>scATAC: Fragments or 10x reads</title>
 <circle class="station" cx="600" cy="510" r="9" stroke="#438362"/>
 <text class="label" text-anchor="middle" x="600" y="470">scATAC</text>
-<text class="detail" text-anchor="middle" x="600" y="493">Published fragments</text></g>
+<text class="detail" text-anchor="middle" x="600" y="493">Fragments or 10x reads</text></g>
 <g id="cells"><title>Cell groups: From the cell list</title>
 <circle class="station" cx="1060" cy="510" r="9" stroke="#438362"/>
 <text class="label" text-anchor="middle" x="1060" y="470">Cell groups</text>
@@ -82,5 +82,5 @@
 <path d="M48 762 H1432" stroke="var(--panel)" stroke-width="2"/>
 <text class="note" x="48" y="798">Solid: available assay processing. Dashed: contracts or planned integration.</text>
 <text class="note" x="48" y="823">RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.</text>
-<text class="note" x="48" y="848">Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments; raw-read barcode processing and model export are not production workflows.</text>
-<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 20fbf8d36c490aed07e301eb9a24c04b3960d126ac758af0e700f303e37ae18e; workflows/atac-seq.nf SHA256 36f0a854dea36721501e0f57f8f1605835a206bd33b5df9ebce6359d73ab1818; workflows/rna-seq.nf SHA256 7759229356180f372b3784f152513ac78658df34e1cc053035d19aa924b24159; workflows/scatac-seq.nf SHA256 e81a7404894091b3ada32e5d5b53dee3ca9f567974f9a5f9e03ce4a60961f97f; schematic animation.</metadata></svg>
+<text class="note" x="48" y="848">Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments or 10x reads on NCBI SRA; model export is not a production workflow.</text>
+<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 20fbf8d36c490aed07e301eb9a24c04b3960d126ac758af0e700f303e37ae18e; workflows/atac-seq.nf SHA256 36f0a854dea36721501e0f57f8f1605835a206bd33b5df9ebce6359d73ab1818; workflows/rna-seq.nf SHA256 7759229356180f372b3784f152513ac78658df34e1cc053035d19aa924b24159; workflows/scatac-seq.nf SHA256 d8973c34b5304565217cbee32ffb0045be71f83e11a846e4ea1ea46afeeb81d1; workflows/scatac-reads.nf SHA256 487b391ec5976ef4c77148afaadacc19e365d1bcf98fe2d8b957d6731f9cf868; schematic animation.</metadata></svg>

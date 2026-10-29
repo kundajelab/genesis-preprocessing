@@ -21,7 +21,7 @@ def main() -> None:
             [sys.executable, str(ROOT / "docs/diagrams/render_metro.py"), "--output-dir", folder],
             check=True,
         )
-        assert len(list(out.glob("*.svg"))) == 11
+        assert len(list(out.glob("*.svg"))) == 13
         for generated in out.glob("*.svg"):
             source = ROOT / "docs/images" / generated.name
             assert generated.read_bytes() == source.read_bytes(), f"Stale map: {source}"
@@ -40,6 +40,7 @@ def main() -> None:
             ("genesis_atac", "workflows/atac-seq.nf"),
             ("genesis_rna", "workflows/rna-seq.nf"),
             ("genesis_scatac", "workflows/scatac-seq.nf"),
+            ("genesis_scatac_reads", "workflows/scatac-reads.nf"),
         ]:
             static = ET.parse(out / f"{stem}_metro_map.svg").getroot()
             animated = ET.parse(out / f"{stem}_metro_map_animated.svg").getroot()
@@ -49,15 +50,22 @@ def main() -> None:
 
             assert paths(static) == paths(animated)
             code = (ROOT / workflow).read_text()
-            include = r"include\s*\{\s*(\w+)\s*\}\s*from '\.\./modules/[\w-]+/"
-            expected = set(re.findall(include, code))
+            include = r"include\s*\{\s*(\w+)\s*\}\s*from '\.\./modules/([\w-]+/[\w-]+)'"
             stations = {g.attrib["id"] for g in static.findall("s:g", NS)}
+            expected = set()
+            for name, module in re.findall(include, code):
+                source = (ROOT / "modules" / f"{module}.nf").read_text()
+                if name in stations or not re.search(rf"^workflow {name}\b", source, re.M):
+                    expected.add(name)
+                    continue
+                # A subworkflow not drawn as one station must have each of its processes drawn.
+                expected |= set(re.findall(r"include\s*\{\s*(\w+)\s*\}\s*from '\./", source))
             assert expected <= stations, expected - stations
             assert (
                 hashlib.sha256(code.encode()).hexdigest()
                 in (out / f"{stem}_metro_map.svg").read_text()
             )
-    print("PASS: 11 deterministic accessible maps; actual DAP/ATAC/RNA/scATAC process coverage")
+    print("PASS: 13 deterministic accessible maps; actual DAP/ATAC/RNA/scATAC process coverage")
 
 
 if __name__ == "__main__":

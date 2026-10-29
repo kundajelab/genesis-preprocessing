@@ -4,10 +4,7 @@ include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { SCATAC_DOWNLOAD } from '../modules/scatac-seq/scatac_download'
-include { SCATAC_FRAGMENTS } from '../modules/scatac-seq/scatac_fragments'
-include { SCATAC_PEAKS } from '../modules/scatac-seq/scatac_peaks'
-include { SCATAC_TRACKS } from '../modules/scatac-seq/scatac_tracks'
-include { SCATAC_QC } from '../modules/scatac-seq/scatac_qc'
+include { SCATAC_PSEUDOBULKS } from '../modules/scatac-seq/scatac_pseudobulks'
 
 // Sheet rules a JSON schema cannot express: the exact columns, existing reference files, distinct
 // reference IDs, and one gene annotation and organelle list per reference.
@@ -85,44 +82,9 @@ workflow {
     GET_REFERENCES(references, referencesDir)
     sizes_ch = GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) }
     SCATAC_DOWNLOAD(samples)
-    // MACS3's genome size counts nuclear contigs only, as in bulk ATAC.
-    sized = SCATAC_DOWNLOAD.out.downloads
-        .map { meta, fragments, cells -> tuple(meta.ref_id, meta, fragments, cells) }
-        .combine(sizes_ch, by: 0)
-        .map { _refId, meta, fragments, cells, path ->
-            def nuclear = path.readLines().collect { line -> line.tokenize('\t') }
-                .findAll { fields -> !(fields[0] in meta.organelles) }
-            tuple(meta + [nuclear_size: nuclear.sum(0L) { fields -> fields[1].toLong() }],
-                  fragments, cells, path)
-        }
-    SCATAC_FRAGMENTS(sized)
-    // One pseudobulk per library and group; libraries, and so biological replicates, stay separate.
-    groups = SCATAC_FRAGMENTS.out.groups.flatMap { meta, files ->
-        (files instanceof List ? files : [files]).collect { bed ->
-            def group = bed.name.substring(meta.id.length() + 1).replaceFirst(/\.fragments\.bed$/, '')
-            tuple(meta + [library: meta.id, group: group, id: "${meta.id}.${group}".toString()], bed)
-        }
-    }
-    SCATAC_PEAKS(groups)
-    SCATAC_TRACKS(groups.map { meta, bed -> tuple(meta.ref_id, meta, bed) }
-        .combine(sizes_ch, by: 0)
-        .map { _refId, meta, bed, path -> tuple(meta, bed, path) }, resources)
-    qcInputs = groups.map { meta, bed -> tuple(meta.id, meta, bed) }
-        .join(SCATAC_TRACKS.out.bam.map { meta, bam, bai -> tuple(meta.id, bam, bai) },
-              failOnDuplicate: true, failOnMismatch: true)
-        .join(SCATAC_PEAKS.out.peaks.map { meta, peaks -> tuple(meta.id, peaks) },
-              failOnDuplicate: true, failOnMismatch: true)
-        .join(SCATAC_TRACKS.out.cuts.map { meta, cuts -> tuple(meta.id, cuts) },
-              failOnDuplicate: true, failOnMismatch: true)
-        .map { _id, meta, bed, bam, bai, peaks, cuts ->
-            def genes = meta.reference_genes == '-' ? [] : file("${referencesDir}/${meta.reference_genes}")
-            tuple(meta, bed, bam, bai, peaks, cuts, genes)
-        }
-    SCATAC_QC(qcInputs, resources)
+    SCATAC_PSEUDOBULKS(SCATAC_DOWNLOAD.out.downloads, sizes_ch, referencesDir, resources)
     // Collect channels, not publishDir contents: wait for every library's reports.
-    multiqcFiles = SCATAC_FRAGMENTS.out.summary.map { _meta, summary -> summary }
-        .mix(SCATAC_QC.out.summary.map { _meta, summary -> summary })
-        .mix(SCATAC_QC.out.tss.map { _meta, files -> files })
+    multiqcFiles = SCATAC_PSEUDOBULKS.out.multiqc
         .flatten().collect().map { paths -> paths.sort { it.name } }
     // Record what produced this run beside its outputs, as workflows/dap-seq.nf does.
     def git = { List args ->

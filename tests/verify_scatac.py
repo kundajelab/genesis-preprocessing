@@ -211,10 +211,10 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
         "GET_REFERENCES:CHROM_SIZES": 1,
         "GET_REFERENCES:BWA_MEM2_INDEX": 1,
         "SCATAC_DOWNLOAD": 2,
-        "SCATAC_FRAGMENTS": 2,
-        "SCATAC_PEAKS": groups,
-        "SCATAC_TRACKS": groups,
-        "SCATAC_QC": groups,
+        "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 2,
+        "SCATAC_PSEUDOBULKS:SCATAC_PEAKS": groups,
+        "SCATAC_PSEUDOBULKS:SCATAC_TRACKS": groups,
+        "SCATAC_PSEUDOBULKS:SCATAC_QC": groups,
         "MULTIQC_REPORT": 1,
     }, counts
     published = work / "published" / "samples" / "output"
@@ -312,7 +312,11 @@ def check_results(work: Path, published: Path) -> None:
 
 def check_cut_sites(work: Path) -> None:
     """Each fragment [s, e) gives Tn5 cuts at bases s and e - 1, the bases bulk ATAC counts."""
-    tasks = [row for row in trace_rows(work) if row["name"].startswith("SCATAC_TRACKS ")]
+    tasks = [
+        row
+        for row in trace_rows(work)
+        if row["name"].startswith("SCATAC_PSEUDOBULKS:SCATAC_TRACKS ")
+    ]
     assert len(tasks) == 4, tasks
     for row in tasks:
         folder = work / "work" / row["hash"]

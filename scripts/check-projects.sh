@@ -66,7 +66,7 @@ uv run --frozen --project "$root/genesis_tools" ty check --project "$root/genesi
 # Slowest first, so the pipeline regressions start before the quick checks.
 tests=()
 if ! $fast; then
-    tests+=(verify_pipeline verify_rna verify_atac verify_scatac)
+    tests+=(verify_pipeline verify_rna verify_atac verify_scatac verify_scatac_reads)
 fi
 tests+=(verify_deployment verify_nextflow_style verify_build_tags
     verify_multiqc verify_metro verify_readme)

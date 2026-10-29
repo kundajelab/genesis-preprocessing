@@ -1,0 +1,12 @@
+sample_id	species	sra_runs	chemistry	cells_url	reference_fasta	reference_genes	organelle_contigs	barcode_whitelist
+SRP474955_0h_rep1	Sorghum_bicolor	SRR26989999,SRR26990000,SRR26990001,SRR26990002	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_0h_rep2	Sorghum_bicolor	SRR26989946,SRR26989947,SRR26989948,SRR26989949	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_0h_rep3	Sorghum_bicolor	SRR26989943	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_0h_rep4	Sorghum_bicolor	SRR26989942	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_0h_rep5	Sorghum_bicolor	SRR26989941	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_0h_rep6	Sorghum_bicolor	SRR26989940	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_12h_rep1	Sorghum_bicolor	SRR26990003,SRR26990004,SRR26990005,SRR26990006	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_12h_rep2	Sorghum_bicolor	SRR26989950,SRR26989951,SRR26989952,SRR26989953	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_12h_rep3	Sorghum_bicolor	SRR26989939	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_12h_rep4	Sorghum_bicolor	SRR26989938	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP474955_12h_rep5	Sorghum_bicolor	SRR26990028	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-

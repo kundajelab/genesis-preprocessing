@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 870" role="img" aria-labelledby="title description">
+<title id="title">GENESIS / scATAC FROM 10x READS</title>
+<desc id="description">NCBI SRA runs with the barcode read · chromap fragments · shared pseudobulk steps. Runs come from NCBI SRA, which keeps the 10x barcode read; the barcode and genomic reads are told apart by length. chromap writes 10x fragments (Tn5 offsets applied), corrects barcodes against a user-supplied list and removes duplicates per cell. Without an authors&#x27; cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied.</desc>
+<style>
+    svg{--bg:#fbfcfe;--text:#172c3d;--muted:#536779;--panel:#e2e8ef;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
+    .title{font-size:32px;font-weight:700;letter-spacing:1px;fill:var(--text)}
+    .subtitle,.note{font-size:17px;fill:var(--muted)}
+    .label{font-size:21px;font-weight:700;fill:var(--text)}
+    .detail{font-size:16px;fill:var(--muted)}
+    .station{fill:var(--bg);stroke-width:4}
+    .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+    .planned{stroke-dasharray:9 9}
+    .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
+    @keyframes travel{to{stroke-dashoffset:-400}}
+    @media(prefers-reduced-motion:reduce){.flow{display:none}}
+    @media(prefers-color-scheme:dark){svg{--bg:#14212d;--text:#eff6fc;--muted:#bdcbd6;--panel:#344957}.line,.station{filter:brightness(1.25)}}
+    @media print{.flow{display:none}svg{--bg:#fff;--text:#172c3d;--muted:#536779;--panel:#e2e8ef}}
+    </style>
+<rect width="1480" height="870" fill="var(--bg)"/>
+<text class="title" x="48" y="52">GENESIS / scATAC FROM 10x READS</text>
+<text class="subtitle" x="48" y="85">NCBI SRA runs with the barcode read · chromap fragments · shared pseudobulk steps</text>
+<path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 1060 330"><title>Runs are downloaded, mapped per library, then cells are called</title></path>
+<path id="route-1" class="line" stroke="#ce6030" d="M 1060 330 L 1290 330"><title>Each group&#x27;s fragments give peaks</title></path>
+<path id="route-2" class="line" stroke="#9260b7" d="M 1290 330 L 1290 510"><title>Peaks give FRiP</title></path>
+<path id="route-3" class="line" stroke="#438362" d="M 1060 330 L 1060 690"><title>Each group&#x27;s fragments give cut sites</title></path>
+<path id="route-4" class="line" stroke="#9260b7" d="M 1060 690 L 1276 690 Q 1290 690 1290 676 L 1290 510"><title>Cut sites give the TSS profile</title></path>
+<path id="route-5" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>Group QC and TSS profiles feed MultiQC</title></path>
+<path id="route-6" class="line" stroke="#4169b1" d="M 370 510 L 471 510 Q 485 510 485 496 L 485 344 Q 485 330 499 330 L 600 330"><title>Barcodes are corrected against the list</title></path>
+<path id="route-7" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path id="route-8" class="line" stroke="#4169b1" d="M 140 690 L 526 690 Q 540 690 540 676 L 540 344 Q 540 330 554 330 L 600 330"><title>chromap indexes the FASTA</title></path>
+<path id="route-9" class="line" stroke="#4169b1" d="M 140 510 L 241 510 Q 255 510 255 524 L 255 586 Q 255 600 269 600 L 931 600 Q 945 600 945 586 L 945 344 Q 945 330 959 330 L 1060 330"><title>Every fragment must lie on a contig</title></path>
+<path id="route-10" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 704 L 715 766 Q 715 780 729 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Gene starts define strand-aware TSS windows</title></path>
+<g id="samples"><title>Sample sheet: SRA runs + chemistry</title>
+<circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
+<text class="detail" text-anchor="middle" x="140" y="313">SRA runs + chemistry</text></g>
+<g id="SCATAC_SRA"><title>SRA download: Barcode read kept</title>
+<circle class="station" cx="370" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="370" y="290">SRA download</text>
+<text class="detail" text-anchor="middle" x="370" y="313">Barcode read kept</text></g>
+<g id="SCATAC_CHROMAP"><title>chromap: 10x fragments</title>
+<circle class="station" cx="600" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="600" y="290">chromap</text>
+<text class="detail" text-anchor="middle" x="600" y="313">10x fragments</text></g>
+<g id="SCATAC_CELLS"><title>Cells: Called or listed</title>
+<circle class="station" cx="830" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="830" y="290">Cells</text>
+<text class="detail" text-anchor="middle" x="830" y="313">Called or listed</text></g>
+<g id="SCATAC_FRAGMENTS"><title>Fragments: Cells, nuclear</title>
+<circle class="station" cx="1060" cy="330" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="1060" y="290">Fragments</text>
+<text class="detail" text-anchor="middle" x="1060" y="313">Cells, nuclear</text></g>
+<g id="SCATAC_PEAKS"><title>MACS3 peaks: Per group</title>
+<circle class="station" cx="1290" cy="330" r="9" stroke="#ce6030"/>
+<text class="label" text-anchor="middle" x="1290" y="290">MACS3 peaks</text>
+<text class="detail" text-anchor="middle" x="1290" y="313">Per group</text></g>
+<g id="SCATAC_QC"><title>scATAC QC: FRiP, TSS enrichment</title>
+<circle class="station" cx="1290" cy="510" r="9" stroke="#9260b7"/>
+<text class="label" text-anchor="middle" x="1290" y="470">scATAC QC</text>
+<text class="detail" text-anchor="middle" x="1290" y="493">FRiP, TSS enrichment</text></g>
+<g id="MULTIQC_REPORT"><title>MultiQC: HTML + parsed data</title>
+<circle class="station" cx="1290" cy="180" r="9" stroke="#9260b7"/>
+<text class="label" text-anchor="middle" x="1290" y="140">MultiQC</text>
+<text class="detail" text-anchor="middle" x="1290" y="163">HTML + parsed data</text></g>
+<g id="whitelist"><title>Barcode list: User-supplied</title>
+<circle class="station" cx="370" cy="510" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="370" y="470">Barcode list</text>
+<text class="detail" text-anchor="middle" x="370" y="493">User-supplied</text></g>
+<g id="CHROM_SIZES"><title>Chromosome sizes: Verified products</title>
+<circle class="station" cx="140" cy="510" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="140" y="470">Chromosome sizes</text>
+<text class="detail" text-anchor="middle" x="140" y="493">Verified products</text></g>
+<g id="GET_REFERENCES"><title>Reference FASTA: Hash-checked reuse</title>
+<circle class="station" cx="140" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="140" y="650">Reference FASTA</text>
+<text class="detail" text-anchor="middle" x="140" y="673">Hash-checked reuse</text></g>
+<g id="genes"><title>Gene starts: Optional BED6</title>
+<circle class="station" cx="600" cy="690" r="9" stroke="#4169b1"/>
+<text class="label" text-anchor="middle" x="600" y="650">Gene starts</text>
+<text class="detail" text-anchor="middle" x="600" y="673">Optional BED6</text></g>
+<g id="SCATAC_TRACKS"><title>Tn5 cut sites: Per-base bigWig</title>
+<circle class="station" cx="1060" cy="690" r="9" stroke="#438362"/>
+<text class="label" text-anchor="middle" x="1060" y="650">Tn5 cut sites</text>
+<text class="detail" text-anchor="middle" x="1060" y="673">Per-base bigWig</text></g>
+<path d="M48 762 H1432" stroke="var(--panel)" stroke-width="2"/>
+<text class="note" x="48" y="798">Runs come from NCBI SRA, which keeps the 10x barcode read; the barcode and genomic reads are told apart by length.</text>
+<text class="note" x="48" y="823">chromap writes 10x fragments (Tn5 offsets applied), corrects barcodes against a user-supplied list and removes duplicates per cell.</text>
+<text class="note" x="48" y="848">Without an authors&#x27; cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied.</text>
+<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 487b391ec5976ef4c77148afaadacc19e365d1bcf98fe2d8b957d6731f9cf868; schematic animation.</metadata></svg>
