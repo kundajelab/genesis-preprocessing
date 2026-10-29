@@ -63,10 +63,10 @@
 <circle class="station" cx="1290" cy="180" r="9" stroke="#9260b7"/>
 <text class="label" text-anchor="middle" x="1290" y="140">MultiQC</text>
 <text class="detail" text-anchor="middle" x="1290" y="163">HTML + parsed data</text></g>
-<g id="whitelist"><title>Barcode list: User-supplied</title>
+<g id="GET_WHITELIST"><title>Barcode list: Supplied or downloaded</title>
 <circle class="station" cx="370" cy="510" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="370" y="470">Barcode list</text>
-<text class="detail" text-anchor="middle" x="370" y="493">User-supplied</text></g>
+<text class="detail" text-anchor="middle" x="370" y="493">Supplied or downloaded</text></g>
 <g id="CHROM_SIZES"><title>Chromosome sizes: Verified products</title>
 <circle class="station" cx="140" cy="510" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="140" y="470">Chromosome sizes</text>
@@ -91,4 +91,4 @@
 <text class="note" x="48" y="798">Runs come from NCBI SRA, which keeps the 10x barcode read; the barcode and genomic reads are told apart by length.</text>
 <text class="note" x="48" y="823">chromap writes 10x fragments (Tn5 offsets applied), corrects barcodes against a user-supplied list and removes duplicates per cell.</text>
 <text class="note" x="48" y="848">Without an authors&#x27; cell list, barcodes with enough nuclear fragments form one group. No plant TSS threshold is applied.</text>
-<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 1e56c6015c2e2e24d1533c9cdbd9fd43f46dd1f0b5a1a235fb909aefb817b736; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/scatac-reads.nf SHA256 409b5f26e29edbfd196457a8ddae13537a9e3d4ea51255082466a2be91a4f231; schematic animation.</metadata></svg>

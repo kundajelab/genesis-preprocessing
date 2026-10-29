@@ -153,6 +153,18 @@ def create_stub_fixture(work: Path) -> Path:
             "organelle_contigs": "ChrM",
             "barcode_whitelist": "-",
         },
+        # A known 10x list missing from the references folder is downloaded (GET_WHITELIST).
+        {
+            "sample_id": "known",
+            "species": "Plant_synthetic",
+            "sra_runs": "SRR0000004",
+            "chemistry": "10x-atac-v2",
+            "cells_url": "-",
+            "reference_fasta": "sc.fa.gz",
+            "reference_genes": "genes.bed",
+            "organelle_contigs": "ChrM",
+            "barcode_whitelist": "737K-cratac-v1.txt",
+        },
     ]
     sheet = work / "samples.tsv"
     write_sheet(sheet, rows)
@@ -166,25 +178,33 @@ def check_stub(work: Path) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 1,
         "GET_REFERENCES:BWA_MEM2_INDEX": 1,
-        "SCATAC_SRA:SRA_PREFETCH": 3,
-        "SCATAC_SRA:SRA_FASTQ": 3,
+        "SCATAC_SRA:SRA_PREFETCH": 4,
+        "SCATAC_SRA:SRA_FASTQ": 4,
         "GET_CHROMAP_INDEX:CHROMAP_INDEX": 1,
-        "SCATAC_CHROMAP": 2,
-        "SCATAC_CELLS": 2,
-        "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 2,
-        "SCATAC_PSEUDOBULKS:SCATAC_PEAKS": 2,
-        "SCATAC_PSEUDOBULKS:SCATAC_TRACKS": 2,
-        "SCATAC_PSEUDOBULKS:SCATAC_QC": 2,
+        "GET_WHITELIST": 1,
+        "SCATAC_CHROMAP": 3,
+        "SCATAC_CELLS": 3,
+        "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 3,
+        "SCATAC_PSEUDOBULKS:SCATAC_PEAKS": 3,
+        "SCATAC_PSEUDOBULKS:SCATAC_TRACKS": 3,
+        "SCATAC_PSEUDOBULKS:SCATAC_QC": 3,
         "MULTIQC_REPORT": 1,
     }, counts
     # Runs are downloaded and converted one task each, then mapped per library.
     for process in ("SCATAC_SRA:SRA_PREFETCH", "SCATAC_SRA:SRA_FASTQ"):
         names = sorted(row["name"] for row in rows if row["name"].startswith(f"{process} "))
         assert names == [
+            f"{process} (known:SRR0000004)",
             f"{process} (lanes:SRR0000001)",
             f"{process} (lanes:SRR0000002)",
             f"{process} (multiome:SRR0000003)",
         ], names
+    # The library with the known list maps with the downloaded copy.
+    (task,) = [row for row in rows if row["name"] == "SCATAC_CHROMAP (known)"]
+    staged = work / "work" / task["hash"]
+    assert any(
+        path.name == "737K-cratac-v1.txt" for path in staged.parent.glob(f"{staged.name}*/*")
+    )
     # Stub runs never publish into the references folder.
     assert sorted(p.name for p in (work / "references").iterdir()) == [
         "atac.whitelist.txt",
