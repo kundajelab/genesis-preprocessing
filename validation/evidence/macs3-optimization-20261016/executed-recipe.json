@@ -1,6 +1,0 @@
-{
-  "benchmark_recipe_sha256": "91385031197a9b04beaa2cde1f2c87fe402d2d4c456de3dc9404d533601b6160",
-  "timed_launcher_sha256": "da2e41c0ab070f60ec7fb09035077ff23f993db4283898f85da75dc860abfb58",
-  "final_launcher_sha256": "49612e9cd1bb886688f6aa389d0ab8c2709dbd7e782eed849d2e12925f28aee1",
-  "difference": "After timing, the launcher selects the executable from its Python environment and rotates within inherited affinity. Timed masks equal the requested CPU count, so rotation retains the same CPU set. Fresh fixture, Nextflow and container checks exercise the final launcher. The public comparison recipe also received formatting/type annotations after execution."
-}

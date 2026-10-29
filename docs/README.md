@@ -22,7 +22,6 @@ method benchmarks.
 ## Understand the methods
 
 - [Benchmarks](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md): datasets, method comparisons, metric definitions and measured results.
-- [Validation records](../validation/README.md): dated tests and their limitations.
 - [Historical DAP documentation](history/dapseq-readme-fb60096.md): commands and behavior at revision `fb60096`.
 
 ## Develop Genesis
@@ -31,6 +30,7 @@ method benchmarks.
 - [Nextflow conventions](nextflow-style.md): module structure and pipeline changes.
 - [Diagram maintenance](diagrams/README.md): update the maintained workflow maps.
 
-Current guides describe the installed commands. Historical reports describe the
-revision and date written in each report; their commands and temporary paths may
-differ from a current installation.
+Current guides describe the installed commands. The historical DAP documentation
+describes its own revision; its commands may differ from a current installation.
+Earlier validation reports and evidence were removed; see `validation/` at commit
+e2e2aa9.

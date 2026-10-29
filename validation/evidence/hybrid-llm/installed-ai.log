@@ -1,6 +1,0 @@
-PASS provider fake HTTP, budgets, retries, refusal, redaction, cache, cancellation
-PASS metadata evidence/conflicts/abstention, separate approval/apply, migration/restore
-PASS deterministic/adversarial diagnosis and provider failure isolation
-{"biological_accuracy":"NOT EVALUATED","live_api":"NOT RUN","seconds":2.8209090349264443,"status":"PASS"}
-PASS model inspection, exact plan authorization, budgets, revision/cache, ownership, restart, SSH/tunnel loss
-PASS offline lifecycle; real local/SSH/GPU acceptance NOT RUN

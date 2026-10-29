@@ -1,3 +1,0 @@
-{"case": "baseline-default-user", "exit_code": 1, "stdout": "", "stderr": "[E::hts_open_format] Failed to open file \"/var/tmp/genesis-bam-permission-a9b8gcc3/tiny.bam\" : Permission denied\nsamtools view: failed to open \"/var/tmp/genesis-bam-permission-a9b8gcc3/tiny.bam\" for reading: Permission denied\n"}
-{"case": "pr2-calling-user", "exit_code": 0, "stdout": "known-read\t0\tchr1\t11\t60\t4M\t*\t0\t0\tACGT\t*\n", "stderr": ""}
-PASS: baseline permission failure reproduced; PR #2 reads mode-0700 fixture without changing permissions

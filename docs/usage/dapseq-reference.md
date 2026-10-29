@@ -138,8 +138,7 @@ samples (default 8), one batch at a time; mates with matching basenames are fine
 
 ## Analysis choices
 
-The main workflow uses bwa-mem2 for alignment. The Bowtie 1 comparison modules in
-`modules/dap-seq/` are not imported or run by this workflow.
+The main workflow uses bwa-mem2 for alignment.
 
 Main and first-read QC alignments use **full reads**; only SPP's input is cut
 (see below). Read length is inferred
@@ -161,9 +160,7 @@ options, and the QC and SPP read policies.
 
 The currently pinned alignment image contains BWA-MEM2 **2.3**, although its
 executable banner reports `2.2.1`. Use the image digest, package metadata and
-executable hashes to identify that build. The
-[benchmark identity check](../../validation/reports/pipeline-method-comparison.md#production-identity-correction)
-records the discrepancy.
+executable hashes to identify that build.
 
 BWA defaults are `-K 10000000 -k 19 -c 10000 -T 30`. Override them with
 `--bwa_batch_size`, `--bwa_seed_length`, `--bwa_max_seed_occurrences`, and
@@ -371,9 +368,8 @@ optional missing SPP, duplicate identities, collision-prone names, missing requi
 modules despite a zero tool exit, fresh deterministic HTML/metrics, and cached
 full output directories.
 
-The [2026-10-12 integration validation](../../validation/reports/integration-validation-20261012.md)
-records Linux Docker results with exact source and image identities. These small
-synthetic runs test integration, not biological performance on full public datasets.
+These small synthetic Docker runs test integration, not biological performance
+on full public datasets.
 Native macOS stub traces do not include task runtime metrics; Docker traces do.
 
 See [docs/nextflow-style.md](../../docs/nextflow-style.md) for module conventions.

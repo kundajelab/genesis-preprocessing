@@ -1,4 +1,0 @@
-REPRODUCED: original PR #12 accepts generator.version missing/malformed
-REPRODUCED: original PR #12 accepts source_basename missing/malformed
-REPRODUCED: original PR #12 accepts compressed_fasta_sha256 missing/malformed
-REPRODUCED: original PR #12 accepts boolean_schema_version missing/malformed

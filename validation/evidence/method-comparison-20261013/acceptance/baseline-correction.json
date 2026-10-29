@@ -1,9 +1,0 @@
-{
-  "utc": "2026-10-13T09:22:35.935380+00:00",
-  "action": "Stopped old-package-baseline DAP campaign using SIGINT; preserve completed cases and failure record",
-  "pid": 193028,
-  "reason": "Production image binaries equal native 2.3 package, despite both reporting version 2.2.1",
-  "evidence": "production-aligner-identity.json",
-  "stopped_campaign": "dap-se-1m-v4-results",
-  "next_action": "Use verified 2.3 package baseline and explicit older 2.2.1 comparator in new manifests/directories"
-}

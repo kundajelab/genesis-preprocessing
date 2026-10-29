@@ -43,15 +43,12 @@ pixi run checks
 git status --short
 ```
 
-`checks` includes lint, formatting checks, types, DAP and ATAC Nextflow stubs, the
-evidence publication check and README command checks. Its initial Nextflow
+`checks` includes lint, formatting checks, types, DAP and ATAC Nextflow stubs and
+README command checks. Its initial Nextflow
 run needs access to the pinned plugin registry or a verified cache containing
 `nf-schema@2.4.2` and `nf-dotenv@1.0.0`. If plugin resolution fails, restore registry
 access or configure an approved cache with `NXF_PLUGINS_DIR`; only enable
-`NXF_OFFLINE=true` after populating it. The historical `/tmp/genesis-*` paths in
-validation reports identify old test runs and are not paths to reuse on a new server.
-The [hybrid validation report](../validation/reports/hybrid-llm-validation.md) records
-the verified plugin archive hashes.
+`NXF_OFFLINE=true` after populating it.
 
 ### Recovery when plugin lookup fails
 
@@ -153,21 +150,7 @@ Use [Nextflow conventions](nextflow-style.md) when editing a workflow. Keep gene
 outputs and machine-specific configuration outside Git. Commit a reviewable change
 with the commands actually tested and any remaining limitations.
 
-Prepare public validation evidence from a separate private source directory:
-
-```bash
-pixi run uv run --frozen --project genesis_tools python -m genesis_tools.publication export /private/evidence /staging/public-evidence
-pixi run uv run --frozen --project genesis_tools python -m genesis_tools.publication check /staging/public-evidence
-```
-
-The exporter sanitizes review-state hashes in logs and command arguments, along with
-recognized credential patterns. It checks archive paths and expansion limits and
-records original and published file/member checksums in `publication-manifest.json`.
-Keep original receipts and their hashes: sanitized copies do not have the same bytes.
-Review the output before committing it. This targeted check is included in
-`pixi run checks`; it complements secret scanning rather than certifying that arbitrary
-binary data or every credential format is safe to publish. Keep private originals,
-environment files and assistant configuration outside Git.
+Keep benchmark results, environment files and assistant configuration outside Git.
 
 Real-tool acceptance is opt-in: `pixi run validate-docker` runs DAP-seq with its pinned
 containers on synthetic inputs. For bulk ATAC, scATAC and RNA-seq, run
@@ -176,7 +159,7 @@ or `--conda` to build the tools from `environments/*.yaml` where Docker is unava
 
 ## Data and configuration
 
-Git transfers code, locks, small fixtures, schemas, templates and validation reports.
+Git transfers code, locks, small fixtures, schemas and templates.
 It does not transfer references, reads, analysis outputs, caches, live databases,
 model weights or credentials. Public container pins for both workflows are in
 `conf/genesis-images.lock`. It contains image references only.
@@ -188,5 +171,4 @@ before committing.
 
 Keep site-specific configuration outside the checkout. Test schedulers in the
 environment where they will run; local checks do not establish cluster compatibility.
-[Validation records](../validation/README.md) show which scientific and installation
-checks have been performed.
+Earlier validation records were removed; see `validation/` at commit e2e2aa9.

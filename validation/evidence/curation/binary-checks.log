@@ -1,2 +1,0 @@
-PASS: real bigWig readability, finite values and raw-count semantics
-PASS: BAM/reference/index, narrowPeak, bounded FASTA, signal declarations and worker isolation

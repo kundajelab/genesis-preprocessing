@@ -1,2 +1,0 @@
-# Evidence hashes refer to exact bytes, including native TSV line endings.
-validation/evidence/** -text

@@ -55,11 +55,12 @@ with its own launcher.
 
 ## Earlier measurements
 
-The [measured results](../../validation/reports/macs3-optimization.md) and the
-[comparison
+The [comparison
 recipe](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/experiments/macs3-optimization/README.md)
-compare the earlier revision `22eb40f7b51f5b20b635614ca0b1759dc5398c5c` with the
+compares the earlier revision `22eb40f7b51f5b20b635614ca0b1759dc5398c5c` with the
 released package, using the same inputs and scientific arguments, 1, 2 and 8 CPUs and
-three measured repetitions. They describe that revision, not the current DAP pin.
+three measured repetitions. Its results describe that revision, not the current DAP pin.
 Benchmark environments and results remain version-specific; do not overwrite results
-from one caller build with those from another.
+from one caller build with those from another. The measured results were removed
+from this repository; see `validation/reports/macs3-optimization.md` at commit
+e2e2aa9.

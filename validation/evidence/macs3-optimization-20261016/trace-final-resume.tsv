@@ -1,4 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-3	dc/014a7c	2772273	CALL_PEAKS (dap-pe-colcen-1m-SRR31238589)	CACHED	0	2026-10-16 02:33:49.859	6.4s	6.2s	91.9%	159.8 MB	239.6 MB	387.2 MB	112.7 MB
-1	12/3772b7	2772014	ATAC_PEAKS (atac-arabidopsis-tair10-1m-SRR4000468)	CACHED	0	2026-10-16 02:33:48.793	998ms	920ms	93.6%	23.3 MB	36.4 MB	71.3 MB	31.1 MB
-2	a7/f15608	2772260	CALL_PEAKS (dap-se-colcen-1m-SRR2926076)	CACHED	0	2026-10-16 02:33:49.832	3.1s	3s	72.4%	68.1 MB	160.1 MB	142.4 MB	43.4 MB
