@@ -292,7 +292,7 @@ def config_params(path: Path) -> set[str]:
 def check_workflow_configs() -> None:
     """Each workflow has its own config and parameter schema; the shared sections stay identical."""
     workflows = sorted(path.stem for path in (ROOT / "workflows").glob("*.nf"))
-    assert workflows == ["atac-seq", "dap-seq", "rna-seq", "scatac-seq"], workflows
+    assert workflows == ["atac-seq", "dap-seq", "rna-seq", "scatac-seq", "tss-seq"], workflows
     shared = config_params(ROOT / "nextflow.config") | {"run_dir"}
     schemas = {}
     for name in workflows:

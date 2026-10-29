@@ -1,0 +1,10 @@
+sample_id	species	read1_url	method	trim_5p	adapter_3p	reference_fasta	reference_annotation	organelle_contigs
+hen2-4_rep1	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/006/SRR10045006/SRR10045006.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+hen2-4_rep2	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/007/SRR10045007/SRR10045007.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+hen2-4_rep3	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/008/SRR10045008/SRR10045008.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+rrp4-2_rep1	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/009/SRR10045009/SRR10045009.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+rrp4-2_rep2	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/010/SRR10045010/SRR10045010.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+rrp4-2_rep3	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/011/SRR10045011/SRR10045011.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+wt_rep1	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/003/SRR10045003/SRR10045003.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+wt_rep2	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/004/SRR10045004/SRR10045004.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM
+wt_rep3	Arabidopsis_thaliana	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR100/005/SRR10045005/SRR10045005.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.gene_exons.gff3.gz	ChrC,ChrM

@@ -13,7 +13,7 @@ Solid routes are available workflows. Dashed routes mark specified or planned in
 
 Edit `render_metro.py` to update station labels, data dependencies and layout, then
 run `pixi run uv run --frozen --project genesis_tools python docs/diagrams/render_metro.py`. It uses only Python's standard library
-and deterministically generates eleven static, animated and architecture SVGs.
+and deterministically generates thirteen static, animated and architecture SVGs.
 The SVG metadata records the SHA256 of each documented workflow (DAP, ATAC, scATAC or RNA-seq); it is not a
 claim about an upstream release. Update a map with its corresponding workflow
 change. Do not depict validation-only features as available in an upstream revision
