@@ -23,7 +23,7 @@
 <path id="route-1" class="line" stroke="#438362" d="M 370 330 L 586 330 Q 600 330 614 330 L 1060 330"><title>Paired-end libraries bulk ATAC route</title></path>
 <path id="route-2" class="line" stroke="#438362" d="M 370 330 L 471 330 Q 485 330 485 344 L 485 496 Q 485 510 499 510 L 586 510 Q 600 510 614 510 L 1046 510 Q 1060 510 1074 510 L 1290 510"><title>scATAC from published fragments to group pseudobulks</title></path>
 <path id="route-3" class="line" stroke="#087f8c" d="M 370 330 L 471 330 Q 485 330 485 344 L 485 676 Q 485 690 499 690 L 600 690"><title>Bulk RNA-seq route</title></path>
-<path id="route-4" class="line" stroke="#087f8c" d="M 485 690 L 485 766 Q 485 780 499 780 L 830 780"><title>TSS mapping route</title></path>
+<path id="route-4" class="line" stroke="#087f8c" d="M 485 330 L 485 586 Q 485 600 499 600 L 830 600"><title>TSS mapping route</title></path>
 <path id="route-5" class="line planned" stroke="#4169b1" d="M 140 180 L 241 180 Q 255 180 255 194 L 255 316 Q 255 330 269 330 L 370 330"><title>Versioned registry contract</title></path>
 <path id="route-6" class="line planned" stroke="#81909f" d="M 140 690 L 586 690 Q 600 690 614 690 L 931 690 Q 945 690 945 676 L 945 524 Q 945 510 959 510 L 1060 510"><title>Modality-specific QC with shared annotation provenance</title></path>
 <path id="route-7" class="line planned" stroke="#81909f" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1189 690 L 1290 690"><title>Proposed bulk model export</title></path>
@@ -64,28 +64,28 @@
 <circle class="station" cx="1290" cy="510" r="9" stroke="#438362"/>
 <text class="label" text-anchor="middle" x="1290" y="470">Pseudobulks</text>
 <text class="detail" text-anchor="middle" x="1290" y="493">Group × library</text></g>
-<g id="multiome"><title>Multiome identity: Tested linking contract</title>
+<g id="multiome"><title>Multiome identity: Contract in genesis-curation</title>
 <circle class="station" cx="140" cy="690" r="9" stroke="#81909f"/>
 <text class="label" text-anchor="middle" x="140" y="650">Multiome identity</text>
-<text class="detail" text-anchor="middle" x="140" y="673">Tested linking contract</text></g>
+<text class="detail" text-anchor="middle" x="140" y="673">Contract in genesis-curation</text></g>
 <g id="rna"><title>Bulk RNA-seq: STAR + featureCounts</title>
 <circle class="station" cx="600" cy="690" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="600" y="650">Bulk RNA-seq</text>
 <text class="detail" text-anchor="middle" x="600" y="673">STAR + featureCounts</text></g>
-<g id="tss"><title>TSS mapping: CAGE, TSS-seq, csRNA</title>
-<circle class="station" cx="830" cy="780" r="9" stroke="#087f8c"/>
-<text class="label" text-anchor="middle" x="830" y="740">TSS mapping</text>
-<text class="detail" text-anchor="middle" x="830" y="763">CAGE, TSS-seq, csRNA</text></g>
-<g id="reference_registry"><title>Reference registry: Tested schema</title>
+<g id="tss"><title>TSS mapping: CAGE, TSS-seq, RAMPAGE, Smar2C2</title>
+<circle class="station" cx="830" cy="600" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="830" y="560">TSS mapping</text>
+<text class="detail" text-anchor="middle" x="830" y="583">CAGE, TSS-seq, RAMPAGE, Smar2C2</text></g>
+<g id="reference_registry"><title>Reference registry: Schema in genesis-curation</title>
 <circle class="station" cx="140" cy="180" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="140" y="140">Reference registry</text>
-<text class="detail" text-anchor="middle" x="140" y="163">Tested schema</text></g>
-<g id="models"><title>Model inputs: Model-specific export</title>
+<text class="detail" text-anchor="middle" x="140" y="163">Schema in genesis-curation</text></g>
+<g id="models"><title>Model inputs: genesis-curation export</title>
 <circle class="station" cx="1290" cy="690" r="9" stroke="#81909f"/>
 <text class="label" text-anchor="middle" x="1290" y="650">Model inputs</text>
-<text class="detail" text-anchor="middle" x="1290" y="673">Model-specific export</text></g>
+<text class="detail" text-anchor="middle" x="1290" y="673">genesis-curation export</text></g>
 <path d="M48 762 H1432" stroke="var(--panel)" stroke-width="2"/>
 <text class="note" x="48" y="798">Solid: available assay processing. Dashed: contracts or planned integration.</text>
 <text class="note" x="48" y="823">RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.</text>
 <text class="note" x="48" y="848">Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments or 10x reads on NCBI SRA; model export is not a production workflow.</text>
-<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 68b7ff83b3d46179c5147d20bc77f505dbd57fcdbfba5508a1430e87f78fbf44; workflows/atac-seq.nf SHA256 4771fdc1d8f2dc877f9c398c0e8afeb62a91f65cfa2d199379c753a208a53e5a; workflows/rna-seq.nf SHA256 7759229356180f372b3784f152513ac78658df34e1cc053035d19aa924b24159; workflows/scatac-seq.nf SHA256 2381752eb8c3720335b8edf174f0f9a203dea0ce14927b04c31fd7113a7b9ad3; workflows/scatac-reads.nf SHA256 1e56c6015c2e2e24d1533c9cdbd9fd43f46dd1f0b5a1a235fb909aefb817b736; workflows/tss-seq.nf SHA256 89965d087a131e265ab72eabc93becd757f657f2e05cd55977b04de8695a9ea7; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 68b7ff83b3d46179c5147d20bc77f505dbd57fcdbfba5508a1430e87f78fbf44; workflows/atac-seq.nf SHA256 4771fdc1d8f2dc877f9c398c0e8afeb62a91f65cfa2d199379c753a208a53e5a; workflows/rna-seq.nf SHA256 7759229356180f372b3784f152513ac78658df34e1cc053035d19aa924b24159; workflows/scatac-seq.nf SHA256 2381752eb8c3720335b8edf174f0f9a203dea0ce14927b04c31fd7113a7b9ad3; workflows/scatac-reads.nf SHA256 1e56c6015c2e2e24d1533c9cdbd9fd43f46dd1f0b5a1a235fb909aefb817b736; workflows/tss-seq.nf SHA256 5e962776387426e9398ef0f02325cfd109c16b3a16f0748b35d4b2f6ee7169ec; schematic animation.</metadata></svg>

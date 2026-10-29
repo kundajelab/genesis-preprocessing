@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 870" role="img" aria-labelledby="title description">
 <title id="title">GENESIS / TSS MAPPING</title>
-<desc id="description">Single-read CAGE, TSS-seq and csRNA-seq · per-base TSS tags · paraclu clusters. The 5&#x27; end of read 1 is the TSS: only fixed barcode bases are trimmed there; the 3&#x27; end is adapter- and quality-trimmed. Cap-trapping CAGE adds a G the genome lacks; such reads move 1 base downstream, as in FANTOM. Unique alignments only. paraclu clusters each strand; FANTOM&#x27;s paraclu-cut keeps clusters ≤ 200 bases with a 2-fold density rise. No plant thresholds.</desc>
+<desc id="description">CAGE, TSS-seq, csRNA-seq, RAMPAGE and Smar2C2 · per-base TSS tags · paraclu clusters. The TSS read&#x27;s 5&#x27; end is the TSS: only fixed barcode bases are trimmed there; the 3&#x27; end is adapter- and quality-trimmed. CAGE&#x27;s cap G moves tags 1 base downstream, as in FANTOM; template-switch Gs are soft-clipped; Smar2C2 UMIs count once. paraclu clusters each strand; FANTOM&#x27;s paraclu-cut keeps clusters ≤ 200 bases with a 2-fold density rise. No plant thresholds.</desc>
 <style>
     svg{--bg:#fbfcfe;--text:#172c3d;--muted:#536779;--panel:#e2e8ef;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
     .title{font-size:32px;font-weight:700;letter-spacing:1px;fill:var(--text)}
@@ -18,31 +18,35 @@
     </style>
 <rect width="1480" height="870" fill="var(--bg)"/>
 <text class="title" x="48" y="52">GENESIS / TSS MAPPING</text>
-<text class="subtitle" x="48" y="85">Single-read CAGE, TSS-seq and csRNA-seq · per-base TSS tags · paraclu clusters</text>
+<text class="subtitle" x="48" y="85">CAGE, TSS-seq, csRNA-seq, RAMPAGE and Smar2C2 · per-base TSS tags · paraclu clusters</text>
 <path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 1060 330"><title>Reads are trimmed, aligned and reduced to their 5&#x27; ends</title></path>
 <path class="flow" style="animation-delay:-0s" d="M 140 330 L 1060 330"/>
-<path id="route-1" class="line" stroke="#ce6030" d="M 1060 330 L 1290 330"><title>Tags per strand give clusters</title></path>
-<path class="flow" style="animation-delay:-1s" d="M 1060 330 L 1290 330"/>
-<path id="route-2" class="line" stroke="#9260b7" d="M 1290 330 L 1290 510"><title>Clusters feed QC</title></path>
-<path class="flow" style="animation-delay:-2s" d="M 1290 330 L 1290 510"/>
-<path id="route-3" class="line" stroke="#9260b7" d="M 1060 330 L 1060 586 Q 1060 600 1074 600 L 1161 600 Q 1175 600 1175 586 L 1175 524 Q 1175 510 1189 510 L 1290 510"><title>Tags feed QC</title></path>
-<path class="flow" style="animation-delay:-3s" d="M 1060 330 L 1060 586 Q 1060 600 1074 600 L 1161 600 Q 1175 600 1175 586 L 1175 524 Q 1175 510 1189 510 L 1290 510"/>
-<path id="route-4" class="line" stroke="#9260b7" d="M 370 330 L 370 180"><title>Raw reads feed FastQC</title></path>
-<path class="flow" style="animation-delay:-4s" d="M 370 330 L 370 180"/>
-<path id="route-5" class="line" stroke="#9260b7" d="M 370 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
-<path class="flow" style="animation-delay:-5s" d="M 370 180 L 1290 180"/>
-<path id="route-6" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>TSS QC, cutadapt and STAR logs feed MultiQC</title></path>
-<path class="flow" style="animation-delay:-6s" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
-<path id="route-7" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
-<path class="flow" style="animation-delay:-7s" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"/>
-<path id="route-8" class="line" stroke="#4169b1" d="M 140 510 L 370 510"><title>Annotation contigs must be in the FASTA</title></path>
-<path class="flow" style="animation-delay:-8s" d="M 140 510 L 370 510"/>
-<path id="route-9" class="line" stroke="#4169b1" d="M 370 510 L 471 510 Q 485 510 485 524 L 485 676 Q 485 690 499 690 L 600 690"><title>Annotated junctions feed the STAR index</title></path>
-<path class="flow" style="animation-delay:-9s" d="M 370 510 L 471 510 Q 485 510 485 524 L 485 676 Q 485 690 499 690 L 600 690"/>
-<path id="route-10" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 676 L 715 434 Q 715 420 729 420 L 816 420 Q 830 420 830 406 L 830 330"><title>Verified index and intron limit feed alignment</title></path>
-<path class="flow" style="animation-delay:-10s" d="M 600 690 L 701 690 Q 715 690 715 676 L 715 434 Q 715 420 729 420 L 816 420 Q 830 420 830 406 L 830 330"/>
-<path id="route-11" class="line" stroke="#4169b1" d="M 370 510 L 370 766 Q 370 780 384 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Annotated transcript starts feed QC</title></path>
-<path class="flow" style="animation-delay:-11s" d="M 370 510 L 370 766 Q 370 780 384 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"/>
+<path id="route-1" class="line" stroke="#087f8c" d="M 370 330 L 471 330 Q 485 330 485 344 L 485 496 Q 485 510 499 510 L 600 510"><title>Smar2C2 read pairs</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 370 330 L 471 330 Q 485 330 485 344 L 485 496 Q 485 510 499 510 L 600 510"/>
+<path id="route-2" class="line" stroke="#087f8c" d="M 600 510 L 701 510 Q 715 510 715 496 L 715 344 Q 715 330 701 330 L 600 330"><title>Extracted TSS reads with their UMIs</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 600 510 L 701 510 Q 715 510 715 496 L 715 344 Q 715 330 701 330 L 600 330"/>
+<path id="route-3" class="line" stroke="#ce6030" d="M 1060 330 L 1290 330"><title>Tags per strand give clusters</title></path>
+<path class="flow" style="animation-delay:-3s" d="M 1060 330 L 1290 330"/>
+<path id="route-4" class="line" stroke="#9260b7" d="M 1290 330 L 1290 510"><title>Clusters feed QC</title></path>
+<path class="flow" style="animation-delay:-4s" d="M 1290 330 L 1290 510"/>
+<path id="route-5" class="line" stroke="#9260b7" d="M 1060 330 L 1060 586 Q 1060 600 1074 600 L 1161 600 Q 1175 600 1175 586 L 1175 524 Q 1175 510 1189 510 L 1290 510"><title>Tags feed QC</title></path>
+<path class="flow" style="animation-delay:-5s" d="M 1060 330 L 1060 586 Q 1060 600 1074 600 L 1161 600 Q 1175 600 1175 586 L 1175 524 Q 1175 510 1189 510 L 1290 510"/>
+<path id="route-6" class="line" stroke="#9260b7" d="M 370 330 L 370 180"><title>Raw reads feed FastQC</title></path>
+<path class="flow" style="animation-delay:-6s" d="M 370 330 L 370 180"/>
+<path id="route-7" class="line" stroke="#9260b7" d="M 370 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-7s" d="M 370 180 L 1290 180"/>
+<path id="route-8" class="line" stroke="#9260b7" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>TSS QC, cutadapt and STAR logs feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-8s" d="M 1290 510 L 1391 510 Q 1405 510 1405 496 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
+<path id="route-9" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path class="flow" style="animation-delay:-9s" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"/>
+<path id="route-10" class="line" stroke="#4169b1" d="M 140 510 L 370 510"><title>Annotation contigs must be in the FASTA</title></path>
+<path class="flow" style="animation-delay:-10s" d="M 140 510 L 370 510"/>
+<path id="route-11" class="line" stroke="#4169b1" d="M 370 510 L 370 676 Q 370 690 384 690 L 600 690"><title>Annotated junctions feed the STAR index</title></path>
+<path class="flow" style="animation-delay:-11s" d="M 370 510 L 370 676 Q 370 690 384 690 L 600 690"/>
+<path id="route-12" class="line" stroke="#4169b1" d="M 600 690 L 816 690 Q 830 690 830 676 L 830 330"><title>Verified index and intron limit feed alignment</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 600 690 L 816 690 Q 830 690 830 676 L 830 330"/>
+<path id="route-13" class="line" stroke="#4169b1" d="M 370 510 L 370 766 Q 370 780 384 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"><title>Annotated transcript starts feed QC</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 370 510 L 370 766 Q 370 780 384 780 L 1336 780 Q 1350 780 1350 766 L 1350 524 Q 1350 510 1336 510 L 1290 510"/>
 <g id="samples"><title>Sample sheet: Method + trimming</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
@@ -51,18 +55,22 @@
 <circle class="station" cx="370" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="370" y="290">Download</text>
 <text class="detail" text-anchor="middle" x="370" y="313">Unmodified raw reads</text></g>
+<g id="TSS_EXTRACT"><title>Smar2C2 reads: Primer + UMI, either mate</title>
+<circle class="station" cx="600" cy="510" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="600" y="470">Smar2C2 reads</text>
+<text class="detail" text-anchor="middle" x="600" y="493">Primer + UMI, either mate</text></g>
 <g id="TSS_TRIM"><title>cutadapt: 5&#x27; barcode, 3&#x27; adapter</title>
 <circle class="station" cx="600" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="600" y="290">cutadapt</text>
 <text class="detail" text-anchor="middle" x="600" y="313">5&#x27; barcode, 3&#x27; adapter</text></g>
-<g id="TSS_ALIGN"><title>STAR: 5&#x27; end kept</title>
+<g id="TSS_ALIGN"><title>STAR: 5&#x27; end kept or Gs clipped</title>
 <circle class="station" cx="830" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="830" y="290">STAR</text>
-<text class="detail" text-anchor="middle" x="830" y="313">5&#x27; end kept</text></g>
-<g id="TSS_CTSS"><title>TSS tags: 5&#x27; ends, cap G corrected</title>
+<text class="detail" text-anchor="middle" x="830" y="313">5&#x27; end kept or Gs clipped</text></g>
+<g id="TSS_CTSS"><title>TSS tags: Cap G corrected, UMI deduped</title>
 <circle class="station" cx="1060" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="1060" y="290">TSS tags</text>
-<text class="detail" text-anchor="middle" x="1060" y="313">5&#x27; ends, cap G corrected</text></g>
+<text class="detail" text-anchor="middle" x="1060" y="313">Cap G corrected, UMI deduped</text></g>
 <g id="TSS_CLUSTERS"><title>paraclu: FANTOM clusters</title>
 <circle class="station" cx="1290" cy="330" r="9" stroke="#ce6030"/>
 <text class="label" text-anchor="middle" x="1290" y="290">paraclu</text>
@@ -96,7 +104,7 @@
 <text class="label" text-anchor="middle" x="600" y="650">STAR index</text>
 <text class="detail" text-anchor="middle" x="600" y="673">Hash-checked reuse</text></g>
 <path d="M48 762 H1432" stroke="var(--panel)" stroke-width="2"/>
-<text class="note" x="48" y="798">The 5&#x27; end of read 1 is the TSS: only fixed barcode bases are trimmed there; the 3&#x27; end is adapter- and quality-trimmed.</text>
-<text class="note" x="48" y="823">Cap-trapping CAGE adds a G the genome lacks; such reads move 1 base downstream, as in FANTOM. Unique alignments only.</text>
+<text class="note" x="48" y="798">The TSS read&#x27;s 5&#x27; end is the TSS: only fixed barcode bases are trimmed there; the 3&#x27; end is adapter- and quality-trimmed.</text>
+<text class="note" x="48" y="823">CAGE&#x27;s cap G moves tags 1 base downstream, as in FANTOM; template-switch Gs are soft-clipped; Smar2C2 UMIs count once.</text>
 <text class="note" x="48" y="848">paraclu clusters each strand; FANTOM&#x27;s paraclu-cut keeps clusters ≤ 200 bases with a 2-fold density rise. No plant thresholds.</text>
-<metadata>Genesis diagram schema 2; workflows/tss-seq.nf SHA256 89965d087a131e265ab72eabc93becd757f657f2e05cd55977b04de8695a9ea7; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/tss-seq.nf SHA256 5e962776387426e9398ef0f02325cfd109c16b3a16f0748b35d4b2f6ee7169ec; schematic animation.</metadata></svg>

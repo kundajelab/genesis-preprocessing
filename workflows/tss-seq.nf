@@ -7,6 +7,7 @@ include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { RNA_ANNOTATION } from '../modules/rna-seq/rna_annotation'
 include { GET_STAR_INDEX } from '../modules/rna-seq/get_star_index'
+include { TSS_EXTRACT } from '../modules/tss-seq/tss_extract'
 include { TSS_TRIM } from '../modules/tss-seq/tss_trim'
 include { TSS_ALIGN } from '../modules/tss-seq/tss_align'
 include { TSS_CTSS } from '../modules/tss-seq/tss_ctss'
@@ -15,23 +16,27 @@ include { TSS_QC } from '../modules/tss-seq/tss_qc'
 
 // Settings each method implies. Cap-trapping CAGE adds a non-templated G before the first base
 // during reverse transcription; oligo-capping (TSS-seq) and csRNA-seq ligate an adapter to the
-// RNA's own 5' end. csRNA-seq reads are short capped RNAs.
+// RNA's own 5' end. Template-switching methods (RAMPAGE, Smar2C2) add a run of Gs, which local
+// alignment soft-clips. Smar2C2 reads start with a spacer, the Smart-seq2 primer, a 12-base UMI
+// and AT, in either mate; RAMPAGE's TSS read is the library's read 2.
 def methodDefaults(method) {
-    def cage = [g_correction: true, min_length: 20]
-    def ligation = [g_correction: false, min_length: 20]
+    def cage = [g_correction: true, soft_clip_5p: false, umi_length: 0, min_length: 20, mates: 1]
+    def ligation = cage + [g_correction: false]
     return [
         'CAGE': cage,
         'nAnT-iCAGE': cage,
         'TSS-seq': ligation,
         'oligo-capping': ligation,
-        'csRNA-seq': [g_correction: false, min_length: 18],
+        'csRNA-seq': ligation + [min_length: 18],
+        'RAMPAGE': ligation + [soft_clip_5p: true],
+        'Smar2C2': ligation + [soft_clip_5p: true, umi_length: 12, mates: 2],
     ][method]
 }
 
 // Sheet rules a JSON schema cannot express: the exact columns, existing reference files, distinct
 // reference IDs, and one annotation and organelle list per reference.
 def checkSamples(sheet, rows, references) {
-    def header = ['sample_id', 'species', 'read1_url', 'method', 'trim_5p', 'adapter_3p',
+    def header = ['sample_id', 'species', 'read1_url', 'read2_url', 'method', 'trim_5p', 'adapter_3p',
                   'reference_fasta', 'reference_annotation', 'organelle_contigs']
     def columns = sheet.withReader { reader -> reader.readLine() }?.split('\t')?.toList()
     if (columns != header) {
@@ -40,6 +45,12 @@ def checkSamples(sheet, rows, references) {
     def referenceIds = [:]
     def annotations = [:]
     rows.each { row ->
+        // Smar2C2 needs both mates (its TSS reads are in either); the other methods read one file.
+        if ((methodDefaults(row.method).mates == 2) != (row.read2_url != '-')) {
+            error("${sheet}: ${row.id}: ${row.method} takes " +
+                  (methodDefaults(row.method).mates == 2 ? 'both read1_url and read2_url' :
+                   'one FASTQ in read1_url and read2_url -'))
+        }
         if (!references.resolve(row.reference_fasta).isFile()) {
             error("${sheet}: reference missing: ${row.reference_fasta}")
         }
@@ -91,10 +102,9 @@ workflow {
         .collect { row -> row[0] }
     checkSamples(sheet, sheetRows, referencesDir)
     samples = channel.fromList(sheetRows.collect { row ->
-        // The TSS is the 5' end of read 1; DOWNLOAD fetches it as a single-end library.
         row + methodDefaults(row.method) + [
             ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
-            layout: 'SE', read2_url: '-',
+            layout: row.read2_url == '-' ? 'SE' : 'PE',
             organelles: row.organelle_contigs == '-' ? [] : row.organelle_contigs.tokenize(',')]
     })
     // One annotation and one STAR index per reference; samples rejoin them by ref_id.
@@ -137,7 +147,14 @@ workflow {
             tuple(meta, read.name.endsWith('.read2.fastq.gz') ? 'read2' : 'read1', read)
         }
     })
-    TSS_TRIM(downloaded)
+    // Smar2C2's TSS reads are picked out of both mates first; the other methods' reads start at
+    // the TSS already.
+    byMethod = downloaded.branch { meta, _reads ->
+        extract: meta.mates == 2
+        direct: true
+    }
+    TSS_EXTRACT(byMethod.extract)
+    TSS_TRIM(byMethod.direct.mix(TSS_EXTRACT.out.reads))
     alignmentInputs = TSS_TRIM.out.reads.map { meta, reads -> tuple(meta.ref_id, meta, reads) }
         .combine(annotations, by: 0)
         .combine(GET_STAR_INDEX.out.index.map { refId, _ref, index -> tuple(refId, index) }, by: 0)
@@ -168,6 +185,7 @@ workflow {
     TSS_QC(qcInputs)
     // Collect channels, not publishDir contents: wait for every library's reports.
     multiqcFiles = FASTQC.out.reports.map { _meta, _mate, _html, zip -> zip }
+        .mix(TSS_EXTRACT.out.log.map { _meta, log -> log })
         .mix(TSS_TRIM.out.log.map { _meta, log -> log })
         .mix(TSS_ALIGN.out.log.map { _meta, log -> log })
         .mix(TSS_QC.out.summary.map { _meta, summary -> summary })

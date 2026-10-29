@@ -1,8 +1,9 @@
 """Regression checks for TSS mapping (workflows/tss-seq.nf).
 
 Without options: stub runs and sheet checks. With --conda: real tools on a synthetic genome, with
-CAGE reads (barcode, the cap's non-templated G, 3' adapter) and TSS-seq reads (start at the TSS),
-checking the exact tag positions, clusters and QC.
+CAGE reads (barcode, the cap's non-templated G, 3' adapter), TSS-seq reads (start at the TSS),
+RAMPAGE reads (template-switch Gs) and Smar2C2 read pairs (primer, UMI and Gs in either mate,
+PCR duplicates, oligo-dT reads), checking the exact tag positions, clusters and QC.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ HEADER = [
     "sample_id",
     "species",
     "read1_url",
+    "read2_url",
     "method",
     "trim_5p",
     "adapter_3p",
@@ -36,6 +38,16 @@ HEADER = [
 ]
 BARCODE = "ACGCAGCAG"
 ADAPTER = "TCGTATGCCGTCTTCTGCTTG"
+SMART = "AAGCAGTGGTATCAACGCAGAGTAC"
+# (sample, method, trim_5p): CAGE carries a barcode, the cap G and an adapter; TSS-seq starts at
+# the TSS; RAMPAGE adds template-switch Gs; Smar2C2 hides its TSS reads among Tn5 fragments in
+# either mate.
+LIBRARIES = (
+    ("cage", "CAGE", "9"),
+    ("tssseq", "TSS-seq", "-"),
+    ("rampage", "RAMPAGE", "-"),
+    ("smar", "Smar2C2", "-"),
+)
 # (gene, strand, transcript start, transcript end), 1-based on chr1.
 GENES = [
     ("geneA", "+", 20001, 22000),
@@ -63,17 +75,19 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
     """References, reads and a sheet; returns each library's expected tags."""
     generator = random.Random(6031)
     chromosome = list("".join(generator.choices("ACGT", k=300000)))
-    # The base before each TSS (on the transcript's strand) is not G, so the cap's added G
-    # always mismatches and is corrected; a genomic G there is FANTOM's known ambiguity.
+    # The 3 bases before each TSS (on the transcript's strand) are not G, so the cap's added G and
+    # the template-switch Gs always mismatch; a genomic G there is a known ambiguity.
     for _gene, strand, start, end in GENES:
         tss = start if strand == "+" else end
         for offset in PROFILE:
             site = tss + offset if strand == "+" else tss - offset
-            before = site - 1 if strand == "+" else site + 1
-            chromosome[before - 1] = "A" if strand == "+" else "T"
+            for back in (1, 2, 3):
+                before = site - back if strand == "+" else site + back
+                chromosome[before - 1] = "A" if strand == "+" else "T"
     plastid = list("".join(generator.choices("ACGT", k=20000)))
     for index in range(12):
-        plastid[1000 + 300 * index - 2] = "A"
+        for back in (1, 2, 3):
+            plastid[1000 + 300 * index - 1 - back] = "A"
     contigs = {"chr1": "".join(chromosome), "ChrC": "".join(plastid)}
     references = work / "references"
     references.mkdir()
@@ -87,43 +101,71 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
             f"chr1\tsynthetic\texon\t{start}\t{end}\t.\t{strand}\t.\tParent={gene}.1\n",
         ]
     (references / "plant.gff3").write_text("".join(lines))
+
+    def random_bases(length: int) -> str:
+        return "".join(generator.choices("ACGT", k=length))
+
+    def internal() -> str:
+        # A Tn5 fragment from inside a gene: no primer, so Smar2C2 extraction skips it.
+        start = generator.randrange(30000, 50000)
+        return contigs["chr1"][start : start + 70]
+
+    sites: list[tuple[str, str, int, int]] = []
+    for _gene, strand, start, end in GENES:
+        tss = start if strand == "+" else end
+        for offset, count in PROFILE.items():
+            sites.append(("chr1", strand, tss + offset if strand == "+" else tss - offset, count))
+    # Plastid TSSs count as organelle tags.
+    sites += [("ChrC", "+", 1000 + 300 * index, 1) for index in range(12)]
     expected: dict[str, Counter] = {}
     rows = []
-    libraries = [("cage", "CAGE", "9"), ("tssseq", "TSS-seq", "-")]
+    libraries = list(LIBRARIES)
     if conda:
         # The CAGE reads trimmed past the cap's G and the first transcribed base: every TSS moves
         # 1 base downstream. (Trimming just the cap's G, 10, changes nothing: it is not templated.)
         libraries.append(("overtrimmed", "CAGE", "11"))
     for sample, method, trim in libraries:
-        reads: list[str] = []
+        first: list[str] = []
+        second: list[str] = []
         tags: Counter = Counter()
-        for _gene, strand, start, end in GENES:
-            tss = start if strand == "+" else end
-            for offset, count in PROFILE.items():
-                site = tss + offset if strand == "+" else tss - offset
-                if strand == "+":
-                    transcript = contigs["chr1"][site - 1 : site - 1 + 40]
+        for contig, strand, site, count in sites:
+            if strand == "+":
+                transcript = contigs[contig][site - 1 : site - 1 + 40]
+            else:
+                transcript = reverse_complement(contigs[contig][site - 40 : site])
+            for copy in range(count):
+                tags[(contig, strand, site)] += 1
+                if method == "CAGE":
+                    first.append(BARCODE + "G" + transcript[:30] + ADAPTER)
+                elif method == "TSS-seq":
+                    first.append(transcript)
+                elif method == "RAMPAGE":
+                    first.append("G" * (3 + copy % 3) + transcript)
                 else:
-                    transcript = reverse_complement(contigs["chr1"][site - 40 : site])
-                for _ in range(count):
-                    if method == "CAGE":
-                        reads.append(BARCODE + "G" + transcript[:30] + ADAPTER)
-                    else:
-                        reads.append(transcript)
-                    tags[("chr1", strand, site)] += 1
-        # Reads from the plastid count as organelle tags.
-        for index in range(12):
-            site = 1000 + 300 * index
-            transcript = contigs["ChrC"][site - 1 : site - 1 + 40]
-            reads.append(
-                BARCODE + "G" + transcript[:30] + ADAPTER if method == "CAGE" else transcript
-            )
-            tags[("ChrC", "+", site)] += 1
+                    # Each molecule is read twice (a PCR duplicate, same UMI), in either mate.
+                    # Tn5 also cuts inside the oligo, so the primer can start far into the read.
+                    code = random_bases(12)
+                    spacer = random_bases(5 if copy % 3 else 60)
+                    read = spacer + SMART + code + "AT" + "GGG" + transcript
+                    for _ in range(2):
+                        pair = [read, internal()]
+                        if copy % 2:
+                            pair.reverse()
+                        first.append(pair[0])
+                        second.append(pair[1])
+        if method == "Smar2C2":
+            # Oligo-dT (3' end) reads and plain Tn5 fragments give no tags.
+            for _ in range(20):
+                first.append(random_bases(40) + SMART + "T" * 30 + random_bases(20))
+                second.append(internal())
         folder = work / "inputs" / sample
         folder.mkdir(parents=True)
-        with gzip.open(folder / "reads.fastq.gz", "wt") as stream:
-            for index, read in enumerate(reads):
-                stream.write(f"@{sample}{index}\n{read}\n+\n{'I' * len(read)}\n")
+        for name, reads in (("reads", first), ("mates", second)):
+            if not reads:
+                continue
+            with gzip.open(folder / f"{name}.fastq.gz", "wt") as stream:
+                for index, read in enumerate(reads):
+                    stream.write(f"@{sample}{index}\n{read}\n+\n{'I' * len(read)}\n")
         if sample != "overtrimmed":
             expected[sample] = tags
         rows.append(
@@ -131,6 +173,7 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
                 "sample_id": sample,
                 "species": "Plant_synthetic",
                 "read1_url": f"{base_url}/{sample}/reads.fastq.gz",
+                "read2_url": f"{base_url}/{sample}/mates.fastq.gz" if second else "-",
                 "method": method,
                 "trim_5p": trim,
                 "adapter_3p": ADAPTER if method == "CAGE" else "-",
@@ -211,7 +254,9 @@ def check_trace(work: Path, libraries: int) -> None:
         "RNA_ANNOTATION": 1,
         "GET_STAR_INDEX:RNA_INDEX": 1,
         "DOWNLOAD": 1,
-        "FASTQC": libraries,
+        # Smar2C2 reads both mates and extracts its TSS reads first.
+        "FASTQC": libraries + 1,
+        "TSS_EXTRACT": 1,
         "TSS_TRIM": libraries,
         "TSS_ALIGN": libraries,
         "TSS_CTSS": libraries,
@@ -222,7 +267,7 @@ def check_trace(work: Path, libraries: int) -> None:
 
 
 def check_results(work: Path, expected: dict[str, Counter]) -> None:
-    """Exact tags after trimming and G correction, one cluster per gene, and the QC table."""
+    """Exact tags after trimming, G handling and UMI deduplication, clusters, and the QC table."""
     output = work / "published" / "samples" / "output" / "Plant_synthetic"
     for sample, tags in expected.items():
         observed: Counter = Counter()
@@ -274,11 +319,13 @@ def check_failures(work: Path, sheet: Path) -> None:
     lines = sheet.read_text().splitlines(keepends=True)
     cases: list[tuple[str, str, str]] = []
     for suffix, changed, diagnostic in (
-        ("method", [{**rows[0], "method": "RAMPAGE"}], "method must be"),
+        ("method", [{**rows[0], "method": "TIF-seq"}], "method must be"),
         ("trim", [{**rows[0], "trim_5p": "0"}], "trim_5p must be"),
         ("adapter", [{**rows[0], "adapter_3p": "ACG"}], "adapter_3p must be"),
         ("annotation", [{**rows[0], "reference_annotation": "absent.gff3"}], "annotation missing"),
         ("organelles", [rows[0], {**rows[1], "organelle_contigs": "-"}], "disagree on"),
+        ("smar-mates", [{**rows[3], "read2_url": "-"}], "takes both read1_url and read2_url"),
+        ("cage-mates", [{**rows[0], "read2_url": rows[3]["read2_url"]}], "takes one FASTQ"),
     ):
         candidate = work / f"{suffix}.tsv"
         write_sheet(candidate, changed)
@@ -316,7 +363,7 @@ def main() -> None:
             sheet, expected = create_fixture(work, base_url, conda=args.conda)
             assert run_tss(work, sheet, conda=args.conda).returncode == 0
             # The real-tool run adds a library with a wrong trim_5p.
-            check_trace(work, 3 if args.conda else 2)
+            check_trace(work, len(LIBRARIES) + 1 if args.conda else len(LIBRARIES))
             if args.conda:
                 check_results(work, expected)
             else:

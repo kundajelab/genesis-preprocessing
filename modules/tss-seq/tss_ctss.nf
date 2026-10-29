@@ -18,12 +18,13 @@ process TSS_CTSS {
     tuple val(meta), path("${meta.id}.ctss.tsv.gz"), emit: ctss
     tuple val(meta), path("${meta.id}.*.bw"), emit: tracks
     script:
-    // One tag per uniquely aligned read (STAR gives them MAPQ 255) at its 5' end: the alignment
-    // start on +, its last aligned base on -. Cap-based methods add a non-templated G before the
-    // first base; when the read starts with a G that the genome lacks (MD tag), the TSS is the
-    // next base, as in FANTOM.
+    // One tag per uniquely aligned read (STAR gives them MAPQ 255) at its 5' end: the first
+    // aligned base on +, the last on - (soft-clipped bases excluded). Cap-trapping methods add a
+    // non-templated G before the first base; when the read starts with a G that the genome lacks
+    // (MD tag), the TSS is the next base, as in FANTOM.
     """
-    samtools view -q 255 -F 0x904 '${bam}' | gawk -v OFS='\\t' -v correct=${meta.g_correction ? 1 : 0} '
+    samtools view -q 255 -F 0x904 '${bam}' | gawk -v OFS='\\t' -v correct=${meta.g_correction ? 1 : 0} \\
+        -v umi=${meta.umi_length} '
         {
             md = ""
             for (i = 12; i <= NF; i++) if (\$i ~ /^MD:Z:/) md = substr(\$i, 6)
@@ -40,7 +41,14 @@ process TSS_CTSS {
                 strand = "+"; pos = \$4
                 if (correct && substr(\$10, 1, 1) == "G" && md ~ /^0[ACGTN]/) pos++
             }
-            count[\$3 "\\t" strand "\\t" pos]++
+            key = \$3 "\\t" strand "\\t" pos
+            # With a UMI (the end of the read name), each molecule counts once at its TSS.
+            if (umi) {
+                code = substr(\$1, length(\$1) - umi + 1)
+                if ((key SUBSEP code) in seen) next
+                seen[key SUBSEP code] = 1
+            }
+            count[key]++
         }
         END {for (key in count) print key, count[key]}' |
         LC_ALL=C sort -t \$'\\t' -k1,1 -k2,2 -k3,3n > ctss.tsv
