@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Genesis scATAC sample sheet from raw 10x reads",
-  "description": "One row per 10x scATAC library, read from NCBI SRA with its barcode read. workflows/scatac-reads.nf also checks the exact header, reference and whitelist files, reference IDs and per-reference consistency.",
+  "description": "One row per 10x scATAC library, read from NCBI SRA with its barcode read. workflows/scatac-reads.nf also checks the exact header, reference files, that the whitelist exists or can be downloaded, reference IDs and per-reference consistency.",
   "type": "array",
   "minItems": 1,
   "uniqueEntries": [
@@ -95,7 +95,7 @@
         "meta": [
           "barcode_whitelist"
         ],
-        "errorMessage": "barcode_whitelist must be a 10x barcode list basename (.txt or .txt.gz) in the references folder, or - for no barcode correction"
+        "errorMessage": "barcode_whitelist must be a 10x barcode list basename (.txt or .txt.gz) in the references folder or 737K-cratac-v1.txt (downloaded when missing), or - for no barcode correction"
       }
     }
   }
