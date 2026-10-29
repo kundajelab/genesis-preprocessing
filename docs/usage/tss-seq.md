@@ -95,8 +95,8 @@ Under `WORKSPACE/RUN_NAME/output/<species>/<sample_id>/`:
 - `*.ctss.tsv.gz`: tags per TSS (contig, strand, 1-based position, count);
 - `*.ctss.plus.bw`, `*.ctss.minus.bw`: tags per base on each strand, and `*.cpm.bw`
   versions in tags per million;
-- `*.tss_clusters.bed`: clusters as BED6 (score = tags) plus TPM, the dominant TSS
-  (0-based) and its tags;
+- `*.tss_clusters.bed`: clusters as BED6 (score = tags, capped at 1000 as BED requires)
+  plus TPM, the dominant TSS (0-based) and its tags, and the cluster's exact tags;
 - `qc/`: the cutadapt and STAR logs, the TSS QC table and FastQC reports.
 
 `output/multiqc/` has the run's MultiQC report. As for DAP-seq, `output/` also holds

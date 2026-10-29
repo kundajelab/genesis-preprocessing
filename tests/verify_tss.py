@@ -240,7 +240,8 @@ def check_results(work: Path, expected: dict[str, Counter]) -> None:
             assert cluster[5] == strand, cluster
             # The dominant TSS (0-based) is the annotated start, and the cluster holds every tag.
             assert int(cluster[7]) + 1 == tss, (sample, cluster)
-            assert int(cluster[4]) == sum(PROFILE.values()), (sample, cluster)
+            assert int(cluster[9]) == sum(PROFILE.values()), (sample, cluster)
+            assert int(cluster[4]) == min(sum(PROFILE.values()), 1000), (sample, cluster)
         with (output / sample / "qc" / f"{sample}.tss_qc_mqc.tsv").open() as stream:
             rows = [line for line in stream if not line.startswith("#")]
         qc = next(csv.DictReader(rows, delimiter="\t"))
@@ -248,6 +249,8 @@ def check_results(work: Path, expected: dict[str, Counter]) -> None:
         organelle = sum(n for (contig, _s, _p), n in tags.items() if contig == "ChrC")
         assert int(qc["tags"]) == total, qc
         assert float(qc["near_TSS_100"]) == round((total - organelle) / total, 4), qc
+        # Every nuclear tag is in its gene's cluster.
+        assert float(qc["in_clusters"]) == round((total - organelle) / total, 4), qc
         assert float(qc["antisense_500"]) == 0, qc
         assert float(qc["organelle"]) == round(organelle / total, 4), qc
         assert qc["rRNA"] == "NA", qc

@@ -53,7 +53,8 @@ process TSS_QC {
     else
         rrna=NA
     fi
-    clustered=\$(awk '{n += \$5} END {print n + 0}' '${clusters}')
+    # The cluster's exact tags (column 10); the BED score is capped at 1000.
+    clustered=\$(awk '{n += \$10} END {print n + 0}' '${clusters}')
     cluster_count=\$(grep -c . '${clusters}' || true)
     input=\$(awk -F ':' '/^Total reads processed/ {gsub(/[^0-9]/, "", \$2); print \$2}' '${trim_log}')
     trimmed=\$(awk -F ':' '/^Reads written/ {sub(/\\(.*/, "", \$2); gsub(/[^0-9]/, "", \$2); print \$2}' '${trim_log}')
