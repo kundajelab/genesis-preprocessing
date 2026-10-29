@@ -14,7 +14,7 @@ process METADATA {
     output:
     tuple val(meta), path("${meta.id}.metadata.tsv"), emit: metadata
     script:
-    def files = reads instanceof List ? reads.sort { it.name } : [reads]
+    def files = reads instanceof List ? reads.sort { read -> read.name } : [reads]
     def mate = meta.layout == 'PE' ? "--read2 '${files[1]}'" : ''
     """
     genesis-tools metadata --sample-id '${meta.id}' \
@@ -23,7 +23,7 @@ process METADATA {
         --read1 '${files[0]}' ${mate} --output '${meta.id}.metadata.tsv'
     """
     stub:
-    def files = reads instanceof List ? reads.sort { it.name } : [reads]
+    def files = reads instanceof List ? reads.sort { read -> read.name } : [reads]
     def mate = meta.layout == 'PE' ? "--read2 '${files[1]}'" : ''
     """
     genesis-tools metadata --sample-id '${meta.id}' \

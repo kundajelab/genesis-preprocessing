@@ -28,8 +28,11 @@ process BWA_MEM2_INDEX {
     tag "${ref.id}"
     // <fasta>.sha256 records the FASTA hash and every product's size; GET_REFERENCES reuses products
     // only while both match. Stub runs never publish into the shared references folder.
+    // Runs resume by default (nextflow.config), and publishDir then keeps existing files;
+    // overwrite, so a task taken from the cache still replaces the stale products that sent it
+    // here.
     publishDir params.references, mode: 'copy', pattern: '{*.bwa-mem2,*.sha256}',
-        enabled: !workflow.stubRun
+        overwrite: true, enabled: !workflow.stubRun
     input:
     tuple val(ref), path(fasta), path(chrom_sizes)
     output:

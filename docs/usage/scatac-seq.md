@@ -6,7 +6,7 @@ layout, reference folder and image pins, with `workflows/scatac-seq.nf` as the w
 and `conf/scatac-seq.config` for its settings.
 
 It starts from published single-cell fragment files, such as the 10x Cell Ranger ATAC
-`fragments.tsv.gz`, not from reads. Each library's cells are grouped into pseudobulks,
+`fragments.tsv.gz`; [another workflow](#from-raw-10x-reads) starts from raw 10x reads. Each library's cells are grouped into pseudobulks,
 for example one per cell type, and each pseudobulk gets peaks, a cut-site track and QC.
 
 ```bash
@@ -107,3 +107,66 @@ Under `WORKSPACE/RUN_NAME/output/<species>/<sample_id>/`:
 `output/multiqc/` has the run's MultiQC report. As for DAP-seq, `output/` also holds
 `genesis-images.lock` and `git-status.txt`, and `trace/` the Nextflow trace, report,
 timeline and DAG.
+
+## From raw 10x reads
+
+Most plant scATAC studies publish only reads. `workflows/scatac-reads.nf` (`pixi run
+pipeline-scatac-reads`, `conf/scatac-reads.config`) makes each library's fragments from its
+10x reads on NCBI SRA, calls cells, then runs the steps above unchanged.
+
+```bash
+pixi run pipeline-scatac-reads -w /scratch/genesis -n scatac-B /data/scatac-reads.tsv --references /data/references
+```
+
+```tsv
+sample_id	species	sra_runs	chemistry	cells_url	reference_fasta	reference_genes	organelle_contigs	barcode_whitelist
+root_rep1	Arabidopsis_thaliana	SRR12340627,SRR12340628	10x-atac-v1	-	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.genes.bed	ChrC,ChrM	737K-cratac-v1.txt
+```
+
+| Column | Meaning |
+| --- | --- |
+| `sra_runs` | The library's SRA runs (its lanes), comma-separated; they are mapped together |
+| `chemistry` | `10x-atac-v1` or `10x-atac-v2` (16-base barcode read), or `10x-multiome-atac` (24 bases: an 8-base spacer, then the barcode) |
+| `cells_url` | The authors' `barcode<TAB>group` cell list, or `-` to call cells |
+| `barcode_whitelist` | The 10x barcode list in the references folder, or `-` for no barcode correction |
+
+The other columns are as above. A run may be listed for one library only.
+
+1. **Download.** `prefetch` and `fasterq-dump --include-technical` from NCBI SRA, which keeps
+   the 10x barcode read; ENA's FASTQs drop it. Submitters order the reads differently, so the
+   barcode read is the one of the chemistry's length and the genomic reads are the two
+   longest. A run without such a barcode read stops the library. Downloading and converting
+   are separate tasks, so a failed conversion, or `-resume` after one, reuses the download;
+   a failed download is tried again. `fasterq-dump` needs temporary disk of about the FASTQs'
+   size, about 100 GB for a 116-million-spot run, and takes about 1.5 hours with 4 threads.
+   Intermediate FASTQS (tens of GB) are also stored in work/ until the run is cleaned up.
+2. **Fragments.** chromap `--preset atac` trims adapters, maps the pairs, corrects barcodes
+   against the whitelist and removes duplicates per cell. It writes 10x fragments: BED0, Tn5
+   offsets applied (start + 4, end − 5). Sequencers read the barcode on either strand; the
+   strand that matches the whitelist for most of the first 200,000 barcodes is used, and a
+   library where neither matches half of them stops. The chromap index, about 5 bytes per
+   reference base, is built once per reference and published beside the FASTA as
+   `<id>.chromap/`, with `<id>.chromap.sha256` recording the FASTA's SHA-256, the chromap
+   release and the index's size. Later runs reuse it only while that record matches the FASTA,
+   the release pinned in `environments/GENESIS_CHROMAP.yaml` and the index file; otherwise it
+   is rebuilt.
+3. **Cells.** With `cells_url`, the authors' list is used, after removing Cell Ranger's `-1`
+   suffix, which chromap does not write. Otherwise barcodes with at least
+   `--scatac_min_fragments` nuclear fragments (default 1000, as in ArchR) are cells, at most
+   `--scatac_max_cells` of them (0, the default, for no limit), all in one group, `all`.
+   `qc/<sample>.barcodes.tsv` lists every barcode's nuclear and organelle fragments, and
+   `<sample>.all_barcodes.fragments.tsv.gz` keeps every barcode's fragments for calling cells
+   again with other tools.
+
+10x does not allow its barcode lists to be redistributed, so they are not in this
+repository and are never downloaded by the workflow. Copy the list for the chemistry (for
+10x ATAC v1 and v2, `737K-cratac-v1.txt` from Cell Ranger ATAC) into the references folder.
+
+Differences from Cell Ranger ATAC and ArchR:
+
+- **Cell calling.** A fragment-count threshold only; Cell Ranger fits a model to the barcode
+  counts and removes gel bead doublets, and ArchR also requires a TSS enrichment, which is
+  not tuned for plants. Use the authors' cell list when one is published.
+- **Barcodes.** chromap corrects barcodes one mismatch away from the list; Cell Ranger also
+  uses base qualities.
+- **Plate-based designs** (sci-ATAC-seq) have no 10x barcode read and are not supported.

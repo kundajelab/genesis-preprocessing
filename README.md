@@ -50,6 +50,12 @@ model training and experimental validation.
 
 [View full size](docs/images/genesis_scatac_metro_map.svg) · [scATAC guide](docs/usage/scatac-seq.md)
 
+From raw 10x reads on NCBI SRA, the same steps follow download, chromap and cell calling:
+
+![Genesis scATAC from 10x reads metro map](docs/images/genesis_scatac_reads_metro_map.svg)
+
+[View full size](docs/images/genesis_scatac_reads_metro_map.svg) · [From raw 10x reads](docs/usage/scatac-seq.md#from-raw-10x-reads)
+
 ### Bulk RNA-seq workflow
 
 ![Genesis bulk RNA-seq pipeline metro map](docs/images/genesis_rna_metro_map.svg)
@@ -168,6 +174,10 @@ pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --refe
 
 Each library's groups become separate pseudobulks with peaks, Tn5 cut-count tracks and
 QC. The [scATAC guide](docs/usage/scatac-seq.md) explains the cell list and metrics.
+
+When only raw 10x reads are published, `pixi run pipeline-scatac-reads` downloads them from
+NCBI SRA, makes the fragments with chromap and calls cells, then runs the same steps; see
+[From raw 10x reads](docs/usage/scatac-seq.md#from-raw-10x-reads).
 
 ### RNA-seq
 

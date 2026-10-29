@@ -1000,6 +1000,29 @@ def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
         assert after == before
 
 
+def check_resume_repair(work: Path, sheet: Path) -> None:
+    """A resumed run repairs a damaged published product, though its rebuild comes from the cache.
+
+    Runs resume by default, and publishDir keeps existing files on resume unless overwrite is set.
+    """
+    references = work / "references"
+    index = references / "se.bwa-mem2/genome.ann"
+    intact = index.read_bytes()
+    index.write_bytes(intact + b"x")  # e.g. partly copied over
+    assert run_pipeline(work, sheet, docker=True, resume=True, suffix="repair").returncode == 0
+    rebuilt = [
+        row
+        for row in trace_rows(work, "repair")
+        if row["name"] in {"GET_REFERENCES:CHROM_SIZES (se)", "GET_REFERENCES:BWA_MEM2_INDEX (se)"}
+    ]
+    # The rebuild is taken from the task cache, as its inputs did not change.
+    assert len(rebuilt) == 2 and all(row["status"] == "CACHED" for row in rebuilt), rebuilt
+    assert index.read_bytes() == intact
+    assert (references / "se.fa.gz.sha256").read_text() == reference_record(
+        references, "se", "se.fa.gz"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1085,6 +1108,9 @@ def main() -> None:
             else:
                 phases.append(functools.partial(check_failures, work, sheet))
             in_parallel(phases)
+            if args.docker:
+                # After the phases above, which read the references folder this changes.
+                check_resume_repair(work, sheet)
             assert raw_before == {
                 path: hashlib.sha256(Path(path).read_bytes()).hexdigest() for path in raw_before
             }
