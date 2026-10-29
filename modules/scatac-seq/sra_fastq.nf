@@ -22,7 +22,8 @@ process SRA_FASTQ {
     script:
     // Reads are told apart by length, as submitters order them differently (e.g. 8/50/16/49,
     // 50/16/50, 51/51/16): the barcode read is meta.barcode_length long, the genomic mates are the
-    // two longest, and an 8-base sample index read is dropped.
+    // two longest, and an 8-base sample index read is dropped. Each file's length is its longest
+    // read among the first 1,000, so a trimmed first read does not decide it.
     """
     # sra-tools keeps its settings outside the home folder.
     export NCBI_SETTINGS="\$PWD/ncbi-settings.mkfg"
@@ -30,14 +31,24 @@ process SRA_FASTQ {
     fasterq-dump --split-files --include-technical --threads ${task.cpus} --temp tmp \\
         --outdir split '${sra}' 2>&1 | tee fasterq-dump.log >&2
     rm -r tmp
+    # reads.tsv: file, longest and shortest read among its first 1,000, by longest.
     for file in split/*.fastq; do
-        printf '%s\\t%s\\n' "\$file" "\$(head -n 2 "\$file" | tail -n 1 | tr -d '\\n' | wc -c)"
+        head -n 4000 "\$file" | awk -v file="\$file" '
+            NR % 4 == 2 {n = length(\$0); if (NR == 2 || n < min) min = n; if (n > max) max = n}
+            END {printf "%s\\t%d\\t%d\\n", file, max, min}'
     done | sort -t \$'\\t' -k2,2n > reads.tsv
     cat reads.tsv >&2
     barcode=\$(awk -F '\\t' '\$2 == ${meta.barcode_length} {print \$1}' reads.tsv)
     if [ "\$(printf '%s' "\$barcode" | grep -c .)" != 1 ]; then
         printf '%s has no single %s-base barcode read; is it a 10x scATAC run?\\n' '${run}' \\
             '${meta.barcode_length}' >&2
+        exit 1
+    fi
+    # Trimmed barcode reads would give some cells shorter barcodes.
+    shortest=\$(awk -F '\\t' -v file="\$barcode" '\$1 == file {print \$3}' reads.tsv)
+    if [ "\$shortest" != ${meta.barcode_length} ]; then
+        printf '%s has barcode reads of %s to %s bases; expected all %s (trimmed reads?)\\n' \\
+            '${run}' "\$shortest" '${meta.barcode_length}' '${meta.barcode_length}' >&2
         exit 1
     fi
     mates=\$(awk -F '\\t' '\$2 >= 30' reads.tsv | tail -n 2 | cut -f1)

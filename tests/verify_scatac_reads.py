@@ -56,11 +56,20 @@ def write_sheet(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 def nextflow(
-    work: Path, command: list[str], suffix: str, *, expect_failure: bool = False
+    work: Path,
+    command: list[str],
+    suffix: str,
+    *,
+    expect_failure: bool = False,
+    tools: Path | None = None,
+    extra_environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    """Run Nextflow in work; tools is a folder of stand-in executables put first on PATH."""
+    first = f"{tools}:" if tools else ""
     environment = {
         **os.environ,
-        "PATH": f"{Path(sys.executable).parent}:{os.environ['PATH']}",
+        **(extra_environment or {}),
+        "PATH": f"{first}{Path(sys.executable).parent}:{os.environ['PATH']}",
         "NXF_OFFLINE": "true",
         "NXF_DISABLE_CHECK_LATEST": "true",
     }
@@ -218,6 +227,104 @@ def check_index_reuse(work: Path, sheet: Path) -> None:
         [
             functools.partial(case, "current", CHROMAP_VERSION, False),
             functools.partial(case, "other-release", "0.0.0", True),
+        ]
+    )
+
+
+# Writes split FASTQs as fasterq-dump --split-files does, one per read of the spot, with lengths
+# from FAKE_READ_LENGTHS: one entry per file, "n" for every read n bases, or "first/rest".
+FAKE_FASTERQ_DUMP = """#!{python}
+import os, sys
+from pathlib import Path
+args = sys.argv[1:]
+outdir = Path(args[args.index("--outdir") + 1])
+run = Path(args[-1]).name.removesuffix(".sra")
+outdir.mkdir()
+Path(args[args.index("--temp") + 1]).mkdir()
+spots = 6
+specs = os.environ["FAKE_READ_LENGTHS"].split()
+for number, spec in enumerate(specs, 1):
+    first, _, rest = spec.partition("/")
+    lengths = [int(first)] + [int(rest or first)] * (spots - 1)
+    with (outdir / f"{{run}}_{{number}}.fastq").open("w") as stream:
+        for spot, length in enumerate(lengths):
+            stream.write(f"@{{run}}.{{spot}}\\n{{'A' * length}}\\n+\\n{{'I' * length}}\\n")
+print(f"spots read      : {{spots:,}}")
+print(f"reads read      : {{spots * len(specs):,}}")
+print(f"reads written   : {{spots * len(specs):,}}")
+"""
+# pigz -p N -c FILE, as SRA_FASTQ calls it.
+FAKE_PIGZ = '#!/bin/sh\nfor last; do :; done\nexec gzip -c "$last"\n'
+
+
+def check_read_selection(work: Path) -> None:
+    """SRA_FASTQ picks the barcode and genomic reads by length, from each file's first reads."""
+    tools = work / "read-selection" / "tools"
+    tools.mkdir(parents=True)
+    for name, text in (
+        ("fasterq-dump", FAKE_FASTERQ_DUMP.format(python=sys.executable)),
+        ("pigz", FAKE_PIGZ),
+    ):
+        (tools / name).write_text(text)
+        (tools / name).chmod(0o755)
+
+    def case(name: str, lengths: str, expected: list[set[int]] | str) -> None:
+        folder = work / "read-selection" / name
+        folder.mkdir()
+        (folder / "SRR1.sra").write_text("placeholder\n")
+        limits = folder / "limits.config"
+        limits.write_text(executor_limits(docker=False))
+        command = [
+            "run",
+            str(ROOT / "tests/sra_fastq_harness.nf"),
+            "-c",
+            str(ROOT / "conf/scatac-reads.config"),
+            "-profile",
+            "local,test",
+            "-c",
+            str(limits),
+            "--sra",
+            str(folder / "SRR1.sra"),
+            "--run",
+            "SRR1",
+            "--barcode_length",
+            "16",
+            "--run_dir",
+            str(folder / "published"),
+            "-work-dir",
+            str(folder / "work"),
+        ]
+        result = nextflow(
+            folder,
+            command,
+            "run",
+            expect_failure=isinstance(expected, str),
+            tools=tools,
+            extra_environment={"FAKE_READ_LENGTHS": lengths},
+        )
+        if isinstance(expected, str):
+            assert result.returncode != 0, name
+            assert expected in result.stdout, (name, result.stdout[-3000:])
+            return
+        assert result.returncode == 0, name
+        observed = []
+        for read in ("R1", "R2", "barcode"):
+            (path,) = folder.glob(f"work/*/*/SRR1.{read}.fastq.gz")
+            with gzip.open(path, "rt") as stream:
+                observed.append({len(line.rstrip("\n")) for line in list(stream)[1::4]})
+        # Read lengths in R1, R2 and the barcode FASTQ.
+        assert observed == expected, (name, observed)
+
+    # Lengths per split file, in fasterq-dump's order: index, R1, barcode, R2 as in 8/50/16/49.
+    in_parallel(
+        [
+            functools.partial(case, "untrimmed", "8 50 16 49", [{50}, {49}, {16}]),
+            # A trimmed first read no longer hides a genomic file: its longest read counts.
+            functools.partial(case, "trimmed-first-mate", "8 20/50 16 49", [{20, 50}, {49}, {16}]),
+            functools.partial(
+                case, "trimmed-barcode", "8 50 15/16 49", "has barcode reads of 15 to 16 bases"
+            ),
+            functools.partial(case, "no-barcode", "8 50 49", "has no single 16-base barcode read"),
         ]
     )
 
@@ -399,6 +506,7 @@ def main() -> None:
         assert run_workflow(work, sheet).returncode == 0
         check_stub(work)
         check_index_reuse(work, sheet)
+        check_read_selection(work)
         check_failures(work, sheet)
         if args.conda:
             real = work / "real"
