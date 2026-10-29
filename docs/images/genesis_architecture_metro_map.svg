@@ -23,10 +23,11 @@
 <path id="route-1" class="line" stroke="#438362" d="M 370 330 L 586 330 Q 600 330 614 330 L 1060 330"><title>Paired-end libraries bulk ATAC route</title></path>
 <path id="route-2" class="line" stroke="#438362" d="M 370 330 L 471 330 Q 485 330 485 344 L 485 496 Q 485 510 499 510 L 586 510 Q 600 510 614 510 L 1046 510 Q 1060 510 1074 510 L 1290 510"><title>scATAC from published fragments to group pseudobulks</title></path>
 <path id="route-3" class="line" stroke="#087f8c" d="M 370 330 L 471 330 Q 485 330 485 344 L 485 676 Q 485 690 499 690 L 600 690"><title>Bulk RNA-seq route</title></path>
-<path id="route-4" class="line planned" stroke="#4169b1" d="M 140 180 L 241 180 Q 255 180 255 194 L 255 316 Q 255 330 269 330 L 370 330"><title>Versioned registry contract</title></path>
-<path id="route-5" class="line planned" stroke="#81909f" d="M 140 690 L 586 690 Q 600 690 614 690 L 931 690 Q 945 690 945 676 L 945 524 Q 945 510 959 510 L 1060 510"><title>Modality-specific QC with shared annotation provenance</title></path>
-<path id="route-6" class="line planned" stroke="#81909f" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1189 690 L 1290 690"><title>Proposed bulk model export</title></path>
-<path id="route-7" class="line planned" stroke="#81909f" d="M 1290 510 L 1391 510 Q 1405 510 1405 524 L 1405 676 Q 1405 690 1391 690 L 1290 690"><title>Replicate-specific pseudobulk export</title></path>
+<path id="route-4" class="line" stroke="#087f8c" d="M 485 690 L 485 766 Q 485 780 499 780 L 830 780"><title>TSS mapping route</title></path>
+<path id="route-5" class="line planned" stroke="#4169b1" d="M 140 180 L 241 180 Q 255 180 255 194 L 255 316 Q 255 330 269 330 L 370 330"><title>Versioned registry contract</title></path>
+<path id="route-6" class="line planned" stroke="#81909f" d="M 140 690 L 586 690 Q 600 690 614 690 L 931 690 Q 945 690 945 676 L 945 524 Q 945 510 959 510 L 1060 510"><title>Modality-specific QC with shared annotation provenance</title></path>
+<path id="route-7" class="line planned" stroke="#81909f" d="M 1060 330 L 1161 330 Q 1175 330 1175 344 L 1175 676 Q 1175 690 1189 690 L 1290 690"><title>Proposed bulk model export</title></path>
+<path id="route-8" class="line planned" stroke="#81909f" d="M 1290 510 L 1391 510 Q 1405 510 1405 524 L 1405 676 Q 1405 690 1391 690 L 1290 690"><title>Replicate-specific pseudobulk export</title></path>
 <g id="manifest"><title>Manifest: Biological library IDs</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Manifest</text>
@@ -71,6 +72,10 @@
 <circle class="station" cx="600" cy="690" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="600" y="650">Bulk RNA-seq</text>
 <text class="detail" text-anchor="middle" x="600" y="673">STAR + featureCounts</text></g>
+<g id="tss"><title>TSS mapping: CAGE, TSS-seq, csRNA</title>
+<circle class="station" cx="830" cy="780" r="9" stroke="#087f8c"/>
+<text class="label" text-anchor="middle" x="830" y="740">TSS mapping</text>
+<text class="detail" text-anchor="middle" x="830" y="763">CAGE, TSS-seq, csRNA</text></g>
 <g id="reference_registry"><title>Reference registry: Tested schema</title>
 <circle class="station" cx="140" cy="180" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="140" y="140">Reference registry</text>
@@ -83,4 +88,4 @@
 <text class="note" x="48" y="798">Solid: available assay processing. Dashed: contracts or planned integration.</text>
 <text class="note" x="48" y="823">RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.</text>
 <text class="note" x="48" y="848">Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments; raw-read barcode processing and model export are not production workflows.</text>
-<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 0e0dcb80486e2dbd29e51464c385fe728281f937382d144f141c56f15490cc8e; workflows/atac-seq.nf SHA256 36f0a854dea36721501e0f57f8f1605835a206bd33b5df9ebce6359d73ab1818; workflows/rna-seq.nf SHA256 7759229356180f372b3784f152513ac78658df34e1cc053035d19aa924b24159; workflows/scatac-seq.nf SHA256 e81a7404894091b3ada32e5d5b53dee3ca9f567974f9a5f9e03ce4a60961f97f; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 0e0dcb80486e2dbd29e51464c385fe728281f937382d144f141c56f15490cc8e; workflows/atac-seq.nf SHA256 36f0a854dea36721501e0f57f8f1605835a206bd33b5df9ebce6359d73ab1818; workflows/rna-seq.nf SHA256 7759229356180f372b3784f152513ac78658df34e1cc053035d19aa924b24159; workflows/scatac-seq.nf SHA256 e81a7404894091b3ada32e5d5b53dee3ca9f567974f9a5f9e03ce4a60961f97f; workflows/tss-seq.nf SHA256 89965d087a131e265ab72eabc93becd757f657f2e05cd55977b04de8695a9ea7; schematic animation.</metadata></svg>

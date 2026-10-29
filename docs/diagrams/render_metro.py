@@ -213,6 +213,35 @@ SCATAC_EDGES = [
     edge("reference",[(140,510),(485,510),(485,330),(600,330)],"Every fragment must lie on a contig"),
     edge("reference",[(600,690),(715,690),(715,735),(1350,735),(1350,330),(1290,330)],"Gene starts define strand-aware TSS windows"),
 ]
+TSS_NODES = [
+    ("samples",140,330,"Sample sheet","Method + trimming","reads"),
+    ("DOWNLOAD",370,330,"Download","Unmodified raw reads","reads"),
+    ("TSS_TRIM",600,330,"cutadapt","5' barcode, 3' adapter","reads"),
+    ("TSS_ALIGN",830,330,"STAR","5' end kept","reads"),
+    ("TSS_CTSS",1060,330,"TSS tags","5' ends, cap G corrected","reads"),
+    ("TSS_CLUSTERS",1290,330,"paraclu","FANTOM clusters","peaks"),
+    ("TSS_QC",1290,510,"TSS QC","Near annotated starts","qc"),
+    ("FASTQC",370,180,"FastQC","Raw reads","qc"),
+    ("MULTIQC_REPORT",1290,180,"MultiQC","HTML + parsed data","qc"),
+    ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
+    ("RNA_ANNOTATION",370,510,"Annotation","GTF + longest intron","reference"),
+    ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
+    ("GET_STAR_INDEX",600,690,"STAR index","Hash-checked reuse","reference"),
+]
+TSS_EDGES = [
+    edge("reads",[(140,330),(1060,330)],"Reads are trimmed, aligned and reduced to their 5' ends"),
+    edge("peaks",[(1060,330),(1290,330)],"Tags per strand give clusters"),
+    edge("qc",[(1290,330),(1290,510)],"Clusters feed QC"),
+    edge("qc",[(1060,330),(1060,600),(1175,600),(1175,510),(1290,510)],"Tags feed QC"),
+    edge("qc",[(370,330),(370,180)],"Raw reads feed FastQC"),
+    edge("qc",[(370,180),(1290,180)],"FastQC reports feed MultiQC"),
+    edge("qc",[(1290,510),(1405,510),(1405,180),(1290,180)],"TSS QC, cutadapt and STAR logs feed MultiQC"),
+    edge("reference",[(140,690),(255,690),(255,510),(140,510)],"Build or verify chromosome sizes"),
+    edge("reference",[(140,510),(370,510)],"Annotation contigs must be in the FASTA"),
+    edge("reference",[(370,510),(485,510),(485,690),(600,690)],"Annotated junctions feed the STAR index"),
+    edge("reference",[(600,690),(715,690),(715,420),(830,420),(830,330)],"Verified index and intron limit feed alignment"),
+    edge("reference",[(370,510),(370,780),(1350,780),(1350,510),(1290,510)],"Annotated transcript starts feed QC"),
+]
 CONTROL_NODES = [
     ("inputs",140,330,"Datasets","Exact references + policy","reads"),
     ("controller",370,330,"Controller","Queue + durable status","reads"),
@@ -246,6 +275,7 @@ ROAD_NODES = [
     ("pseudobulk",1290,510,"Pseudobulks","Group × library","tracks"),
     ("multiome",140,690,"Multiome identity","Tested linking contract","future"),
     ("rna",600,690,"Bulk RNA-seq","STAR + featureCounts","reads"),
+    ("tss",830,780,"TSS mapping","CAGE, TSS-seq, csRNA","reads"),
     ("reference_registry",140,180,"Reference registry","Tested schema","reference"),
     ("models",1290,690,"Model inputs","Model-specific export","future"),
 ]
@@ -254,6 +284,7 @@ ROAD_EDGES = [
     edge("tracks",[(370,330),(600,330),(1060,330)],"Paired-end libraries bulk ATAC route"),
     edge("tracks",[(370,330),(485,330),(485,510),(600,510),(1060,510),(1290,510)],"scATAC from published fragments to group pseudobulks"),
     edge("reads",[(370,330),(485,330),(485,690),(600,690)],"Bulk RNA-seq route"),
+    edge("reads",[(485,690),(485,780),(830,780)],"TSS mapping route"),
     edge("reference",[(140,180),(255,180),(255,330),(370,330)],"Versioned registry contract",True),
     edge("future",[(140,690),(600,690),(945,690),(945,510),(1060,510)],"Modality-specific QC with shared annotation provenance",True),
     edge("future",[(1060,330),(1175,330),(1175,690),(1290,690)],"Proposed bulk model export",True),
@@ -285,6 +316,12 @@ def main() -> None:
           "featureCounts counts uniquely aligned reads by the sheet's strandedness; rRNA and organelle genes stay in the counts.",
           "QC is diagnostic: the forward fraction checks the sheet's strandedness. Replicates are never pooled."],
          ["workflows/rna-seq.nf"]),
+        ("_tss", "GENESIS / TSS MAPPING", "Single-read CAGE, TSS-seq and csRNA-seq · per-base TSS tags · paraclu clusters",
+         TSS_NODES, TSS_EDGES,
+         ["The 5' end of read 1 is the TSS: only fixed barcode bases are trimmed there; the 3' end is adapter- and quality-trimmed.",
+          "Cap-trapping CAGE adds a G the genome lacks; such reads move 1 base downstream, as in FANTOM. Unique alignments only.",
+          "paraclu clusters each strand; FANTOM's paraclu-cut keeps clusters ≤ 200 bases with a 2-fold density rise. No plant thresholds."],
+         ["workflows/tss-seq.nf"]),
         ("_scatac", "GENESIS / scATAC PSEUDOBULKS", "Published fragments · one pseudobulk per cell group · separate libraries",
          SCATAC_NODES, SCATAC_EDGES,
          ["Starts from published fragments and a cell list. Organelle fragments and unlisted barcodes are counted, then dropped.",
@@ -301,7 +338,8 @@ def main() -> None:
         ["Solid: available assay processing. Dashed: contracts or planned integration.",
          "RNA and ATAC retain separate QC and inclusion decisions. No implicit biological replicate pooling.",
          "Plant biological thresholds remain UNSPECIFIED. scATAC starts from published fragments; raw-read barcode processing and model export are not production workflows."],
-        ["workflows/dap-seq.nf", "workflows/atac-seq.nf", "workflows/rna-seq.nf", "workflows/scatac-seq.nf"]))
+        ["workflows/dap-seq.nf", "workflows/atac-seq.nf", "workflows/rna-seq.nf", "workflows/scatac-seq.nf",
+         "workflows/tss-seq.nf"]))
     for animated, suffix in [(False, ""), (True, "_animated")]:
         (out / f"genesis_execution{suffix}.svg").write_text(document(
             "GENESIS / RUN AND REVIEW", "Start on one Linux server. Add managed clusters or independent workers when needed.",
@@ -310,7 +348,7 @@ def main() -> None:
              "Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.",
              "Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions."],
             ["conf/execution.config"], animated))
-    print("Rendered 11 Genesis SVG maps")
+    print("Rendered 13 Genesis SVG maps")
 
 
 if __name__ == "__main__":

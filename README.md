@@ -53,6 +53,12 @@ model training and experimental validation.
 
 [View full size](docs/images/genesis_rna_metro_map.svg) · [Bulk RNA-seq guide](docs/usage/rna-seq.md)
 
+### TSS mapping workflow
+
+![Genesis TSS mapping metro map](docs/images/genesis_tss_metro_map.svg)
+
+[View full size](docs/images/genesis_tss_metro_map.svg) · [TSS mapping guide](docs/usage/tss-seq.md)
+
 <a id="install-and-run"></a>
 <a id="environments-and-docker-builds"></a>
 
@@ -181,6 +187,23 @@ including strandedness, rRNA and organelle fractions. The
 <a id="analysis-choices"></a>
 <a id="outputs-and-resources"></a>
 
+
+### TSS mapping
+
+TSS mapping takes single-read CAGE, TSS-seq or csRNA-seq libraries, with the fixed
+bases to trim from each read's start and the 3' adapter:
+
+```tsv
+sample_id	species	read1_url	method	trim_5p	adapter_3p	reference_fasta	reference_annotation	organelle_contigs
+wt_rep1	Arabidopsis_thaliana	https://example.org/wt1.fastq.gz	CAGE	9	TCGTATGCCGTCTTCTGCTTG	TAIR10.fa.gz	Araport11.gff3	ChrC,ChrM
+```
+
+```bash
+pixi run pipeline-tss -w /scratch/genesis -n tss-A /data/tss.tsv --references /data/references
+```
+
+Each library gets per-base TSS tags on each strand, paraclu TSS clusters and QC. The
+[TSS mapping guide](docs/usage/tss-seq.md) explains the methods, trimming and metrics.
 ## Find and interpret your results
 
 Start with the MultiQC report, then inspect the library-level QC and signal
@@ -213,6 +236,7 @@ between tools or studies.
 | Run paired-end bulk ATAC | [Bulk ATAC guide](docs/usage/bulk-atac.md) |
 | Make pseudobulks from single-cell ATAC fragments | [scATAC guide](docs/usage/scatac-seq.md) |
 | Count genes in plant RNA-seq | [RNA-seq guide](docs/usage/rna-seq.md) |
+| Map transcription start sites | [TSS mapping guide](docs/usage/tss-seq.md) |
 | Manage studies, curate metadata or export single-cell ATAC for models | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
 | Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |

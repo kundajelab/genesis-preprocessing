@@ -24,7 +24,7 @@ ARGS:
     -p|--profile: Use comma-separated nextflow profiles. Default inferred from environment ($profile)
     -w|--workspace: Where to put run folders. Default inferred from environment ($workspace)
     -n|--run-name: Name of the run folder in the workspace. Default: INPUT.tsv basename without .tsv
-    --workflow: Workflow in workflows/ to run: dap-seq, atac-seq, scatac-seq or rna-seq. Default: $workflow
+    --workflow: Workflow in workflows/ to run: dap-seq, atac-seq, scatac-seq, rna-seq or tss-seq. Default: $workflow
 EOF
 }
 
