@@ -10,9 +10,9 @@ It starts from published single-cell fragment files, such as the 10x Cell Ranger
 for example one per cell type, and each pseudobulk gets peaks, a cut-site track and QC.
 
 ```bash
-pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A -R /data/references /data/scatac.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references -resume
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A -R /data/references /data/scatac.tsv -resume
 ```
 
 `pixi run pipeline-scatac` is `scripts/run-pipeline.sh --workflow scatac-seq`; run either
@@ -115,7 +115,7 @@ pipeline-scatac-reads`, `conf/scatac-reads.config`) makes each library's fragmen
 10x reads on NCBI SRA, calls cells, then runs the steps above unchanged.
 
 ```bash
-pixi run pipeline-scatac-reads -w /scratch/genesis -n scatac-B /data/scatac-reads.tsv --references /data/references
+pixi run pipeline-scatac-reads -w /scratch/genesis -n scatac-B -R /data/references /data/scatac-reads.tsv
 ```
 
 ```tsv

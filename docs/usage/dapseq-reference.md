@@ -62,21 +62,21 @@ pixi run pipeline -p local,conda samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA11
 # Continue a previous run using Nextflow's task cache.
 pixi run pipeline samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv -resume
 
-# Submit tasks from Sherlock using accessible container images.
-pixi run pipeline -p sherlock,apptainer samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv
+# On Perlmutter or Sherlock the cluster profile is chosen automatically.
+pixi run pipeline -R /path/references samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv
 ```
 
 You can also call `scripts/run-pipeline.sh` directly, from any folder; relative paths
 then resolve from your current folder. Either way, Nextflow runs in the checkout's
 Pixi environment, so it can find micromamba. Choose the profile with `-p`/`--profile`
 rather than Nextflow's `-profile`, which the script already sets. Without `-p`,
-`scripts/get-default-profile.sh` always chooses `local,docker`. Cluster execution is
-selected explicitly.
-Choose an executor and a software environment together. `sherlock` uses SLURM and the
-`normal` queue; select another queue with `--slurm_queue`. Locally built images
-must be published with approval, or made available on the cluster, before
-Sherlock's Apptainer can use them. Cluster work, cache, reference, and output
-paths must be visible to compute nodes and writable by the user.
+`scripts/get-default-profile.sh` chooses `nersc` on Perlmutter, `sherlock` on Sherlock and
+`local,docker` elsewhere. A profile names an executor and a software environment together:
+`nersc` is Slurm with podman-hpc, and `sherlock` is Slurm with Apptainer, on the `normal`
+queue (select another with `--slurm_queue`). Locally built images must be published with
+approval before a cluster can use them. Cluster work, cache, reference, and output paths must
+be visible to compute nodes and writable by the user; see
+[running on Perlmutter and Sherlock](clusters.md).
 
 Each run lives in `WORKSPACE/RUN_NAME/`, where `RUN_NAME` defaults to the sheet's
 basename without `.tsv` (override with `-n`/`--run-name`). The default workspace,
@@ -90,9 +90,11 @@ is set and `workspace/` in this repository otherwise; override it with
 - `.nextflow.log` and `.nextflow/`: the wrapper launches Nextflow from the run
   folder, so `-resume` uses that run's history.
 
-Use `--references /absolute/path` to choose the reference location (default
-`references/` in this repository). Relative paths in Nextflow arguments resolve
-against the run folder. Nextflow retains intermediate FASTQs and BAMs under its
+Use `-R`/`--references /path` to choose the reference location; the wrapper creates it if
+missing. It defaults to project storage on Perlmutter and Sherlock (see
+[running on Perlmutter and Sherlock](clusters.md)) and to `references/` in this repository
+elsewhere. Like the sheet and `-w`, a relative `-R` resolves from your current folder, whereas
+relative paths in Nextflow arguments resolve against the run folder. Nextflow retains intermediate FASTQs and BAMs under its
 work directory for caching; retain it for `-resume` and clean it only when those
 intermediates are no longer needed. Task scripts run with `bash -euxo pipefail`,
 so each task's `.command.log` records the commands it ran.
@@ -394,7 +396,7 @@ assigned controls and DAP scientific defaults are compatible with that revision.
 
 | Area | What to check |
 | --- | --- |
-| Default execution | Omitting a profile selects `local,docker`. Select `-p local,conda` or `-p sherlock,apptainer` explicitly; the presence of `sbatch` does not select a cluster. |
+| Default execution | Omitting a profile selects `nersc` on Perlmutter, `sherlock` on Sherlock (Slurm with Apptainer) and `local,docker` elsewhere, including other Slurm clusters. Select another with `-p`, e.g. `-p local,conda`. |
 | Reference caches | Derived products are reused only while `<fasta>.sha256` matches the compressed FASTA and records every product's current size. Products from earlier revisions have no such record, so the first run rebuilds them once. Provenance sidecars written by earlier revisions are ignored. |
 | Read QC | Raw-mate FastQC and one run-level MultiQC report require the images pinned in `conf/genesis-images.lock`; the runtime may need to pull them. Quality WARN/FAIL labels are advisory. |
 | Resume | Keep the run folder and work directory. Switching to published reference paths or changing process definitions can rerun affected tasks. Use a new run name and workspace if you need to keep an earlier result unchanged. |

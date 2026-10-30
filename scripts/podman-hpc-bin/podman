@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Nextflow runs containers with `podman`. On NERSC that must be podman-hpc, which keeps images
+# where compute nodes can use them; plain podman is also installed there. scripts/run-pipeline.sh
+# puts this folder first on PATH for the nersc profile, and Slurm passes PATH on to the tasks.
+here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# podman-hpc runs podman by name itself (e.g. to migrate images), so give it PATH without this
+# folder, or that call would come back here.
+path=":$PATH:"
+path=${path//:$here:/:}
+path=${path#:}
+export PATH=${path%:}
+exec podman-hpc "$@"
