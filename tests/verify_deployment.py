@@ -19,10 +19,16 @@ def main() -> None:
             script.chmod(0o755)
         default = subprocess.check_output(
             [str(ROOT / "scripts/get-default-profile.sh")],
-            env={**os.environ, "PATH": f"{folder}:{os.environ['PATH']}"},
+            env={**os.environ, "PATH": f"{folder}:{os.environ['PATH']}", "NERSC_HOST": ""},
             text=True,
         ).strip()
         assert default == "local,docker"
+        perlmutter = subprocess.check_output(
+            [str(ROOT / "scripts/get-default-profile.sh")],
+            env={**os.environ, "NERSC_HOST": "perlmutter"},
+            text=True,
+        ).strip()
+        assert perlmutter == "nersc"
         for profile, executor, runtime in [
             ("local,docker", "local", "docker"),
             ("sherlock,apptainer", "slurm", "apptainer"),
@@ -51,6 +57,9 @@ def main() -> None:
             if profile == "nersc":
                 assert "executor.queueSize = 15" in output
                 assert "executor.pollInterval = '5 min'" in output
+                assert "--constraint=cpu --qos=${params.nersc_qos}" in output
+                assert "podman.registry = 'docker.io'" in output
+                assert "podman.runOptions = '--userns=keep-id --user $(id -u):$(id -g)'" in output
         wrapper = ROOT / "scripts/nersc-podman.sh"
         fake = folder / "podman-hpc"
         fake.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')

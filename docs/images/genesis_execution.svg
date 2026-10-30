@@ -67,4 +67,4 @@
 <text class="note" x="48" y="798">Authentication stays under site control. No keys, permissions or cluster services are changed by Genesis.</text>
 <text class="note" x="48" y="823">Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.</text>
 <text class="note" x="48" y="848">Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions.</text>
-<metadata>Genesis diagram schema 2; conf/execution.config SHA256 ea587760d7cec10eb558c57abc7fe7c417a2c4ef5d02e275ce0e44cd60b5e871; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; conf/execution.config SHA256 43ab8a672c5d8480d82790345ab70a19df0890ecdbb25aeec4892afbf8171635; schematic animation.</metadata></svg>
