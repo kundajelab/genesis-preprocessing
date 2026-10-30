@@ -48,15 +48,10 @@ the archived A. thaliana ATAC inputs (two libraries at 1M and 5M templates), thi
 build gave peak, summit and XLS outputs identical to released MACS3 3.0.5 at two
 and four CPUs.
 
-The benchmark harness in
-[genesis-curation](https://github.com/kundajelab/genesis-curation) still runs released
-MACS3 3.0.5 natively. That release has no `--threads` option, so the harness bounds it
-with its own launcher.
-
 ## Earlier measurements
 
-The [comparison
-recipe](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/experiments/macs3-optimization/README.md)
+The archived [comparison
+recipe](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/experiments/macs3-optimization/README.md)
 compares the earlier revision `22eb40f7b51f5b20b635614ca0b1759dc5398c5c` with the
 released package, using the same inputs and scientific arguments, 1, 2 and 8 CPUs and
 three measured repetitions. Its results describe that revision, not the current DAP pin.

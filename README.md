@@ -5,8 +5,8 @@ single-cell ATAC fragments, into peaks, signal tracks and quality-control report
 and plant RNA-seq reads into gene counts and tracks. It runs on a single server or
 through Nextflow on a cluster.
 
-Study management, metadata curation and review, single-cell ATAC model export and
-method benchmarks are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
+Metadata discovery, curation and review are in
+[genesis-curation](https://github.com/kundajelab/genesis-curation).
 
 <a id="architecture-and-current-capabilities"></a>
 
@@ -250,8 +250,7 @@ between tools or studies.
 | Make pseudobulks from single-cell ATAC fragments | [scATAC guide](docs/usage/scatac-seq.md) |
 | Count genes in plant RNA-seq | [RNA-seq guide](docs/usage/rna-seq.md) |
 | Map transcription start sites | [TSS mapping guide](docs/usage/tss-seq.md) |
-| Manage studies, curate metadata or export single-cell ATAC for models | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
-| Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
+| Find datasets and curate their metadata | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |
 
 The [documentation index](docs/README.md) also links to reference material.
@@ -261,8 +260,8 @@ The [documentation index](docs/README.md) also links to reference material.
 ## Benchmarks and tool choices
 
 The [benchmark
-guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md)
-in genesis-curation has the experiment matrix, metric definitions and reproduction
+guide](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/README.md)
+(archived in genesis-curation) has the experiment matrix, metric definitions and reproduction
 commands. It distinguishes package comparisons from parameter sensitivity and software
 tests. A higher mapping rate or more peaks alone is not evidence that one method is
 better.

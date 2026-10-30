@@ -126,8 +126,8 @@ assignments.
 
 For interspecies DAP, distinguish the TF-source organism from the organism whose DNA
 was assayed. The alignment reference must describe that DNA. Preserve the original
-sheet labels, and record the separate biological identities in the [curation
-metadata](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md);
+sheet labels, and record the separate biological identities in the curation metadata
+([genesis-curation](https://github.com/kundajelab/genesis-curation));
 do not infer both from a single species label.
 
 Reference names are gzipped FASTA basenames ending in `.fa.gz`, `.fasta.gz`, or
@@ -260,18 +260,13 @@ Each run writes two records to its output folder when it starts:
   clean checkout).
 
 Together with the Nextflow trace and report, these files record how the run was made.
-[genesis-curation](https://github.com/kundajelab/genesis-curation) copies them into
-its manifests unchanged.
 
 Per-sample `*.alignment.tsv` files record the aligner version and options, and
 the MultiQC report's provenance records the run name, Git commit and clean/dirty
 status. Use the run's Nextflow traces for measured task runtime and memory.
 
 Full byte/format scans, scientific QC review and eligibility review are separate from
-successful execution. See the [curation
-guide](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md#validate-existing-inputs-and-published-runs)
-and [study acceptance
-recipe](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/studies.md#real-tool-acceptance-on-synthetic-inputs).
+successful execution.
 
 **FASTQs, BAMs, BAM indexes, and bedGraphs are excluded from published results.** Derived reference files
 are published separately under the reference directory.
@@ -374,15 +369,11 @@ Native macOS stub traces do not include task runtime metrics; Docker traces do.
 
 See [docs/nextflow-style.md](../../docs/nextflow-style.md) for module conventions.
 
-## Opt-in method benchmarks
+## Method benchmarks
 
-The benchmark tools in
-[genesis-curation](https://github.com/kundajelab/genesis-curation) compare processing
-packages on matched inputs or test explicit policy changes. Start with the synthetic
-fixtures, then use the verified public plant recipes. See its [benchmark
-guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md)
-for commands, metric definitions, measured results and limitations. Running a
-comparison does not change production defaults.
+The archived [benchmark guide](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/README.md) in genesis-curation has
+the commands, metric definitions, measured results and limitations of the earlier
+comparisons. None of them changed a production default.
 
 <a id="upgrade-from-the-dap-only-release"></a>
 
