@@ -90,7 +90,15 @@ cd -- "$run_folder"
 # The workflow lives in workflows/, so pass its config explicitly: Nextflow only looks for
 # nextflow.config beside the script and in the launch folder. conf/WORKFLOW.config includes the
 # shared nextflow.config.
-exec pixi run --manifest-path "$repo_dir" \
+launcher=()
+if [[ ,$profile, == *,nersc,* ]]; then
+    # Compute nodes run images that podman-hpc pulled here once; plain podman cannot.
+    grep -o 'kundajelab/[^[:space:]]*' "$repo_dir/conf/genesis-images.lock" | while read -r image; do
+        podman-hpc pull "docker.io/$image" > /dev/null
+    done
+    launcher=("$script_dir/nersc-podman.sh")
+fi
+exec "${launcher[@]}" pixi run --manifest-path "$repo_dir" \
     nextflow run "$repo_dir/workflows/$workflow.nf" \
     -c "$repo_dir/conf/$workflow.config" \
     --input "$sheet" \

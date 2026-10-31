@@ -65,6 +65,11 @@
           "default": "normal",
           "description": "SLURM queue used by the sherlock profile."
         },
+        "nersc_qos": {
+          "type": "string",
+          "default": "shared",
+          "description": "Slurm QOS used by the nersc profile (Perlmutter)."
+        },
         "download_batch_size": {
           "type": "integer",
           "minimum": 1,

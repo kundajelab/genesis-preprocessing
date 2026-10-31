@@ -17,7 +17,8 @@ finish() {
     fi
 }
 trap finish EXIT
-printf '%s\n' '#!/usr/bin/env bash' 'exec podman-hpc "$@"' > "$adapter/podman"
+# podman-hpc runs podman helpers by name, so the adapter calls it with the original PATH.
+printf '%s\n' '#!/usr/bin/env bash' "PATH=${PATH@Q} exec podman-hpc \"\$@\"" > "$adapter/podman"
 chmod 700 "$adapter/podman"
 export PATH="$adapter:$PATH"
 "$@"

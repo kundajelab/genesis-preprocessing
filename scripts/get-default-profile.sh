@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
-# A cluster must always be selected explicitly.
+# Perlmutter is detected from NERSC_HOST; any other cluster must be selected explicitly.
 set -euo pipefail
-echo "local,docker"
+if [[ ${NERSC_HOST:-} == perlmutter ]]; then
+    echo "nersc"
+else
+    echo "local,docker"
+fi
