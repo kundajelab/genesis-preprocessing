@@ -90,9 +90,11 @@ is set and `workspace/` in this repository otherwise; override it with
 - `.nextflow.log` and `.nextflow/`: the wrapper launches Nextflow from the run
   folder, so `-resume` uses that run's history.
 
-Use `--references /absolute/path` to choose the reference location (default
-`references/` in this repository). Relative paths in Nextflow arguments resolve
-against the run folder. Nextflow retains intermediate FASTQs and BAMs under its
+Use `-R`/`--references /path` to choose the reference location; the wrapper creates it if
+missing. It defaults to project storage on Perlmutter and Sherlock (see
+[running on Perlmutter and Sherlock](clusters.md)) and to `references/` in this repository
+elsewhere. Like the sheet and `-w`, a relative `-R` resolves from your current folder, whereas
+relative paths in Nextflow arguments resolve against the run folder. Nextflow retains intermediate FASTQs and BAMs under its
 work directory for caching; retain it for `-resume` and clean it only when those
 intermediates are no longer needed. Task scripts run with `bash -euxo pipefail`,
 so each task's `.command.log` records the commands it ran.

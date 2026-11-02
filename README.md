@@ -112,9 +112,9 @@ Run the pipeline from the checkout with `pixi run pipeline`. Pixi runs it from t
 checkout folder, so give the sheet and other paths as absolute paths:
 
 ```bash
-pixi run pipeline -w /scratch/genesis -n study-A /data/dap.tsv --references /data/references
+pixi run pipeline -w /scratch/genesis -n study-A -R /data/references /data/dap.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline -w /scratch/genesis -n study-A /data/dap.tsv --references /data/references -resume
+pixi run pipeline -w /scratch/genesis -n study-A -R /data/references /data/dap.tsv -resume
 ```
 
 Alternatively, call the script directly; it uses the checkout's Pixi environment
@@ -122,7 +122,7 @@ itself, and relative paths resolve from your current folder:
 
 ```bash
 /path/to/genesis-preprocessing/scripts/run-pipeline.sh -w /scratch/genesis -n study-A \
-  dap.tsv --references /data/references
+  -R /data/references dap.tsv
 ```
 
 `pixi run pipeline --help` lists the options. Choose a profile with `-p` (for
@@ -151,7 +151,7 @@ leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://examp
 ```
 
 ```bash
-pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references
+pixi run pipeline-atac -w /scratch/genesis -n atac-A -R /data/references /data/atac.tsv
 ```
 
 Results appear in `/scratch/genesis/atac-A/output/`: fragments, peaks, Tn5 cut-count
@@ -169,7 +169,7 @@ root_rep1	Arabidopsis_thaliana	https://example.org/rep1.fragments.tsv.gz	https:/
 ```
 
 ```bash
-pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A -R /data/references /data/scatac.tsv
 ```
 
 Each library's groups become separate pseudobulks with peaks, Tn5 cut-count tracks and
@@ -190,7 +190,7 @@ leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://examp
 ```
 
 ```bash
-pixi run pipeline-rna -w /scratch/genesis -n rna-A /data/rna.tsv --references /data/references
+pixi run pipeline-rna -w /scratch/genesis -n rna-A -R /data/references /data/rna.tsv
 ```
 
 Each library gets STAR alignments, featureCounts gene counts, a CPM track and QC,
@@ -212,7 +212,7 @@ wt_rep1	Arabidopsis_thaliana	https://example.org/wt1.fastq.gz	-	CAGE	9	TCGTATGCC
 ```
 
 ```bash
-pixi run pipeline-tss -w /scratch/genesis -n tss-A /data/tss.tsv --references /data/references
+pixi run pipeline-tss -w /scratch/genesis -n tss-A -R /data/references /data/tss.tsv
 ```
 
 Each library gets per-base TSS tags on each strand, paraclu TSS clusters and QC. The

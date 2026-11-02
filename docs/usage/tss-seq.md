@@ -11,9 +11,9 @@ methods RAMPAGE and Smar2C2. Each library gets per-base TSS tag counts (CTSSs), 
 clusters and QC. TIF-seq, nanoCAGE and nanoPARE are not supported yet.
 
 ```bash
-pixi run pipeline-tss -w /scratch/genesis -n tss-A /data/tss.tsv --references /data/references
+pixi run pipeline-tss -w /scratch/genesis -n tss-A -R /data/references /data/tss.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline-tss -w /scratch/genesis -n tss-A /data/tss.tsv --references /data/references -resume
+pixi run pipeline-tss -w /scratch/genesis -n tss-A -R /data/references /data/tss.tsv -resume
 ```
 
 `pixi run pipeline-tss` is `scripts/run-pipeline.sh --workflow tss-seq`; run either with

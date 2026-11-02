@@ -5,7 +5,7 @@ One folder per species, one sheet per study and modality:
 (see the [DAP-seq](../docs/usage/dapseq-reference.md), [TSS mapping](../docs/usage/tss-seq.md), [bulk ATAC](../docs/usage/bulk-atac.md),
 [scATAC, including from raw 10x reads](../docs/usage/scatac-seq.md) and [RNA-seq](../docs/usage/rna-seq.md) guides). Read URLs
 point to ENA over HTTPS, or to GSA (China) for CRA studies. Reference files are named in the sheet and looked up in the
-folder given by `--references`; they are not downloaded automatically.
+folder given by `-R`/`--references`; they are not downloaded automatically.
 
 | Sheet | Workflow | Libraries | Source |
 | --- | --- | ---: | --- |
