@@ -125,9 +125,10 @@ itself, and relative paths resolve from your current folder:
   -R /data/references dap.tsv
 ```
 
-`pixi run pipeline --help` lists the options. Choose a profile with `-p` (for
-example `-p local,conda` or `-p sherlock,apptainer`); the default is `local,docker`,
-and a cluster is always selected explicitly. The pipeline checks the whole sheet
+`pixi run pipeline --help` lists the options. The profile follows the host: `nersc` on
+Perlmutter, `sherlock` on Sherlock and `local,docker` elsewhere; choose another with `-p`
+(for example `-p local,conda`). See [running on Perlmutter and Sherlock](docs/usage/clusters.md)
+for references, results, accounts and images there. The pipeline checks the whole sheet
 before starting any task.
 
 Results appear in `/scratch/genesis/study-A/output/`, grouped by species and

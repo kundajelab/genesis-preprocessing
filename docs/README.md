@@ -13,6 +13,7 @@ measurement definitions and evidence boundaries, read the
 - [scATAC pseudobulks](usage/scatac-seq.md): fragment files, cell lists, pseudobulk peaks, tracks and QC.
 - [RNA-seq](usage/rna-seq.md): plant annotations, STAR intron limits, gene counts, tracks and QC.
 - [TSS mapping](usage/tss-seq.md): CAGE, TSS-seq and csRNA-seq trimming, cap-G correction, TSS tags, paraclu clusters and QC.
+- [Running on Perlmutter and Sherlock](usage/clusters.md): default profiles, images, accounts and QOS, references and purged scratch.
 
 ## Related repository
 

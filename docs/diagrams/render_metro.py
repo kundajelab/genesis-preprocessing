@@ -386,7 +386,7 @@ def main() -> None:
             ["Authentication stays under site control. No keys, permissions or cluster services are changed by Genesis.",
              "Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.",
              "Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions."],
-            ["conf/execution.config"], animated))
+            ["nextflow.config"], animated))
     print("Rendered 15 Genesis SVG maps")
 
 
