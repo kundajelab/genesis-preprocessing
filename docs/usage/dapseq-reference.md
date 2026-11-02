@@ -73,7 +73,7 @@ rather than Nextflow's `-profile`, which the script already sets. Without `-p`,
 `scripts/get-default-profile.sh` chooses `nersc` on Perlmutter, `sherlock` on Sherlock and
 `local,docker` elsewhere. A profile names an executor and a software environment together:
 `nersc` is Slurm with podman-hpc, and `sherlock` is Slurm with Apptainer, on the `normal`
-queue (select another with `--slurm_queue`). Locally built images must be published with
+queue (select another with `--queue`, which is a QOS with `nersc`). Locally built images must be published with
 approval before a cluster can use them. Cluster work, cache, reference, and output paths must
 be visible to compute nodes and writable by the user; see
 [running on Perlmutter and Sherlock](clusters.md).

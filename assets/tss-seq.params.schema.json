@@ -60,15 +60,9 @@
           "default": "4h",
           "description": "Walltime for QC and tracks."
         },
-        "slurm_queue": {
+        "queue": {
           "type": "string",
-          "default": "normal",
-          "description": "SLURM queue used by the sherlock profile."
-        },
-        "nersc_qos": {
-          "type": "string",
-          "default": "shared",
-          "description": "Slurm QOS used by the nersc profile (Perlmutter)."
+          "description": "Slurm queue: the partition with the slurm (default regular) and sherlock (default normal) profiles, the QOS with nersc (default shared)."
         },
         "download_batch_size": {
           "type": "integer",

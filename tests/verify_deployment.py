@@ -188,7 +188,7 @@ def main() -> None:
             if profile == "nersc":
                 assert "executor.queueSize = 15" in output
                 assert "executor.pollInterval = '5 min'" in output
-                assert "--constraint=cpu --qos=${params.nersc_qos}" in output
+                assert "--constraint=cpu --qos=${params.queue ?: 'shared'}" in output
                 assert "toMega() + 4096}M" in output
                 assert "podman.runOptions = '--userns=keep-id --user $(id -u):$(id -g)'" in output
                 assert "podman.registry = 'docker.io'" in output

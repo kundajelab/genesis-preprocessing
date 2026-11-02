@@ -9,6 +9,14 @@ on, unless `-p` names one:
 | Sherlock (Slurm with `apptainer`) | `sherlock` | Slurm | Apptainer |
 | Anything else | `local,docker` | local | Docker |
 
+`--queue` chooses where the jobs go, and means what each site calls it:
+
+| Profile | `--queue` is | Default |
+| --- | --- | --- |
+| `nersc` | a QOS; Perlmutter picks the partition | `shared` |
+| `sherlock` | a partition | `normal` |
+| `slurm` | a partition | `regular` |
+
 Another Slurm cluster also gets `local,docker`, with a note on stderr; choose its profile with
 `-p`. Run the command on a login node from a checkout that compute nodes can read. The
 Nextflow manager stays on that login node and submits each task as a Slurm job, so keep it
@@ -49,8 +57,8 @@ Perlmutter's Podman only searches `registry.suse.com`, so `podman.registry` is `
 **Account and QOS.** Jobs are charged to your default NERSC project. For another project, or
 another QOS for one run, set `SBATCH_ACCOUNT` or `SBATCH_QOS` in your shell; `sbatch` reads them
 and they override the job scripts' settings. Avoid setting `process.clusterOptions`: it holds
-the profile's QOS and memory settings. Jobs use the `shared` QOS (`--nersc_qos`), which is
-charged only for the cores and memory used and allows at most half a node for 48 hours, so the
+the profile's QOS and memory settings. Jobs use the `shared` QOS (`--queue`, which is a QOS
+here), which is charged only for the cores and memory used and allows at most half a node for 48 hours, so the
 profile caps each task at 128 CPUs, 247 GB and 48 hours. Without a QOS, NERSC would use `debug`,
 which is limited to 30 minutes.
 
@@ -75,7 +83,8 @@ pixi run pipeline -p nersc,test -R /path/references /path/samples.tsv -stub-run
 pixi run pipeline /path/samples.tsv
 ```
 
-The `sherlock` profile submits to the `normal` partition (`--slurm_queue` selects another) and
+The `sherlock` profile submits to the `normal` partition (`--queue`, a partition here, selects
+another) and
 runs the images with Apptainer. Nextflow pulls each image once, on the login node, into
 `$SCRATCH/workspace/apptainer_cache`, where compute nodes read it. Set the Slurm account, if you
 need one, with `SBATCH_ACCOUNT`. References default to `$OAK/$USER/genesis/references`, which

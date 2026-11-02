@@ -75,4 +75,4 @@
 <text class="note" x="48" y="798">Authentication stays under site control. No keys, permissions or cluster services are changed by Genesis.</text>
 <text class="note" x="48" y="823">Healthy datasets continue. Failed datasets enter review; unreachable workers are never blindly resubmitted.</text>
 <text class="note" x="48" y="848">Cluster profiles require site validation. Monitoring reports problems; people resolve data and scientific questions.</text>
-<metadata>Genesis diagram schema 2; nextflow.config SHA256 0563a43bc187806b305ca784b0c8370257b3cef2849376b35053899cf1272249; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; nextflow.config SHA256 227eb5a7d7e230cf9b01098b20ca38b7ccbf00da55c173716ffcb0d0b39c8c29; schematic animation.</metadata></svg>

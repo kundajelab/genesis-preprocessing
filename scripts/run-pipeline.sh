@@ -17,7 +17,7 @@ Run a pipeline on exactly one sample sheet.
 * Work, published output, trace files and the Nextflow log go in WORKSPACE/RUN_NAME/.
 * Nextflow is launched from WORKSPACE/RUN_NAME, so -resume picks up that run's history.
   Relative paths in NEXTFLOW_ARGS resolve against that folder; prefer absolute paths.
-* NEXTFLOW_ARGS are passed directly to nextflow unchecked (e.g. -resume, --slurm_queue owners).
+* NEXTFLOW_ARGS are passed directly to nextflow unchecked (e.g. -resume, --queue owners).
 * If launching via pixi, be sure to use full paths.
 
 ARGS:
