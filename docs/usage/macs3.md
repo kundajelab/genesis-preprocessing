@@ -11,7 +11,7 @@ package.
 
 ## Profiles and images
 
-The DAP profiles (`local,conda`, `local,docker`, `sherlock,apptainer`) use this
+The DAP profiles (`local,conda`, `local,docker`, `nersc`, `sherlock`) use this
 environment or its image. Until a rebuilt image is published,
 `conf/genesis-images.lock` may still name an earlier peak-calling image for container
 profiles. Each run copies that lock to its output folder as `genesis-images.lock`
