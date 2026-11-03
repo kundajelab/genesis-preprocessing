@@ -5,6 +5,10 @@ first. TSS mapping runs like the other workflows: the same launcher, profiles, w
 layout, reference folder and image pins, with `workflows/tss-seq.nf` as the workflow and
 `conf/tss-seq.config` for its settings.
 
+![Genesis TSS mapping workflow metro map](../../docs/images/genesis_tss_metro_map.svg)
+
+[Diagram source and interpretation](../../docs/diagrams/README.md)
+
 It handles methods where the 5′ end of one read is the transcription start site (TSS):
 cap-trapping CAGE, oligo-capping (TSS-seq), csRNA-seq, and the template-switching
 methods RAMPAGE and Smar2C2. Each library gets per-base TSS tag counts (CTSSs), TSS

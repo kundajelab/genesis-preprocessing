@@ -9,7 +9,6 @@
     .detail{font-size:16px;fill:var(--muted)}
     .station{fill:var(--bg);stroke-width:4}
     .line{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
-    .planned{stroke-dasharray:9 9}
     .flow{fill:none;stroke:white;stroke-width:2;stroke-dasharray:2 38;stroke-linecap:round;animation:travel 12s linear infinite;pointer-events:none}
     @keyframes travel{to{stroke-dashoffset:-400}}
     @media(prefers-reduced-motion:reduce){.flow{display:none}}
@@ -20,20 +19,35 @@
 <text class="title" x="48" y="52">GENESIS / BULK RNA-seq</text>
 <text class="subtitle" x="48" y="85">SE / PE libraries · STAR with plant intron limits · unique-read gene counts</text>
 <path id="route-0" class="line" stroke="#087f8c" d="M 140 330 L 830 330"><title>Libraries download and align</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 140 330 L 830 330"/>
 <path id="route-1" class="line" stroke="#087f8c" d="M 830 330 L 1060 330"><title>Uniquely aligned reads are counted per gene</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 830 330 L 1060 330"/>
 <path id="route-2" class="line" stroke="#9260b7" d="M 1060 330 L 1290 330"><title>Counts and assignment feed RNA QC</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 1060 330 L 1290 330"/>
 <path id="route-3" class="line" stroke="#9260b7" d="M 370 330 L 370 180"><title>Raw mates independently feed FastQC</title></path>
+<path class="flow" style="animation-delay:-3s" d="M 370 330 L 370 180"/>
 <path id="route-4" class="line" stroke="#9260b7" d="M 370 180 L 1290 180"><title>FastQC reports feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-4s" d="M 370 180 L 1290 180"/>
 <path id="route-5" class="line" stroke="#9260b7" d="M 830 330 L 931 330 Q 945 330 945 316 L 945 264 Q 945 250 959 250 L 1391 250 Q 1405 250 1405 236 L 1405 194 Q 1405 180 1391 180 L 1290 180"><title>STAR and featureCounts logs feed MultiQC</title></path>
+<path class="flow" style="animation-delay:-5s" d="M 830 330 L 931 330 Q 945 330 945 316 L 945 264 Q 945 250 959 250 L 1391 250 Q 1405 250 1405 236 L 1405 194 Q 1405 180 1391 180 L 1290 180"/>
 <path id="route-6" class="line" stroke="#9260b7" d="M 1290 330 L 1290 180"><title>RNA QC table feeds MultiQC</title></path>
+<path class="flow" style="animation-delay:-6s" d="M 1290 330 L 1290 180"/>
 <path id="route-7" class="line" stroke="#438362" d="M 830 330 L 861 330 Q 875 330 875 344 L 875 676 Q 875 690 889 690 L 1060 690"><title>Aligned reads give a CPM track</title></path>
+<path class="flow" style="animation-delay:-7s" d="M 830 330 L 861 330 Q 875 330 875 344 L 875 676 Q 875 690 889 690 L 1060 690"/>
 <path id="route-8" class="line" stroke="#4169b1" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"><title>Build or verify chromosome sizes</title></path>
+<path class="flow" style="animation-delay:-8s" d="M 140 690 L 241 690 Q 255 690 255 676 L 255 524 Q 255 510 241 510 L 140 510"/>
 <path id="route-9" class="line" stroke="#4169b1" d="M 140 510 L 370 510"><title>Annotation contigs must be in the FASTA</title></path>
+<path class="flow" style="animation-delay:-9s" d="M 140 510 L 370 510"/>
 <path id="route-10" class="line" stroke="#4169b1" d="M 140 690 L 600 690"><title>FASTA feeds the STAR index</title></path>
+<path class="flow" style="animation-delay:-10s" d="M 140 690 L 600 690"/>
 <path id="route-11" class="line" stroke="#4169b1" d="M 370 510 L 471 510 Q 485 510 485 524 L 485 676 Q 485 690 499 690 L 600 690"><title>Annotated junctions feed the STAR index</title></path>
+<path class="flow" style="animation-delay:-11s" d="M 370 510 L 471 510 Q 485 510 485 524 L 485 676 Q 485 690 499 690 L 600 690"/>
 <path id="route-12" class="line" stroke="#4169b1" d="M 600 690 L 701 690 Q 715 690 715 676 L 715 344 Q 715 330 729 330 L 830 330"><title>Verified index and intron limit feed alignment</title></path>
+<path class="flow" style="animation-delay:-0s" d="M 600 690 L 701 690 Q 715 690 715 676 L 715 344 Q 715 330 729 330 L 830 330"/>
 <path id="route-13" class="line" stroke="#4169b1" d="M 370 510 L 931 510 Q 945 510 945 496 L 945 344 Q 945 330 959 330 L 1060 330"><title>GTF defines the genes to count</title></path>
+<path class="flow" style="animation-delay:-1s" d="M 370 510 L 931 510 Q 945 510 945 496 L 945 344 Q 945 330 959 330 L 1060 330"/>
 <path id="route-14" class="line" stroke="#4169b1" d="M 370 510 L 370 586 Q 370 600 384 600 L 1336 600 Q 1350 600 1350 586 L 1350 344 Q 1350 330 1336 330 L 1290 330"><title>rRNA genes and organelle contigs feed QC</title></path>
+<path class="flow" style="animation-delay:-2s" d="M 370 510 L 370 586 Q 370 600 384 600 L 1336 600 Q 1350 600 1350 586 L 1350 344 Q 1350 330 1336 330 L 1290 330"/>
 <g id="samples"><title>Sample sheet: SE / PE + strandedness</title>
 <circle class="station" cx="140" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="140" y="290">Sample sheet</text>
