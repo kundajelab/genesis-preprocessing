@@ -62,21 +62,21 @@ pixi run pipeline -p local,conda samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA11
 # Continue a previous run using Nextflow's task cache.
 pixi run pipeline samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv -resume
 
-# Submit tasks from Sherlock using accessible container images.
-pixi run pipeline -p sherlock,apptainer samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv
+# On Perlmutter or Sherlock the cluster profile is chosen automatically.
+pixi run pipeline -R /path/references samplesheets/Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv
 ```
 
 You can also call `scripts/run-pipeline.sh` directly, from any folder; relative paths
 then resolve from your current folder. Either way, Nextflow runs in the checkout's
 Pixi environment, so it can find micromamba. Choose the profile with `-p`/`--profile`
 rather than Nextflow's `-profile`, which the script already sets. Without `-p`,
-`scripts/get-default-profile.sh` always chooses `local,docker`. Cluster execution is
-selected explicitly.
-Choose an executor and a software environment together. `sherlock` uses SLURM and the
-`normal` queue; select another queue with `--slurm_queue`. Locally built images
-must be published with approval, or made available on the cluster, before
-Sherlock's Apptainer can use them. Cluster work, cache, reference, and output
-paths must be visible to compute nodes and writable by the user.
+`scripts/get-default-profile.sh` chooses `nersc` on Perlmutter, `sherlock` on Sherlock and
+`local,docker` elsewhere. A profile names an executor and a software environment together:
+`nersc` is Slurm with podman-hpc, and `sherlock` is Slurm with Apptainer, on the `normal`
+queue (select another with `--queue`, which is a QOS with `nersc`). Locally built images must be published with
+approval before a cluster can use them. Cluster work, cache, reference, and output paths must
+be visible to compute nodes and writable by the user; see
+[running on Perlmutter and Sherlock](clusters.md).
 
 Each run lives in `WORKSPACE/RUN_NAME/`, where `RUN_NAME` defaults to the sheet's
 basename without `.tsv` (override with `-n`/`--run-name`). The default workspace,
@@ -90,9 +90,11 @@ is set and `workspace/` in this repository otherwise; override it with
 - `.nextflow.log` and `.nextflow/`: the wrapper launches Nextflow from the run
   folder, so `-resume` uses that run's history.
 
-Use `--references /absolute/path` to choose the reference location (default
-`references/` in this repository). Relative paths in Nextflow arguments resolve
-against the run folder. Nextflow retains intermediate FASTQs and BAMs under its
+Use `-R`/`--references /path` to choose the reference location; the wrapper creates it if
+missing. It defaults to project storage on Perlmutter and Sherlock (see
+[running on Perlmutter and Sherlock](clusters.md)) and to `references/` in this repository
+elsewhere. Like the sheet and `-w`, a relative `-R` resolves from your current folder, whereas
+relative paths in Nextflow arguments resolve against the run folder. Nextflow retains intermediate FASTQs and BAMs under its
 work directory for caching; retain it for `-resume` and clean it only when those
 intermediates are no longer needed. Task scripts run with `bash -euxo pipefail`,
 so each task's `.command.log` records the commands it ran.
@@ -126,8 +128,8 @@ assignments.
 
 For interspecies DAP, distinguish the TF-source organism from the organism whose DNA
 was assayed. The alignment reference must describe that DNA. Preserve the original
-sheet labels, and record the separate biological identities in the [curation
-metadata](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md);
+sheet labels, and record the separate biological identities in the curation metadata
+([genesis-curation](https://github.com/kundajelab/genesis-curation));
 do not infer both from a single species label.
 
 Reference names are gzipped FASTA basenames ending in `.fa.gz`, `.fasta.gz`, or
@@ -260,18 +262,13 @@ Each run writes two records to its output folder when it starts:
   clean checkout).
 
 Together with the Nextflow trace and report, these files record how the run was made.
-[genesis-curation](https://github.com/kundajelab/genesis-curation) copies them into
-its manifests unchanged.
 
 Per-sample `*.alignment.tsv` files record the aligner version and options, and
 the MultiQC report's provenance records the run name, Git commit and clean/dirty
 status. Use the run's Nextflow traces for measured task runtime and memory.
 
 Full byte/format scans, scientific QC review and eligibility review are separate from
-successful execution. See the [curation
-guide](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/curation.md#validate-existing-inputs-and-published-runs)
-and [study acceptance
-recipe](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/studies.md#real-tool-acceptance-on-synthetic-inputs).
+successful execution.
 
 **FASTQs, BAMs, BAM indexes, and bedGraphs are excluded from published results.** Derived reference files
 are published separately under the reference directory.
@@ -374,15 +371,11 @@ Native macOS stub traces do not include task runtime metrics; Docker traces do.
 
 See [docs/nextflow-style.md](../../docs/nextflow-style.md) for module conventions.
 
-## Opt-in method benchmarks
+## Method benchmarks
 
-The benchmark tools in
-[genesis-curation](https://github.com/kundajelab/genesis-curation) compare processing
-packages on matched inputs or test explicit policy changes. Start with the synthetic
-fixtures, then use the verified public plant recipes. See its [benchmark
-guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md)
-for commands, metric definitions, measured results and limitations. Running a
-comparison does not change production defaults.
+The archived [benchmark guide](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/README.md) in genesis-curation has
+the commands, metric definitions, measured results and limitations of the earlier
+comparisons. None of them changed a production default.
 
 <a id="upgrade-from-the-dap-only-release"></a>
 
@@ -394,7 +387,7 @@ assigned controls and DAP scientific defaults are compatible with that revision.
 
 | Area | What to check |
 | --- | --- |
-| Default execution | Omitting a profile selects `local,docker`. Select `-p local,conda` or `-p sherlock,apptainer` explicitly; the presence of `sbatch` does not select a cluster. |
+| Default execution | Omitting a profile selects `nersc` on Perlmutter, `sherlock` on Sherlock (Slurm with Apptainer) and `local,docker` elsewhere, including other Slurm clusters. Select another with `-p`, e.g. `-p local,conda`. |
 | Reference caches | Derived products are reused only while `<fasta>.sha256` matches the compressed FASTA and records every product's current size. Products from earlier revisions have no such record, so the first run rebuilds them once. Provenance sidecars written by earlier revisions are ignored. |
 | Read QC | Raw-mate FastQC and one run-level MultiQC report require the images pinned in `conf/genesis-images.lock`; the runtime may need to pull them. Quality WARN/FAIL labels are advisory. |
 | Resume | Keep the run folder and work directory. Switching to published reference paths or changing process definitions can rerun affected tasks. Use a new run name and workspace if you need to keep an earlier result unchanged. |

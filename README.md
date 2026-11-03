@@ -5,8 +5,8 @@ single-cell ATAC fragments, into peaks, signal tracks and quality-control report
 and plant RNA-seq reads into gene counts and tracks. It runs on a single server or
 through Nextflow on a cluster.
 
-Study management, metadata curation and review, single-cell ATAC model export and
-method benchmarks are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
+Metadata discovery, curation and review are in
+[genesis-curation](https://github.com/kundajelab/genesis-curation).
 
 <a id="architecture-and-current-capabilities"></a>
 
@@ -112,9 +112,9 @@ Run the pipeline from the checkout with `pixi run pipeline`. Pixi runs it from t
 checkout folder, so give the sheet and other paths as absolute paths:
 
 ```bash
-pixi run pipeline -w /scratch/genesis -n study-A /data/dap.tsv --references /data/references
+pixi run pipeline -w /scratch/genesis -n study-A -R /data/references /data/dap.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline -w /scratch/genesis -n study-A /data/dap.tsv --references /data/references -resume
+pixi run pipeline -w /scratch/genesis -n study-A -R /data/references /data/dap.tsv -resume
 ```
 
 Alternatively, call the script directly; it uses the checkout's Pixi environment
@@ -122,12 +122,13 @@ itself, and relative paths resolve from your current folder:
 
 ```bash
 /path/to/genesis-preprocessing/scripts/run-pipeline.sh -w /scratch/genesis -n study-A \
-  dap.tsv --references /data/references
+  -R /data/references dap.tsv
 ```
 
-`pixi run pipeline --help` lists the options. Choose a profile with `-p` (for
-example `-p local,conda` or `-p sherlock,apptainer`); the default is `local,docker`,
-and a cluster is always selected explicitly. The pipeline checks the whole sheet
+`pixi run pipeline --help` lists the options. The profile follows the host: `nersc` on
+Perlmutter, `sherlock` on Sherlock and `local,docker` elsewhere; choose another with `-p`
+(for example `-p local,conda`). See [running on Perlmutter and Sherlock](docs/usage/clusters.md)
+for references, results, accounts and images there. The pipeline checks the whole sheet
 before starting any task.
 
 Results appear in `/scratch/genesis/study-A/output/`, grouped by species and
@@ -151,7 +152,7 @@ leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://examp
 ```
 
 ```bash
-pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references
+pixi run pipeline-atac -w /scratch/genesis -n atac-A -R /data/references /data/atac.tsv
 ```
 
 Results appear in `/scratch/genesis/atac-A/output/`: fragments, peaks, Tn5 cut-count
@@ -169,7 +170,7 @@ root_rep1	Arabidopsis_thaliana	https://example.org/rep1.fragments.tsv.gz	https:/
 ```
 
 ```bash
-pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A -R /data/references /data/scatac.tsv
 ```
 
 Each library's groups become separate pseudobulks with peaks, Tn5 cut-count tracks and
@@ -190,7 +191,7 @@ leaf_rep1	Arabidopsis_thaliana	https://example.org/rep1_1.fastq.gz	https://examp
 ```
 
 ```bash
-pixi run pipeline-rna -w /scratch/genesis -n rna-A /data/rna.tsv --references /data/references
+pixi run pipeline-rna -w /scratch/genesis -n rna-A -R /data/references /data/rna.tsv
 ```
 
 Each library gets STAR alignments, featureCounts gene counts, a CPM track and QC,
@@ -212,7 +213,7 @@ wt_rep1	Arabidopsis_thaliana	https://example.org/wt1.fastq.gz	CAGE	9	TCGTATGCCGT
 ```
 
 ```bash
-pixi run pipeline-tss -w /scratch/genesis -n tss-A /data/tss.tsv --references /data/references
+pixi run pipeline-tss -w /scratch/genesis -n tss-A -R /data/references /data/tss.tsv
 ```
 
 Each library gets per-base TSS tags on each strand, paraclu TSS clusters and QC. The
@@ -250,8 +251,7 @@ between tools or studies.
 | Make pseudobulks from single-cell ATAC fragments | [scATAC guide](docs/usage/scatac-seq.md) |
 | Count genes in plant RNA-seq | [RNA-seq guide](docs/usage/rna-seq.md) |
 | Map transcription start sites | [TSS mapping guide](docs/usage/tss-seq.md) |
-| Manage studies, curate metadata or export single-cell ATAC for models | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
-| Compare processing methods | [Benchmark guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md) |
+| Find datasets and curate their metadata | [genesis-curation](https://github.com/kundajelab/genesis-curation) |
 | Set up a development environment or contribute | [Contributor guide](docs/development.md) |
 
 The [documentation index](docs/README.md) also links to reference material.
@@ -261,8 +261,8 @@ The [documentation index](docs/README.md) also links to reference material.
 ## Benchmarks and tool choices
 
 The [benchmark
-guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md)
-in genesis-curation has the experiment matrix, metric definitions and reproduction
+guide](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/README.md)
+(archived in genesis-curation) has the experiment matrix, metric definitions and reproduction
 commands. It distinguishes package comparisons from parameter sensitivity and software
 tests. A higher mapping rate or more peaks alone is not evidence that one method is
 better.

@@ -27,8 +27,8 @@ platforms are Linux x86_64 and macOS x86_64/ARM64.
 Docker is needed for the default container profile; the checks run without it.
 
 <a id="command-installation-and-maintenance"></a>
-Study management, curation and method benchmarks, including the `genesis` command,
-are in [genesis-curation](https://github.com/kundajelab/genesis-curation).
+Metadata discovery, curation and review, including the `genesis` command, are in
+[genesis-curation](https://github.com/kundajelab/genesis-curation).
 
 Read [AGENTS.md](../AGENTS.md) before editing. Create a branch for the next change:
 
@@ -110,8 +110,8 @@ copying explicitly. Neither warning is a failed scientific check.
 
 Keep scientific settings explicit. A change to alignment, filtering, peak calling or
 count definitions needs a comparison of the affected outputs, not just a successful
-exit code. Design that comparison with the [benchmark
-guide](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md).
+exit code. The archived [benchmark
+guide](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/README.md) shows how earlier comparisons were designed.
 
 | Area | Implementation | Focused check |
 | --- | --- | --- |

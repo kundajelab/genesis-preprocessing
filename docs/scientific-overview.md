@@ -23,7 +23,7 @@ Identical bigWig or BED formats do not make targets interchangeable. Preserve co
 unit, strand, normalization, coordinates and shift provenance. The
 [DAP](usage/dapseq-reference.md#analysis-choices), [bulk
 ATAC](usage/bulk-atac.md#analysis-and-metrics) and
-[scATAC](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac.md#process-known-libraries)
+[scATAC](usage/scatac-seq.md)
 guides specify the actual policies.
 
 Sequence-source organism, assayed DNA organism, TF-source organism and experimental
@@ -90,8 +90,8 @@ ChromBPNet revision. Select the cell type, resolve reference/annotation evidence
 agree on raw-cut and background/bias acceptance, then test each exact bundle with
 the model loader. This is a proposed handoff, not a released or approved dataset.
 
-Use [model
-inspection](https://github.com/kundajelab/genesis-curation/blob/main/docs/usage/scatac-model-handoff.md#inspect-a-bundle)
+The archived [model
+inspection](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/docs/usage/scatac-model-handoff.md#inspect-a-bundle) guide shows how
 to distinguish observed structure, declarations and missing acceptance. The modeling
 team still needs to define the held-out prediction task and evidence required before
 training.
