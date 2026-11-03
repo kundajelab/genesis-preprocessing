@@ -222,7 +222,7 @@ SCATAC_READS_NODES = [
     ("SCATAC_PEAKS",1290,330,"MACS3 peaks","Per group","peaks"),
     ("SCATAC_QC",1290,510,"scATAC QC","FRiP, TSS enrichment","qc"),
     ("MULTIQC_REPORT",1290,180,"MultiQC","HTML + parsed data","qc"),
-    ("whitelist",370,510,"Barcode list","User-supplied","reference"),
+    ("GET_WHITELIST",370,510,"Barcode list","Supplied or downloaded","reference"),
     ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
     ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
     ("GET_CHROMAP_INDEX",370,690,"chromap index","Hash-checked reuse","reference"),

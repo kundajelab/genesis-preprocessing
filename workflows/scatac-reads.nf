@@ -4,6 +4,7 @@ include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { GET_CHROMAP_INDEX } from '../modules/scatac-seq/get_chromap_index'
+include { GET_WHITELIST } from '../modules/scatac-seq/get_whitelist'
 include { SCATAC_SRA } from '../modules/scatac-seq/scatac_sra'
 include { SCATAC_CHROMAP } from '../modules/scatac-seq/scatac_chromap'
 include { SCATAC_CELLS } from '../modules/scatac-seq/scatac_cells'
@@ -15,8 +16,21 @@ def barcodeLength(chemistry) {
     return ['10x-atac-v1': 16, '10x-atac-v2': 16, '10x-multiome-atac': 24][chemistry]
 }
 
-// Sheet rules a JSON schema cannot express: the exact columns, existing reference and whitelist
-// files, distinct reference IDs, one gene annotation and organelle list per reference, and runs
+// 10x barcode lists the workflow downloads into the references folder when they are missing:
+// the source, pinned to a commit, and the file's SHA256. The multiome ATAC list (737K-arc-v1.txt)
+// ships only with Cell Ranger ARC, so it must be supplied.
+def knownWhitelists() {
+    return [
+        '737K-cratac-v1.txt': [
+            url: 'https://raw.githubusercontent.com/10XGenomics/cellranger-atac/' +
+                '5753003c286de55c193f02e1d66c847cb635aa60/lib/python/barcodes/737K-cratac-v1.txt',
+            sha256: '707392c93c1ee4168631958a8df61aeefc6eb2d5a3ca3e9ad54e069d8e7fd776',
+        ],
+    ]
+}
+
+// Sheet rules a JSON schema cannot express: the exact columns, existing reference files, a
+// whitelist that exists or can be downloaded, distinct reference IDs, one gene annotation and organelle list per reference, and runs
 // used by one library only.
 def checkSamples(sheet, rows, references) {
     def header = ['sample_id', 'species', 'sra_runs', 'chemistry', 'cells_url', 'reference_fasta',
@@ -35,8 +49,10 @@ def checkSamples(sheet, rows, references) {
         if (row.reference_genes != '-' && !references.resolve(row.reference_genes).isFile()) {
             error("${sheet}: gene annotation missing: ${row.reference_genes}")
         }
-        if (row.barcode_whitelist != '-' && !references.resolve(row.barcode_whitelist).isFile()) {
-            error("${sheet}: barcode whitelist missing: ${row.barcode_whitelist}")
+        if (row.barcode_whitelist != '-' && !references.resolve(row.barcode_whitelist).isFile() &&
+            !knownWhitelists().containsKey(row.barcode_whitelist)) {
+            error("${sheet}: barcode whitelist missing: ${row.barcode_whitelist} (the workflow " +
+                  "downloads only ${knownWhitelists().keySet().join(', ')})")
         }
         row.sra_runs.tokenize(',').each { run ->
             def owner = runs.putIfAbsent(run, row.id)
@@ -109,6 +125,18 @@ workflow {
             def length = sizes.readLines().sum(0L) { line -> line.tokenize('\t')[1].toLong() }
             tuple(ref + [length: length], fasta)
         }, referencesDir)
+    // Each barcode list once: the references folder's copy, or a download of a known list.
+    named = samples.map { meta -> meta.barcode_whitelist }.filter { name -> name != '-' }.unique()
+        .branch { name ->
+            present: referencesDir.resolve(name).isFile()
+            missing: true
+        }
+    GET_WHITELIST(named.missing.map { name ->
+        tuple(name, knownWhitelists()[name].url, knownWhitelists()[name].sha256)
+    })
+    whitelists = named.present.map { name -> tuple(name, referencesDir.resolve(name)) }
+        .mix(GET_WHITELIST.out.whitelist)
+        .mix(channel.of(tuple('-', [])))
     // One task per run (lane); a library's runs are mapped together.
     SCATAC_SRA(samples.flatMap { meta -> meta.runs.collect { run -> tuple(meta, run) } })
     libraries = SCATAC_SRA.out.reads
@@ -126,9 +154,11 @@ workflow {
         .combine(sizes_ch, by: 0)
         .combine(GET_CHROMAP_INDEX.out.index, by: 0)
         .map { _refId, meta, r1, r2, barcodes, sizes, index ->
+            tuple(meta.barcode_whitelist, meta, r1, r2, barcodes, sizes, index)
+        }
+        .combine(whitelists, by: 0)
+        .map { _name, meta, r1, r2, barcodes, sizes, index, whitelist ->
             def length = sizes.readLines().sum(0L) { line -> line.tokenize('\t')[1].toLong() }
-            def whitelist = meta.barcode_whitelist == '-' ? [] :
-                file("${referencesDir}/${meta.barcode_whitelist}")
             tuple(meta + [genome_length: length], r1, r2, barcodes,
                   file("${referencesDir}/${meta.reference_fasta}"), index, whitelist)
         }
