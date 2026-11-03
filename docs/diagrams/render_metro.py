@@ -242,9 +242,10 @@ SCATAC_READS_EDGES = [
 TSS_NODES = [
     ("samples",140,330,"Sample sheet","Method + trimming","reads"),
     ("DOWNLOAD",370,330,"Download","Unmodified raw reads","reads"),
+    ("TSS_EXTRACT",600,510,"Smar2C2 reads","Primer + UMI, either mate","reads"),
     ("TSS_TRIM",600,330,"cutadapt","5' barcode, 3' adapter","reads"),
-    ("TSS_ALIGN",830,330,"STAR","5' end kept","reads"),
-    ("TSS_CTSS",1060,330,"TSS tags","5' ends, cap G corrected","reads"),
+    ("TSS_ALIGN",830,330,"STAR","5' end kept or Gs clipped","reads"),
+    ("TSS_CTSS",1060,330,"TSS tags","Cap G corrected, UMI deduped","reads"),
     ("TSS_CLUSTERS",1290,330,"paraclu","FANTOM clusters","peaks"),
     ("TSS_QC",1290,510,"TSS QC","Near annotated starts","qc"),
     ("FASTQC",370,180,"FastQC","Raw reads","qc"),
@@ -256,6 +257,8 @@ TSS_NODES = [
 ]
 TSS_EDGES = [
     edge("reads",[(140,330),(1060,330)],"Reads are trimmed, aligned and reduced to their 5' ends"),
+    edge("reads",[(370,330),(485,330),(485,510),(600,510)],"Smar2C2 read pairs"),
+    edge("reads",[(600,510),(715,510),(715,330),(600,330)],"Extracted TSS reads with their UMIs"),
     edge("peaks",[(1060,330),(1290,330)],"Tags per strand give clusters"),
     edge("qc",[(1290,330),(1290,510)],"Clusters feed QC"),
     edge("qc",[(1060,330),(1060,600),(1175,600),(1175,510),(1290,510)],"Tags feed QC"),
@@ -264,8 +267,8 @@ TSS_EDGES = [
     edge("qc",[(1290,510),(1405,510),(1405,180),(1290,180)],"TSS QC, cutadapt and STAR logs feed MultiQC"),
     edge("reference",[(140,690),(255,690),(255,510),(140,510)],"Build or verify chromosome sizes"),
     edge("reference",[(140,510),(370,510)],"Annotation contigs must be in the FASTA"),
-    edge("reference",[(370,510),(485,510),(485,690),(600,690)],"Annotated junctions feed the STAR index"),
-    edge("reference",[(600,690),(715,690),(715,420),(830,420),(830,330)],"Verified index and intron limit feed alignment"),
+    edge("reference",[(370,510),(370,690),(600,690)],"Annotated junctions feed the STAR index"),
+    edge("reference",[(600,690),(830,690),(830,330)],"Verified index and intron limit feed alignment"),
     edge("reference",[(370,510),(370,780),(1350,780),(1350,510),(1290,510)],"Annotated transcript starts feed QC"),
 ]
 def main() -> None:
@@ -292,10 +295,10 @@ def main() -> None:
           "featureCounts counts uniquely aligned reads by the sheet's strandedness; rRNA and organelle genes stay in the counts.",
           "QC is diagnostic: the forward fraction checks the sheet's strandedness. Replicates are never pooled."],
          ["workflows/rna-seq.nf"]),
-        ("_tss", "GENESIS / TSS MAPPING", "Single-read CAGE, TSS-seq and csRNA-seq · per-base TSS tags · paraclu clusters",
+        ("_tss", "GENESIS / TSS MAPPING", "CAGE, TSS-seq, csRNA-seq, RAMPAGE and Smar2C2 · per-base TSS tags · paraclu clusters",
          TSS_NODES, TSS_EDGES,
-         ["The 5' end of read 1 is the TSS: only fixed barcode bases are trimmed there; the 3' end is adapter- and quality-trimmed.",
-          "Cap-trapping CAGE adds a G the genome lacks; such reads move 1 base downstream, as in FANTOM. Unique alignments only.",
+         ["The TSS read's 5' end is the TSS: only fixed barcode bases are trimmed there; the 3' end is adapter- and quality-trimmed.",
+          "CAGE's cap G moves tags 1 base downstream, as in FANTOM; template-switch Gs are soft-clipped; Smar2C2 UMIs count once.",
           "paraclu clusters each strand; FANTOM's paraclu-cut keeps clusters ≤ 200 bases with a 2-fold density rise. No plant thresholds."],
          ["workflows/tss-seq.nf"]),
         ("_scatac", "GENESIS / scATAC PSEUDOBULKS", "Published fragments · one pseudobulk per cell group · separate libraries",

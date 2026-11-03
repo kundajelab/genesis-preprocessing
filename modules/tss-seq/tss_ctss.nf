@@ -18,12 +18,16 @@ process TSS_CTSS {
     tuple val(meta), path("${meta.id}.ctss.tsv.gz"), emit: ctss
     tuple val(meta), path("${meta.id}.*.bw"), emit: tracks
     script:
-    // One tag per uniquely aligned read (STAR gives them MAPQ 255) at its 5' end: the alignment
-    // start on +, its last aligned base on -. Cap-based methods add a non-templated G before the
-    // first base; when the read starts with a G that the genome lacks (MD tag), the TSS is the
-    // next base, as in FANTOM.
+    // One tag per uniquely aligned read (STAR gives them MAPQ 255) at its 5' end: the first
+    // aligned base on +, the last on - (soft-clipped bases excluded). Cap-trapping methods add a
+    // non-templated G before the first base; when the read starts with a G that the genome lacks
+    // (MD tag), the TSS is the next base, as in FANTOM. Sorting, not an in-memory table, finds
+    // each TSS's tags (and with a UMI, its molecules), so deep libraries spill to disk instead
+    // of running out of memory.
+    def unique = meta.umi_length ? '-u ' : ''
     """
-    samtools view -q 255 -F 0x904 '${bam}' | gawk -v OFS='\\t' -v correct=${meta.g_correction ? 1 : 0} '
+    samtools view -q 255 -F 0x904 '${bam}' | gawk -v OFS='\\t' -v correct=${meta.g_correction ? 1 : 0} \\
+        -v umi=${meta.umi_length} '
         {
             md = ""
             for (i = 12; i <= NF; i++) if (\$i ~ /^MD:Z:/) md = substr(\$i, 6)
@@ -40,9 +44,12 @@ process TSS_CTSS {
                 strand = "+"; pos = \$4
                 if (correct && substr(\$10, 1, 1) == "G" && md ~ /^0[ACGTN]/) pos++
             }
-            count[\$3 "\\t" strand "\\t" pos]++
-        }
-        END {for (key in count) print key, count[key]}' |
+            # With a UMI (the end of the read name), sort -u below keeps each molecule once.
+            print \$3, strand, pos (umi ? OFS substr(\$1, length(\$1) - umi + 1) : "")
+        }' |
+        LC_ALL=C sort ${unique}-S 1G -T . |
+        # Rows of one TSS are now adjacent: count them in one pass, then order by position.
+        cut -f1-3 | LC_ALL=C uniq -c | awk -v OFS='\\t' '{print \$2, \$3, \$4, \$1}' |
         LC_ALL=C sort -t \$'\\t' -k1,1 -k2,2 -k3,3n > ctss.tsv
     test -s ctss.tsv || { printf 'No uniquely aligned reads\\n' >&2; exit 1; }
     gzip -n -c ctss.tsv > '${meta.id}.ctss.tsv.gz'

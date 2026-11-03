@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Genesis TSS-mapping sample sheet",
-  "description": "One row per single-read TSS library: the TSS is the 5' end of read 1. workflows/tss-seq.nf also checks the exact header, reference files, reference IDs and per-reference consistency.",
+  "description": "One row per TSS library. workflows/tss-seq.nf also checks the exact header, mates per method, reference files, reference IDs and per-reference consistency.",
   "type": "array",
   "minItems": 1,
   "uniqueEntries": [
@@ -13,6 +13,7 @@
       "sample_id",
       "species",
       "read1_url",
+      "read2_url",
       "method",
       "trim_5p",
       "adapter_3p",
@@ -43,7 +44,15 @@
         "meta": [
           "read1_url"
         ],
-        "errorMessage": "read1_url must be an HTTP or HTTPS URL of the gzipped FASTQ whose reads start at the TSS"
+        "errorMessage": "read1_url must be an HTTP or HTTPS URL of the gzipped FASTQ whose reads start at the TSS (for RAMPAGE, the library's read 2)"
+      },
+      "read2_url": {
+        "type": "string",
+        "pattern": "^(-|https?://[A-Za-z0-9_.:%~@-]+[A-Za-z0-9_./:%?=&+~@#,-]*)$",
+        "meta": [
+          "read2_url"
+        ],
+        "errorMessage": "read2_url must be an HTTP or HTTPS URL of the second mate (Smar2C2), or - for the other methods"
       },
       "method": {
         "type": "string",
@@ -52,12 +61,14 @@
           "nAnT-iCAGE",
           "TSS-seq",
           "oligo-capping",
-          "csRNA-seq"
+          "csRNA-seq",
+          "RAMPAGE",
+          "Smar2C2"
         ],
         "meta": [
           "method"
         ],
-        "errorMessage": "method must be CAGE, nAnT-iCAGE, TSS-seq, oligo-capping or csRNA-seq"
+        "errorMessage": "method must be CAGE, nAnT-iCAGE, TSS-seq, oligo-capping, csRNA-seq, RAMPAGE or Smar2C2"
       },
       "trim_5p": {
         "anyOf": [

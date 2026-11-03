@@ -13,8 +13,9 @@ process TSS_QC {
     publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
         pattern: '*_mqc.tsv'
     input:
+    // extract_log: TSS_EXTRACT's counts for Smar2C2, an empty list for the other methods.
     tuple val(meta), path(ctss), path(clusters), path(gtf), path(rrna_genes), path(trim_log),
-        path(star_log), path(chrom_sizes)
+        path(star_log), path(extract_log), path(chrom_sizes)
     output:
     tuple val(meta), path("${meta.id}.tss_qc_mqc.tsv"), emit: summary
     script:
@@ -73,16 +74,24 @@ process TSS_QC {
     input=\$(awk -F ':' '/^Total reads processed/ {gsub(/[^0-9]/, "", \$2); print \$2}' '${trim_log}')
     trimmed=\$(awk -F ':' '/^Reads written/ {sub(/\\(.*/, "", \$2); gsub(/[^0-9]/, "", \$2); print \$2}' '${trim_log}')
     unique=\$(awk -F '|' 'index(\$1, "Uniquely mapped reads number") {gsub(/[ \\t]/, "", \$2); print \$2}' '${star_log}')
+    # Smar2C2: reads carrying the primer, UMI and AT, and oligo-dT reads dropped; NA otherwise.
+    tss_reads=NA
+    oligo_dt=NA
+    if [ -n '${extract_log ?: ''}' ]; then
+        tss_reads=\$(awk '\$1 == "tss_reads" {print \$2}' '${extract_log ?: ''}')
+        oligo_dt=\$(awk '\$1 == "oligo_dt_reads" {print \$2}' '${extract_log ?: ''}')
+    fi
     {
         printf '# id: tss_qc\\n# section_name: TSS libraries\\n# plot_type: table\\n'
-        printf 'sample\\tmethod\\tinput_reads\\ttrimmed_reads\\tunique_reads\\ttags\\tnear_TSS_100\\tnear_TSS_500\\tTSS_offset\\tantisense_500\\torganelle\\trRNA\\tclusters\\tin_clusters\\n'
-        awk -v OFS='\\t' -v id='${meta.id}' -v method='${meta.method}' -v input="\$input" \\
+        printf 'sample\\tmethod\\ttss_reads\\toligo_dt_reads\\tinput_reads\\ttrimmed_reads\\tunique_reads\\ttags\\tnear_TSS_100\\tnear_TSS_500\\tTSS_offset\\tantisense_500\\torganelle\\trRNA\\tclusters\\tin_clusters\\n'
+        awk -v OFS='\\t' -v id='${meta.id}' -v method='${meta.method}' -v tss="\$tss_reads" \\
+            -v oligo="\$oligo_dt" -v input="\$input" \\
             -v trimmed="\$trimmed" -v unique="\$unique" -v tags="\$tags" -v n100="\$near100" \\
             -v n500="\$near500" -v offset="\$offset" -v anti="\$antisense500" -v org="\$organelle" \\
             -v rrna="\$rrna" \\
             -v clusters="\$cluster_count" -v clustered="\$clustered" 'BEGIN {
                 f = "%.4f"
-                print id, method, input, trimmed, unique, tags, sprintf(f, n100 / tags),
+                print id, method, tss, oligo, input, trimmed, unique, tags, sprintf(f, n100 / tags),
                     sprintf(f, n500 / tags), offset, sprintf(f, anti / tags), sprintf(f, org / tags),
                     (rrna == "NA" ? "NA" : sprintf(f, rrna / tags)), clusters, sprintf(f, clustered / tags)
             }'
