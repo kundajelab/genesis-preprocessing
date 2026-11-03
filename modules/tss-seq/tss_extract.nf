@@ -26,10 +26,17 @@ process TSS_EXTRACT {
     // The UMI goes to the end of the read name for deduplication; the Gs stay for alignment to
     // soft-clip.
     def umi = meta.umi_length
+    // One mismatch anywhere in the 25-nt primer is allowed: in GSE197144 that adds 4% more TSS
+    // reads, with the same share followed by template-switch Gs as exact matches (97% vs 98%).
+    def primer = 'AAGCAGTGGTATCAACGCAGAGTAC'
+    def primers = '(' + (0..<primer.length()).collect { i ->
+        primer.substring(0, i) + '.' + primer.substring(i + 1)
+    }.join('|') + ')'
     """
     for read in ${reads.collect { read -> "'${read}'" }.join(' ')}; do gzip -dc "\$read"; done | gawk -v umi=${umi} '
         BEGIN {
-            pattern = "AAGCAGTGGTATCAACGCAGAGTAC[ACGTN]{" umi "}AT"
+            pattern = "${primers}[ACGTN]{" umi "}AT"
+            oligo_dt = "${primers}T{10}"
         }
         NR % 4 == 1 {name = \$1}
         NR % 4 == 2 {sequence = \$0}
@@ -40,12 +47,12 @@ process TSS_EXTRACT {
                 code = substr(sequence, RSTART + RLENGTH - umi - 2, umi)
                 kept++
                 print name "_" code "\\n" substr(sequence, start) "\\n+\\n" substr(\$0, start)
-            } else if (sequence ~ /AAGCAGTGGTATCAACGCAGAGTACT{10}/) {
-                oligo_dt++
+            } else if (sequence ~ oligo_dt) {
+                oligo_dt_reads++
             }
         }
         END {
-            printf "reads\\t%d\\ntss_reads\\t%d\\noligo_dt_reads\\t%d\\n", reads, kept, oligo_dt > "counts.tsv"
+            printf "reads\\t%d\\ntss_reads\\t%d\\noligo_dt_reads\\t%d\\n", reads, kept, oligo_dt_reads > "counts.tsv"
         }' | gzip -c > '${meta.id}.tss_reads.fastq.gz'
     mv counts.tsv '${meta.id}.tso.log'
     test "\$(awk '\$1 == "tss_reads" {print \$2}' '${meta.id}.tso.log')" -gt 0 || {

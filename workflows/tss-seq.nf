@@ -174,18 +174,20 @@ workflow {
               failOnDuplicate: true, failOnMismatch: true)
         .join(TSS_ALIGN.out.log.map { meta, log -> tuple(meta.id, log) },
               failOnDuplicate: true, failOnMismatch: true)
-        .map { _id, meta, ctss, clusters, trimLog, starLog ->
-            tuple(meta.ref_id, meta, ctss, clusters, trimLog, starLog)
+        // Only Smar2C2 libraries have extraction counts; the others get an empty list.
+        .join(TSS_EXTRACT.out.log.map { meta, log -> tuple(meta.id, log) },
+              failOnDuplicate: true, remainder: true)
+        .map { _id, meta, ctss, clusters, trimLog, starLog, extractLog ->
+            tuple(meta.ref_id, meta, ctss, clusters, trimLog, starLog, extractLog ?: [])
         }
         .combine(annotations, by: 0)
         .combine(sizes, by: 0)
-        .map { _refId, meta, ctss, clusters, trimLog, starLog, _ref, gtf, rrna, _maxIntron, path ->
-            tuple(meta, ctss, clusters, gtf, rrna, trimLog, starLog, path)
+        .map { _refId, meta, ctss, clusters, trimLog, starLog, extractLog, _ref, gtf, rrna, _maxIntron, path ->
+            tuple(meta, ctss, clusters, gtf, rrna, trimLog, starLog, extractLog, path)
         }
     TSS_QC(qcInputs)
     // Collect channels, not publishDir contents: wait for every library's reports.
     multiqcFiles = FASTQC.out.reports.map { _meta, _mate, _html, zip -> zip }
-        .mix(TSS_EXTRACT.out.log.map { _meta, log -> log })
         .mix(TSS_TRIM.out.log.map { _meta, log -> log })
         .mix(TSS_ALIGN.out.log.map { _meta, log -> log })
         .mix(TSS_QC.out.summary.map { _meta, summary -> summary })

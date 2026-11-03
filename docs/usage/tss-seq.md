@@ -58,8 +58,9 @@ Paired-end libraries:
 ## Analysis and metrics
 
 1. **Smar2C2 extraction.** `TSS_EXTRACT` keeps reads from either mate that contain the
-   primer, UMI and `AT`, removes everything up to and including them and adds the UMI to the read name. Its
-   `qc/*.tso.log` counts all reads, the TSS reads and the oligo-dT reads.
+   primer (one mismatch allowed), UMI and `AT`, removes everything up to and including them
+   and adds the UMI to the read name. The QC table reports the TSS reads and the oligo-dT
+   reads dropped.
 2. **Annotation and index.** As for RNA-seq: `RNA_ANNOTATION` writes the GTF and the
    longest-intron limit, and `GET_STAR_INDEX` builds or reuses the STAR index.
 3. **Trimming.** cutadapt removes `trim_5p` bases from the 5′ end and the 3′ adapter,
@@ -86,6 +87,7 @@ The `qc/*.tss_qc_mqc.tsv` table, also shown in MultiQC, reports per library:
 
 | Metric | Definition |
 | --- | --- |
+| `tss_reads`, `oligo_dt_reads` | Smar2C2: reads carrying the primer, UMI and `AT`, and oligo-dT reads dropped; `NA` for other methods |
 | `input_reads`, `trimmed_reads`, `unique_reads` | Reads before and after trimming, and uniquely aligned |
 | `tags` | Tags at TSSs: the unique reads (unique molecules for Smar2C2) |
 | `near_TSS_100`, `near_TSS_500` | Fraction of tags within 100 or 500 bases of an annotated transcript start, on its strand |

@@ -146,7 +146,9 @@ def create_fixture(work: Path, base_url: str, *, conda: bool) -> tuple[Path, dic
                     # Tn5 also cuts inside the oligo, so the primer can start far into the read.
                     code = random_bases(12)
                     spacer = random_bases(5 if copy % 3 else 60)
-                    read = spacer + SMART + code + "AT" + "GGG" + transcript
+                    # Every fourth molecule has a sequencing error in the primer (one allowed).
+                    primer = SMART if copy % 4 else SMART[:10] + "C" + SMART[11:]
+                    read = spacer + primer + code + "AT" + "GGG" + transcript
                     for _ in range(2):
                         pair = [read, internal()]
                         if copy % 2:
@@ -306,6 +308,11 @@ def check_results(work: Path, expected: dict[str, Counter]) -> None:
         assert float(qc["organelle"]) == round(organelle / total, 4), qc
         assert qc["rRNA"] == "NA", qc
         assert qc["TSS_offset"] == "0", qc
+        if sample == "smar":
+            # Each molecule was read twice; the 20 oligo-dT reads are counted, not kept.
+            assert int(qc["tss_reads"]) == 2 * total and int(qc["oligo_dt_reads"]) == 20, qc
+        else:
+            assert qc["tss_reads"] == qc["oligo_dt_reads"] == "NA", qc
     # A wrong trim_5p shows as the tags' most common offset from the annotated starts.
     with (output / "overtrimmed" / "qc" / "overtrimmed.tss_qc_mqc.tsv").open() as stream:
         rows = [line for line in stream if not line.startswith("#")]
