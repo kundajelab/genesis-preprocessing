@@ -108,8 +108,8 @@ version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 
 ## scATAC
 
 The scATAC sheets start from raw 10x reads on NCBI SRA (`pixi run pipeline-scatac-reads`), as
-no curated study publishes usable fragment files. Copy the 10x barcode list into the
-references folder: `737K-cratac-v1.txt` for 10x ATAC (from Cell Ranger ATAC). 10x does not
+no curated study publishes usable fragment files. The 10x ATAC barcode list
+(`737K-cratac-v1.txt`) is downloaded into the references folder when it is missing. 10x does not
 allow redistributing it, so it is not in this repository.
 
 - GSE155304 uses `737K-cratac-v1.txt`. Its fragments from these reads were checked against

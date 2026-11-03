@@ -13,16 +13,16 @@ measurement definitions and evidence boundaries, read the
 - [scATAC pseudobulks](usage/scatac-seq.md): fragment files, cell lists, pseudobulk peaks, tracks and QC.
 - [RNA-seq](usage/rna-seq.md): plant annotations, STAR intron limits, gene counts, tracks and QC.
 - [TSS mapping](usage/tss-seq.md): CAGE, TSS-seq and csRNA-seq trimming, cap-G correction, TSS tags, paraclu clusters and QC.
+- [Running on Perlmutter and Sherlock](usage/clusters.md): default profiles, images, accounts and QOS, references and purged scratch.
 
 ## Related repository
 
-[genesis-curation](https://github.com/kundajelab/genesis-curation) has study
-management, metadata curation and review, single-cell ATAC model export and the
-method benchmarks.
+[genesis-curation](https://github.com/kundajelab/genesis-curation) has metadata
+discovery, curation and review.
 
 ## Understand the methods
 
-- [Benchmarks](https://github.com/kundajelab/genesis-curation/blob/main/benchmarks/README.md): datasets, method comparisons, metric definitions and measured results.
+- [Benchmarks](https://github.com/kundajelab/genesis-curation/blob/12bb02cb9ec98fe8c4c0ec660adcfdeb7384f20e/benchmarks/README.md) (archived): datasets, method comparisons, metric definitions and measured results.
 - [Historical DAP documentation](history/dapseq-readme-fb60096.md): commands and behavior at revision `fb60096`.
 
 ## Develop Genesis

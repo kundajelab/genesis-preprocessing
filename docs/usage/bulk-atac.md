@@ -9,9 +9,9 @@ reference cache and image pins, with `workflows/atac-seq.nf` as the workflow and
 [Diagram source and interpretation](../../docs/diagrams/README.md)
 
 ```bash
-pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references
+pixi run pipeline-atac -w /scratch/genesis -n atac-A -R /data/references /data/atac.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline-atac -w /scratch/genesis -n atac-A /data/atac.tsv --references /data/references -resume
+pixi run pipeline-atac -w /scratch/genesis -n atac-A -R /data/references /data/atac.tsv -resume
 ```
 
 `pixi run pipeline-atac` is `scripts/run-pipeline.sh --workflow atac-seq`; run either with

@@ -10,9 +10,9 @@ layout, reference folder and image pins, with `workflows/rna-seq.nf` as the work
 [Diagram source and interpretation](../../docs/diagrams/README.md)
 
 ```bash
-pixi run pipeline-rna -w /scratch/genesis -n rna-A /data/rna.tsv --references /data/references
+pixi run pipeline-rna -w /scratch/genesis -n rna-A -R /data/references /data/rna.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline-rna -w /scratch/genesis -n rna-A /data/rna.tsv --references /data/references -resume
+pixi run pipeline-rna -w /scratch/genesis -n rna-A -R /data/references /data/rna.tsv -resume
 ```
 
 `pixi run pipeline-rna` is `scripts/run-pipeline.sh --workflow rna-seq`; run either with

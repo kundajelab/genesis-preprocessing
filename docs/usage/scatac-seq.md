@@ -14,9 +14,9 @@ It starts from published single-cell fragment files, such as the 10x Cell Ranger
 for example one per cell type, and each pseudobulk gets peaks, a cut-site track and QC.
 
 ```bash
-pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A -R /data/references /data/scatac.tsv
 # Continue the same analysis after an interruption.
-pixi run pipeline-scatac -w /scratch/genesis -n scatac-A /data/scatac.tsv --references /data/references -resume
+pixi run pipeline-scatac -w /scratch/genesis -n scatac-A -R /data/references /data/scatac.tsv -resume
 ```
 
 `pixi run pipeline-scatac` is `scripts/run-pipeline.sh --workflow scatac-seq`; run either
@@ -121,7 +121,7 @@ pipeline-scatac-reads`, `conf/scatac-reads.config`) makes each library's fragmen
 ![Genesis scATAC from 10x reads workflow metro map](../../docs/images/genesis_scatac_reads_metro_map.svg)
 
 ```bash
-pixi run pipeline-scatac-reads -w /scratch/genesis -n scatac-B /data/scatac-reads.tsv --references /data/references
+pixi run pipeline-scatac-reads -w /scratch/genesis -n scatac-B -R /data/references /data/scatac-reads.tsv
 ```
 
 ```tsv
@@ -134,7 +134,7 @@ root_rep1	Arabidopsis_thaliana	SRR12340627,SRR12340628	10x-atac-v1	-	Athaliana_4
 | `sra_runs` | The library's SRA runs (its lanes), comma-separated; they are mapped together |
 | `chemistry` | `10x-atac-v1` or `10x-atac-v2` (16-base barcode read), or `10x-multiome-atac` (24 bases: an 8-base spacer, then the barcode) |
 | `cells_url` | The authors' `barcode<TAB>group` cell list, or `-` to call cells |
-| `barcode_whitelist` | The 10x barcode list in the references folder, or `-` for no barcode correction |
+| `barcode_whitelist` | The 10x barcode list's name in the references folder (`737K-cratac-v1.txt` is downloaded there when missing), or `-` for no barcode correction |
 
 The other columns are as above. A run may be listed for one library only.
 
@@ -165,8 +165,11 @@ The other columns are as above. A run may be listed for one library only.
    again with other tools.
 
 10x does not allow its barcode lists to be redistributed, so they are not in this
-repository and are never downloaded by the workflow. Copy the list for the chemistry (for
-10x ATAC v1 and v2, `737K-cratac-v1.txt` from Cell Ranger ATAC) into the references folder.
+repository. For 10x ATAC v1 and v2, the workflow downloads `737K-cratac-v1.txt` into the
+references folder when it is missing. It comes from 10x's public cellranger-atac repository,
+pinned to a commit and checked against its SHA256. The references folder is git-ignored, and
+the list is only used to correct barcodes. The multiome ATAC list (`737K-arc-v1.txt`) ships
+only inside Cell Ranger ARC: copy it into the references folder yourself.
 
 Differences from Cell Ranger ATAC and ArchR:
 
