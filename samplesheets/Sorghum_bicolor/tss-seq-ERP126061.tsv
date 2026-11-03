@@ -1,0 +1,5 @@
+sample_id	species	read1_url	read2_url	method	trim_5p	adapter_3p	reference_fasta	reference_annotation	organelle_contigs
+RTx436_ERR5021713	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR502/003/ERR5021713/ERR5021713_2.fastq.gz	-	RAMPAGE	-	AGATCGGAAGAGC	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+RTx436_ERR5021714	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR502/004/ERR5021714/ERR5021714_2.fastq.gz	-	RAMPAGE	-	AGATCGGAAGAGC	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+Tx2783_ERR5021711	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR502/001/ERR5021711/ERR5021711_2.fastq.gz	-	RAMPAGE	-	AGATCGGAAGAGC	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
+Tx2783_ERR5021712	Sorghum_bicolor	https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR502/002/ERR5021712/ERR5021712_2.fastq.gz	-	RAMPAGE	-	AGATCGGAAGAGC	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.gene_exons.gff3.gz	Pt,Mt
