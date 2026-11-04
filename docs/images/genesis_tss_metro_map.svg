@@ -106,4 +106,4 @@
 <text class="note" x="48" y="798">The TSS read&#x27;s 5&#x27; end is the TSS: only fixed barcode bases are trimmed there; the 3&#x27; end is adapter- and quality-trimmed.</text>
 <text class="note" x="48" y="823">CAGE&#x27;s cap G moves tags 1 base downstream, as in FANTOM; template-switch Gs are soft-clipped; Smar2C2 UMIs count once.</text>
 <text class="note" x="48" y="848">paraclu clusters each strand; FANTOM&#x27;s paraclu-cut keeps clusters ≤ 200 bases with a 2-fold density rise. No plant thresholds.</text>
-<metadata>Genesis diagram schema 2; workflows/tss-seq.nf SHA256 6a0b51c59de30a29432c77de7edf7f54a773365d0b5c5b586ceee32632498a35; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/tss-seq.nf SHA256 5679ae466fb14c5b3f26481bd90918237fe486e6261ef957f989c5854c162bc3; schematic animation.</metadata></svg>

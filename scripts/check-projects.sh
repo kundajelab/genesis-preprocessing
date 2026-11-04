@@ -53,6 +53,8 @@ if [[ ! $jobs =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 export GENESIS_CHECK_JOBS=$jobs
+# Check with Nextflow's default strict parser even where a shell selects the legacy one.
+export NXF_SYNTAX_PARSER=v2
 
 shellcheck "$root"/scripts/*.sh
 uv run --frozen --project "$root/genesis_tools" ruff check \

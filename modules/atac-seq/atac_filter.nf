@@ -10,9 +10,9 @@ process ATAC_FILTER {
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.fragments.bed.gz*'
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '{*.usable.flagstat.txt,*.complexity.tsv}'
     input:
     tuple val(meta), path(bam), path(bai), path(chrom_sizes)

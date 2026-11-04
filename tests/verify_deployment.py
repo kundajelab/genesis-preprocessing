@@ -193,7 +193,9 @@ def main() -> None:
                 assert "podman.runOptions = '--userns=keep-id --user $(id -u):$(id -g)'" in output
                 assert "podman.registry = 'docker.io'" in output
                 assert "podman.temp" not in output
-                assert "process.resourceLimits = [cpus:128, memory:'247 GB', time:'2d']" in output
+                assert "process.resourceLimits.cpus = 128" in output
+                assert "process.resourceLimits.memory = '247 GB'" in output
+                assert "process.resourceLimits.time = '2d'" in output
         # On NERSC, `podman` is the shim, which hands every argument to podman-hpc unchanged,
         # with PATH minus its own folder: podman-hpc runs podman by name itself.
         fake = folder / "podman-hpc"

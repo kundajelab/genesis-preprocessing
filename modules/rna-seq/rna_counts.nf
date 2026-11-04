@@ -7,9 +7,9 @@ process RNA_COUNTS {
     conda "${moduleDir}/../../environments/GENESIS_RNA_COUNTS.yaml"
     container "${dotenv('GENESIS_RNA_COUNTS_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.featureCounts.tsv'
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.featureCounts.tsv.summary'
     input:
     tuple val(meta), path(bam), path(bai), path(gtf)

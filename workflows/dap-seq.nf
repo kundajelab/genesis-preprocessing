@@ -78,7 +78,8 @@ workflow {
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
     def referencesDir = file(params.references).toAbsolutePath()
-    def resources = [cpus: params.cpus, memory: params.memory, time: params.time]
+    // Parameters given on the command line arrive as strings.
+    def resources = [cpus: params.cpus.toInteger(), memory: params.memory, time: params.time]
     def bwaOptions = [
         batch_size: params.bwa_batch_size, seed_length: params.bwa_seed_length,
         max_seed_occurrences: params.bwa_max_seed_occurrences,
@@ -101,7 +102,8 @@ workflow {
     GET_REFERENCES(references, referencesDir)
     sizes_ch = GET_REFERENCES.out.sizes
     indexes = GET_REFERENCES.out.indexes
-    DOWNLOAD(samples.collate(params.download_batch_size))
+    // Parameters given on the command line arrive as strings.
+    DOWNLOAD(samples.collate(params.download_batch_size.toInteger()))
     // Split each batch back into one tuple per sample: a single read path for SE, a list for PE.
     downloaded = DOWNLOAD.out.downloads.flatMap { batch, reads, _counts ->
         def files = reads instanceof List ? reads : [reads]

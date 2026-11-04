@@ -10,7 +10,7 @@ process TSS_CTSS {
     conda "${moduleDir}/../../environments/GENESIS_TSS.yaml"
     container "${dotenv('GENESIS_TSS_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '{*.ctss.tsv.gz,*.bw}'
     input:
     tuple val(meta), path(bam), path(bai), path(chrom_sizes)

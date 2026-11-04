@@ -70,7 +70,8 @@ workflow {
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
     def referencesDir = file(params.references).toAbsolutePath()
-    def resources = [cpus: params.cpus, memory: params.memory, time: params.time]
+    // Parameters given on the command line arrive as strings.
+    def resources = [cpus: params.cpus.toInteger(), memory: params.memory, time: params.time]
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
     def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/rna-seq.samples.schema.json")
         .collect { row -> row[0] }
@@ -104,7 +105,8 @@ workflow {
     GET_STAR_INDEX(sized.map { ref, fasta, _annotation, _path -> tuple(ref.id, ref, fasta) }
         .join(annotations, failOnDuplicate: true, failOnMismatch: true)
         .map { _id, ref, fasta, _ref, gtf, _rrna, _maxIntron -> tuple(ref, fasta, gtf) }, referencesDir)
-    DOWNLOAD(samples.collate(params.download_batch_size))
+    // Parameters given on the command line arrive as strings.
+    DOWNLOAD(samples.collate(params.download_batch_size.toInteger()))
     // Split each batch back into one tuple per sample: a single read path for SE, a list for PE.
     downloaded = DOWNLOAD.out.downloads.flatMap { batch, reads, _counts ->
         def files = reads instanceof List ? reads : [reads]

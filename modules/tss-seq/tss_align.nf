@@ -11,7 +11,7 @@ process TSS_ALIGN {
     conda "${moduleDir}/../../environments/GENESIS_STAR.yaml"
     container "${dotenv('GENESIS_STAR_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.star.Log.final.out'
     input:
     tuple val(meta), path(reads), path(index)

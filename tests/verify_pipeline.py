@@ -435,7 +435,8 @@ def run_logged(
     with subprocess.Popen(
         command,
         cwd=cwd,
-        env=env,
+        # Nextflow's default strict parser, even where the shell selects the legacy one.
+        env={**env, "NXF_SYNTAX_PARSER": "v2"},
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
