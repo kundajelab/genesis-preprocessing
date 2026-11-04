@@ -90,7 +90,7 @@ def available_resources(*, docker: bool) -> tuple[int, int]:
 def executor_limits(*, docker: bool) -> str:
     """Nextflow settings giving each run half the CPUs and half the memory.
 
-    Test tasks request 2 CPUs and 2 GB each, so this sets how many run at once.
+    Test tasks request at most 1 CPU and 2 GB each, so this sets how many run at once.
     """
     cpus, memory = available_resources(docker=docker)
     megabytes = max(2048, memory // 2 // 2**20)

@@ -55,6 +55,9 @@ fi
 export GENESIS_CHECK_JOBS=$jobs
 # Check with Nextflow's default strict parser even where a shell selects the legacy one.
 export NXF_SYNTAX_PARSER=v2
+# The checks start many short Nextflow runs, whose JVMs spend most of their CPU compiling code
+# they barely run. Quick compilation and a serial collector cut the suite's CPU time by about 2/3.
+export NXF_OPTS="${NXF_OPTS:+$NXF_OPTS }-XX:TieredStopAtLevel=1 -XX:+UseSerialGC"
 
 shellcheck "$root"/scripts/*.sh
 uv run --frozen --project "$root/genesis_tools" ruff check \
