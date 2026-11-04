@@ -455,8 +455,24 @@ def run_logged(
     result = subprocess.CompletedProcess(command, return_code, output)
     log.write_text(result.stdout)
     if result.returncode and not expect_failure:
-        print(result.stdout[-12000:], flush=True)
+        before, marker, dump = output.partition("Full thread dump")
+        if marker:
+            # The whole dump is in log; show the run's output and the threads doing something.
+            print(before[-8000:] + active_threads(dump) + f"Full thread dump: {log}", flush=True)
+        else:
+            print(output[-12000:], flush=True)
     return result
+
+
+def active_threads(dump: str) -> str:
+    """A JVM thread dump without the idle threads: pool workers waiting for work, GC and VM."""
+    idle = ("ThreadPoolExecutor.getTask", "ScheduledThreadPoolExecutor$DelayedWorkQueue.take")
+
+    def active(thread: str) -> bool:
+        named = thread.lstrip().startswith('"') and "\tat " in thread
+        return named and not any(marker in thread for marker in idle)
+
+    return "".join(f"{thread}\n\n" for thread in dump.split("\n\n") if active(thread))
 
 
 def trace_rows(work: Path, suffix: str = "run") -> list[dict[str, str]]:
