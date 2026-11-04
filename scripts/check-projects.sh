@@ -63,6 +63,10 @@ uv run --frozen --project "$root/genesis_tools" ty check --project "$root/genesi
 uv run --frozen --project "$root/genesis_tools" ty check --project "$root/genesis_tools" \
     --extra-search-path "$root/tests" "$root/tests"
 
+# The tests run Nextflow offline, so first install the plugins nextflow.config pins.
+plugins=$(grep -o "id '[^']*'" "$root/nextflow.config" | cut -d "'" -f 2 | paste -s -d , -)
+nextflow -q plugin install "$plugins"
+
 # Slowest first, so the pipeline regressions start before the quick checks.
 tests=()
 if ! $fast; then

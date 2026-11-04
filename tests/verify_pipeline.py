@@ -427,7 +427,16 @@ def trace_rows(work: Path, suffix: str = "run") -> list[dict[str, str]]:
     if not trace.exists():  # A run rejected before any task may not write a trace.
         return []
     with trace.open() as stream:
-        return list(csv.DictReader(stream, delimiter="\t"))
+        rows = list(csv.DictReader(stream, delimiter="\t"))
+    # When a short task's submit event is handled after its completion, Nextflow writes the task
+    # again at shutdown, as submitted or completed. Keep one row per task (a retry is a new task),
+    # its final one if it has one.
+    final = {"COMPLETED", "CACHED", "FAILED", "ABORTED"}
+    tasks: dict[str, dict[str, str]] = {}
+    for row in rows:
+        if row["task_id"] not in tasks or tasks[row["task_id"]]["status"] not in final:
+            tasks[row["task_id"]] = row
+    return list(tasks.values())
 
 
 def failed_task_errors(work_dir: Path) -> str:
