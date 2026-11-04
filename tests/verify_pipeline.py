@@ -430,6 +430,20 @@ def trace_rows(work: Path, suffix: str = "run") -> list[dict[str, str]]:
         return list(csv.DictReader(stream, delimiter="\t"))
 
 
+def failed_task_errors(work_dir: Path) -> str:
+    """The whole stderr of each task in work_dir that failed.
+
+    Nextflow's error report shows only the last lines of a failed task's stderr, as read when the
+    task ended, so a task's own message can be missing from it. Read after the run, .command.err
+    holds all of it.
+    """
+    errors = []
+    for exitcode in sorted(work_dir.glob("*/*/.exitcode")):
+        if exitcode.read_text().strip() != "0":
+            errors.append((exitcode.parent / ".command.err").read_text())
+    return "\n".join(errors)
+
+
 def check_outputs(work: Path, *, docker: bool) -> None:
     """Assert treatment/control wiring, numerical scores, and safe publication."""
     rows = trace_rows(work)

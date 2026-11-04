@@ -22,7 +22,13 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from verify_pipeline import executor_limits, in_parallel, launch_folder, trace_rows
+from verify_pipeline import (
+    executor_limits,
+    failed_task_errors,
+    in_parallel,
+    launch_folder,
+    trace_rows,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CHROMAP_PIN = re.search(
@@ -324,7 +330,8 @@ def check_read_selection(work: Path) -> None:
         )
         if isinstance(expected, str):
             assert result.returncode != 0, name
-            assert expected in result.stdout, (name, result.stdout[-3000:])
+            errors = failed_task_errors(folder / "work")
+            assert expected in errors, (name, errors[-3000:])
             return
         assert result.returncode == 0, name
         observed = []

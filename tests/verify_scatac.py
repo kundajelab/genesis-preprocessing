@@ -17,7 +17,14 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pysam
-from verify_pipeline import executor_limits, in_parallel, launch_folder, serve, trace_rows
+from verify_pipeline import (
+    executor_limits,
+    failed_task_errors,
+    in_parallel,
+    launch_folder,
+    serve,
+    trace_rows,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = [
@@ -358,7 +365,8 @@ def check_rejected_fragments(work: Path, sheet: Path, base_url: str, *, engine: 
     case = launch_folder(work, "suffix")
     result = run_scatac(case, candidate, engine=engine, expect_failure=True)
     assert result.returncode != 0
-    assert "No fragments for any listed barcode" in result.stdout, result.stdout[-3000:]
+    errors = failed_task_errors(case / "work")
+    assert "No fragments for any listed barcode" in errors, errors[-3000:]
 
 
 def check_duplicate_barcodes(work: Path, sheet: Path, base_url: str, *, engine: str) -> None:
@@ -376,7 +384,8 @@ def check_duplicate_barcodes(work: Path, sheet: Path, base_url: str, *, engine: 
     result = run_scatac(case, candidate, engine=engine, expect_failure=True)
     assert result.returncode != 0
     message = f"barcode {barcode} is listed again (first on line 2)"
-    assert message in result.stdout, result.stdout[-3000:]
+    errors = failed_task_errors(case / "work")
+    assert message in errors, errors[-3000:]
 
 
 def check_failures(work: Path, sheet: Path) -> None:
