@@ -22,6 +22,20 @@ Another Slurm cluster also gets `local,docker`, with a note on stderr; choose it
 Nextflow manager stays on that login node and submits each task as a Slurm job, so keep it
 running for the whole run, for example under `tmux` or `nohup`.
 
+To run the manager in the queue too, submit the run instead; it returns once the job is queued:
+
+```bash
+pixi run submit-pipeline -T 2-00:00:00 -- --workflow tss-seq -R /path/references /path/tss.tsv
+```
+
+`scripts/submit-pipeline.sh` takes its own options first (`--help` lists them), then passes
+everything else to `scripts/run-pipeline.sh` unchanged. The manager job runs from the current
+folder with 2 CPUs and 8 GB by default, and its log goes to `~/logs/genesis/` (`-L` to change).
+`-Q` chooses where the manager runs, not the tasks: the `shared` QOS on Perlmutter (at most 48
+hours; `-Q workflow` for NERSC's `workflow` QOS, up to 90 days, once your project has access),
+the `normal` partition on Sherlock. Its walltime (`-T`) caps the whole run. Two minutes before
+it, Nextflow is told to stop and cancels its task jobs; submit again to resume the run.
+
 Each run lives in `WORKSPACE/RUN_NAME/`. On both clusters the default workspace is
 `$SCRATCH/workspace`, which the site purges: copy the results you keep out of `output/`.
 
@@ -69,7 +83,9 @@ which is limited to 30 minutes.
 profile checks Slurm every 5 minutes and submits at most 20 jobs a minute, 15 at a time. Each
 pipeline stage therefore waits up to 5 minutes, which matters only for short tasks; the `test`
 profile (`-p nersc,test`) checks every minute and caps tasks at 1 CPU, 2 GB and 5 minutes. A
-login node suits campaigns of a few days; NERSC's `workflow` QOS is meant for longer ones.
+login node suits campaigns of a few days; NERSC's `workflow` QOS (`pixi run submit-pipeline -Q
+workflow`) is meant for longer ones. `submit-pipeline` pulls the images on the login node
+before submitting, since pulls inside jobs run out of memory.
 
 **Checking a setup.** A stub run starts every task in its container without running the tools:
 
