@@ -14,6 +14,7 @@ import os
 import random
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -428,24 +429,30 @@ def run_logged(
     """Run Nextflow, its output in log. A run past timeout is stopped and fails with its output.
 
     Stub runs take seconds, so a timeout well below CI's job limit reports a hung run instead of
-    leaving the job to be cancelled without output.
+    leaving the job to be cancelled without output. Before stopping it, SIGQUIT makes Nextflow's
+    JVM print every thread's stack into the output, to show where the run is stuck.
     """
-    try:
-        result = subprocess.run(
-            command,
-            cwd=cwd,
-            env=env,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as error:
-        # The partial output is bytes even in text mode.
-        partial = error.output.decode(errors="replace") if error.output else ""
-        message = f"\nStopped after {timeout:.0f} s: the run did not finish.\n"
-        result = subprocess.CompletedProcess(command, -9, partial + message)
+    with subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    ) as process:
+        try:
+            output, _ = process.communicate(timeout=timeout)
+            return_code = process.returncode
+        except subprocess.TimeoutExpired:
+            process.send_signal(signal.SIGQUIT)
+            try:
+                output, _ = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                output, _ = process.communicate()
+            output += f"\nStopped after {timeout:.0f} s: the run did not finish.\n"
+            return_code = -9
+    result = subprocess.CompletedProcess(command, return_code, output)
     log.write_text(result.stdout)
     if result.returncode and not expect_failure:
         print(result.stdout[-12000:], flush=True)
