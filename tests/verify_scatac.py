@@ -22,6 +22,7 @@ from verify_pipeline import (
     failed_task_errors,
     in_parallel,
     launch_folder,
+    run_logged,
     serve,
     trace_rows,
 )
@@ -186,20 +187,14 @@ def run_scatac(
         "NXF_OFFLINE": "true",
         "NXF_DISABLE_CHECK_LATEST": "true",
     }
-    result = subprocess.run(
+    return run_logged(
         command,
         cwd=work,
         env=environment,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=3600,
-        check=False,
+        log=work / f"output-{suffix}.log",
+        timeout=3600 if engine else 300,
+        expect_failure=expect_failure,
     )
-    (work / f"output-{suffix}.log").write_text(result.stdout)
-    if result.returncode and not expect_failure:
-        print(result.stdout[-12000:], flush=True)
-    return result
 
 
 def read_table(path: Path) -> list[dict[str, str]]:

@@ -19,3 +19,11 @@ jobs:
       # Installs pixi and the project's locked default environment, cached by pixi.lock.
       - uses: prefix-dev/setup-pixi@v0.11.3
       - run: pixi run checks
+      # Failed tests keep their runs (Nextflow logs, task folders) in tests/.runs.
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-runs-${{ matrix.os }}
+          path: tests/.runs/
+          include-hidden-files: true
+          retention-days: 7

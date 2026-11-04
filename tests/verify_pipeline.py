@@ -406,17 +406,47 @@ def run_pipeline(
     }
     environment.pop("FTP_PROXY", None)
     environment.pop("ftp_proxy", None)
-    result = subprocess.run(
+    return run_logged(
         command,
         cwd=work,
         env=environment,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=900,
-        check=False,
+        log=work / f"output-{suffix}.log",
+        timeout=900 if docker else 300,
+        expect_failure=expect_failure,
     )
-    (work / f"output-{suffix}.log").write_text(result.stdout)
+
+
+def run_logged(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    log: Path,
+    timeout: float,
+    expect_failure: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run Nextflow, its output in log. A run past timeout is stopped and fails with its output.
+
+    Stub runs take seconds, so a timeout well below CI's job limit reports a hung run instead of
+    leaving the job to be cancelled without output.
+    """
+    try:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        # The partial output is bytes even in text mode.
+        partial = error.output.decode(errors="replace") if error.output else ""
+        message = f"\nStopped after {timeout:.0f} s: the run did not finish.\n"
+        result = subprocess.CompletedProcess(command, -9, partial + message)
+    log.write_text(result.stdout)
     if result.returncode and not expect_failure:
         print(result.stdout[-12000:], flush=True)
     return result
