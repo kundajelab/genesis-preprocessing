@@ -7,7 +7,7 @@ process TRACKS {
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.bw'
     input:
     tuple val(meta), path(bam), path(bai), path(qc_bam), path(qc_bai)

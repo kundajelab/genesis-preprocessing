@@ -7,7 +7,7 @@ process SCATAC_TRACKS {
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.library}/groups/${meta.group}",
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.library}/groups/${meta.group}" },
         mode: 'copy', pattern: '*.bw'
     input:
     tuple val(meta), path(fragments), path(chrom_sizes)

@@ -14,6 +14,7 @@ import os
 import random
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -89,7 +90,7 @@ def available_resources(*, docker: bool) -> tuple[int, int]:
 def executor_limits(*, docker: bool) -> str:
     """Nextflow settings giving each run half the CPUs and half the memory.
 
-    Test tasks request 2 CPUs and 2 GB each, so this sets how many run at once.
+    Test tasks request at most 1 CPU and 2 GB each, so this sets how many run at once.
     """
     cpus, memory = available_resources(docker=docker)
     megabytes = max(2048, memory // 2 // 2**20)
@@ -406,20 +407,73 @@ def run_pipeline(
     }
     environment.pop("FTP_PROXY", None)
     environment.pop("ftp_proxy", None)
-    result = subprocess.run(
+    return run_logged(
         command,
         cwd=work,
         env=environment,
+        log=work / f"output-{suffix}.log",
+        timeout=900 if docker else 300,
+        expect_failure=expect_failure,
+    )
+
+
+def run_logged(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    log: Path,
+    timeout: float,
+    expect_failure: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run Nextflow, its output in log. A run past timeout is stopped and fails with its output.
+
+    Stub runs take seconds, so a timeout well below CI's job limit reports a hung run instead of
+    leaving the job to be cancelled without output. Before stopping it, SIGQUIT makes Nextflow's
+    JVM print every thread's stack into the output, to show where the run is stuck.
+    """
+    with subprocess.Popen(
+        command,
+        cwd=cwd,
+        # Nextflow's default strict parser, even where the shell selects the legacy one.
+        env={**env, "NXF_SYNTAX_PARSER": "v2"},
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=900,
-        check=False,
-    )
-    (work / f"output-{suffix}.log").write_text(result.stdout)
+    ) as process:
+        try:
+            output, _ = process.communicate(timeout=timeout)
+            return_code = process.returncode
+        except subprocess.TimeoutExpired:
+            process.send_signal(signal.SIGQUIT)
+            try:
+                output, _ = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                output, _ = process.communicate()
+            output += f"\nStopped after {timeout:.0f} s: the run did not finish.\n"
+            return_code = -9
+    result = subprocess.CompletedProcess(command, return_code, output)
+    log.write_text(result.stdout)
     if result.returncode and not expect_failure:
-        print(result.stdout[-12000:], flush=True)
+        before, marker, dump = output.partition("Full thread dump")
+        if marker:
+            # The whole dump is in log; show the run's output and the threads doing something.
+            print(before[-8000:] + active_threads(dump) + f"Full thread dump: {log}", flush=True)
+        else:
+            print(output[-12000:], flush=True)
     return result
+
+
+def active_threads(dump: str) -> str:
+    """A JVM thread dump without the idle threads: pool workers waiting for work, GC and VM."""
+    idle = ("ThreadPoolExecutor.getTask", "ScheduledThreadPoolExecutor$DelayedWorkQueue.take")
+
+    def active(thread: str) -> bool:
+        named = thread.lstrip().startswith('"') and "\tat " in thread
+        return named and not any(marker in thread for marker in idle)
+
+    return "".join(f"{thread}\n\n" for thread in dump.split("\n\n") if active(thread))
 
 
 def trace_rows(work: Path, suffix: str = "run") -> list[dict[str, str]]:
@@ -427,7 +481,16 @@ def trace_rows(work: Path, suffix: str = "run") -> list[dict[str, str]]:
     if not trace.exists():  # A run rejected before any task may not write a trace.
         return []
     with trace.open() as stream:
-        return list(csv.DictReader(stream, delimiter="\t"))
+        rows = list(csv.DictReader(stream, delimiter="\t"))
+    # When a short task's submit event is handled after its completion, Nextflow writes the task
+    # again at shutdown, as submitted or completed. Keep one row per task (a retry is a new task),
+    # its final one if it has one.
+    final = {"COMPLETED", "CACHED", "FAILED", "ABORTED"}
+    tasks: dict[str, dict[str, str]] = {}
+    for row in rows:
+        if row["task_id"] not in tasks or tasks[row["task_id"]]["status"] not in final:
+            tasks[row["task_id"]] = row
+    return list(tasks.values())
 
 
 def failed_task_errors(work_dir: Path) -> str:

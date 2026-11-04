@@ -7,7 +7,7 @@ process METADATA {
     conda "${moduleDir}/../../environments/GENESIS_TOOLS.yaml"
     container "${dotenv('GENESIS_TOOLS_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.metadata.tsv'
     input:
     tuple val(meta), path(reads), path(chrom_sizes)

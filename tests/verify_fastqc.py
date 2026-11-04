@@ -35,7 +35,7 @@ def check_fastqc_inputs(work: Path) -> None:
     (work / "images.lock").write_text(image_line + "\n")
     config = work / "nextflow.config"
     config.write_text(
-        "plugins { id 'nf-dotenv@1.0.0' }\n"
+        "plugins { id 'nf-dotenv@2.0.1' }\n"
         "dotenv { filename = 'images.lock'; relative = '.' }\n"
         "docker.enabled = true\n"
         "docker.runOptions = '-u $(id -u):$(id -g)'\n"

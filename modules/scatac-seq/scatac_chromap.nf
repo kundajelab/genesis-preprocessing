@@ -17,10 +17,10 @@ process SCATAC_CHROMAP {
     conda "${moduleDir}/../../environments/GENESIS_CHROMAP.yaml"
     container "${dotenv('GENESIS_CHROMAP_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.chromap.log'
     // Every barcode's fragments, for calling cells again with other tools.
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.source.fragments.gz',
         saveAs: { name -> name.replace('.source.fragments.gz', '.all_barcodes.fragments.tsv.gz') }
     input:

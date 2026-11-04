@@ -99,7 +99,8 @@ workflow {
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
     def referencesDir = file(params.references).toAbsolutePath()
-    def resources = [cpus: params.cpus, memory: params.memory, time: params.time]
+    // Parameters given on the command line arrive as strings.
+    def resources = [cpus: params.cpus.toInteger(), memory: params.memory, time: params.time]
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
     def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/scatac-reads.samples.schema.json")
         .collect { row -> row[0] }

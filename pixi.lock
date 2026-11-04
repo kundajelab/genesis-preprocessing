@@ -24,7 +24,7 @@ environments:
     - url: https://conda.anaconda.org/bioconda/
     packages:
       osx-64:
-      - conda: https://conda.anaconda.org/bioconda/noarch/nextflow-25.10.4-h2a3209d_0.conda
+      - conda: https://conda.anaconda.org/bioconda/noarch/nextflow-26.10.4-h2a3209d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026e-h5d301ff_0.conda
@@ -59,7 +59,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/uv-0.11.33-h0bcf9e0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-hbc1a06c_7.conda
       osx-arm64:
-      - conda: https://conda.anaconda.org/bioconda/noarch/nextflow-25.10.4-h2a3209d_0.conda
+      - conda: https://conda.anaconda.org/bioconda/noarch/nextflow-26.10.4-h2a3209d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026e-h5d301ff_0.conda
@@ -94,7 +94,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/uv-0.11.33-h11277c2_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
       sherlock-linux-64:
-      - conda: https://conda.anaconda.org/bioconda/noarch/nextflow-25.10.4-h2a3209d_0.conda
+      - conda: https://conda.anaconda.org/bioconda/noarch/nextflow-26.10.4-h2a3209d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/alsa-lib-1.2.16.1-h7cc23a3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/bzip2-1.0.8-hda65f42_10.conda
@@ -177,16 +177,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026e-h5d301ff_0.conda
 packages:
-- conda: https://conda.anaconda.org/bioconda/noarch/nextflow-25.10.4-h2a3209d_0.conda
-  sha256: 26917ebbec4133e8d15a6557e3234a976573e46fafda62a28d37d6916d7ad9f9
-  md5: 1fc010bbb636e291ca5812bc1a53917b
+- conda: https://conda.anaconda.org/bioconda/noarch/nextflow-26.10.4-h2a3209d_0.conda
+  sha256: 05f986925bcf39c8bd05f39729df3f21a99b4557cf541689ef0ac9e4d2b1b164
+  md5: 5f94335ce2d067974579000af947c46e
   depends:
   - coreutils
   - curl
-  - openjdk >=17,<=24
+  - openjdk >=17,<26
   license: Apache-2.0
-  size: 34829682
-  timestamp: 1770744718359
+  size: 42949620
+  timestamp: 1793052785170
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
   sha256: 1dd3fffd892081df9726d7eb7e0dea6198962ba775bd88842135a4ddb4deb3c9

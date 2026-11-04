@@ -46,7 +46,7 @@ git status --short
 `checks` includes lint, formatting checks, types, DAP and ATAC Nextflow stubs and
 README command checks. Its initial Nextflow
 run needs access to the pinned plugin registry or a verified cache containing
-`nf-schema@2.4.2` and `nf-dotenv@1.0.0`. If plugin resolution fails, restore registry
+`nf-schema@2.8.0` and `nf-dotenv@2.0.1`. If plugin resolution fails, restore registry
 access or configure an approved cache with `NXF_PLUGINS_DIR`; only enable
 `NXF_OFFLINE=true` after populating it.
 

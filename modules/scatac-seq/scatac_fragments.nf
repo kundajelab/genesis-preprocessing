@@ -10,9 +10,9 @@ process SCATAC_FRAGMENTS {
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.fragments.tsv.gz*'
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '{*.cells.tsv,*_mqc.tsv}'
     input:
     tuple val(meta), path(fragments), path(cells), path(chrom_sizes)
@@ -109,7 +109,7 @@ process SCATAC_FRAGMENTS {
     """
     mkdir groups
     printf 'chr1\\t100\\t300\\tAAA-1\\t1\\n' > 'groups/${meta.id}.all.fragments.bed'
-    bgzip -c 'groups/${meta.id}.all.fragments.bed' > '${meta.id}.fragments.tsv.gz'
+    gzip -n -c 'groups/${meta.id}.all.fragments.bed' > '${meta.id}.fragments.tsv.gz'
     touch '${meta.id}.fragments.tsv.gz.tbi'
     printf 'barcode\\tgroup\\n' > '${meta.id}.cells.tsv'
     printf 'sample\\n${meta.id}\\n' > '${meta.id}.scatac_library_mqc.tsv'

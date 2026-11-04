@@ -27,6 +27,7 @@ from verify_pipeline import (
     failed_task_errors,
     in_parallel,
     launch_folder,
+    run_logged,
     trace_rows,
 )
 
@@ -82,20 +83,14 @@ def nextflow(
     log = str(work / f"nextflow-{suffix}.log")
     full = ["nextflow", "-log", log, *command, "-ansi-log", "false"]
     print(f"Running scATAC reads ({suffix}) in {work}", flush=True)
-    result = subprocess.run(
+    return run_logged(
         full,
         cwd=work,
         env=environment,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=3600,
-        check=False,
+        log=work / f"output-{suffix}.log",
+        timeout=3600 if "local,test,conda" in full else 300,
+        expect_failure=expect_failure,
     )
-    (work / f"output-{suffix}.log").write_text(result.stdout)
-    if result.returncode and not expect_failure:
-        print(result.stdout[-12000:], flush=True)
-    return result
 
 
 def run_workflow(

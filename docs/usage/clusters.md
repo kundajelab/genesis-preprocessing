@@ -68,7 +68,7 @@ which is limited to 30 minutes.
 **Scheduling.** As [NERSC recommends](https://docs.nersc.gov/jobs/workflow/nextflow/), the
 profile checks Slurm every 5 minutes and submits at most 20 jobs a minute, 15 at a time. Each
 pipeline stage therefore waits up to 5 minutes, which matters only for short tasks; the `test`
-profile (`-p nersc,test`) checks every minute and caps tasks at 2 CPUs, 2 GB and 5 minutes. A
+profile (`-p nersc,test`) checks every minute and caps tasks at 1 CPU, 2 GB and 5 minutes. A
 login node suits campaigns of a few days; NERSC's `workflow` QOS is meant for longer ones.
 
 **Checking a setup.** A stub run starts every task in its container without running the tools:

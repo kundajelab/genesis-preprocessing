@@ -14,7 +14,7 @@ process CALL_PEAKS {
     conda "${moduleDir}/../../environments/GENESIS_MACS3.yaml"
     container "${dotenv('GENESIS_MACS3_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.macs3*'
     input:
     tuple val(meta), path(bam), path(bai), path(control_bam), path(control_bai)

@@ -1,0 +1,31 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        # The platforms pixi.toml supports: linux-64, osx-arm64, osx-64.
+        os: [ubuntu-latest, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      # Installs pixi and the project's locked default environment, cached by pixi.lock.
+      - uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          pixi-version: v0.82.1
+      - run: pixi run checks
+      # Failed tests keep their runs (Nextflow logs, task folders) in tests/.runs.
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-runs-${{ matrix.os }}
+          path: tests/.runs/
+          include-hidden-files: true
+          retention-days: 7

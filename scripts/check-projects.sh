@@ -53,6 +53,11 @@ if [[ ! $jobs =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 export GENESIS_CHECK_JOBS=$jobs
+# Check with Nextflow's default strict parser even where a shell selects the legacy one.
+export NXF_SYNTAX_PARSER=v2
+# The checks start many short Nextflow runs, whose JVMs spend most of their CPU compiling code
+# they barely run. Quick compilation and a serial collector cut the suite's CPU time by about 2/3.
+export NXF_OPTS="${NXF_OPTS:+$NXF_OPTS }-XX:TieredStopAtLevel=1 -XX:+UseSerialGC"
 
 shellcheck "$root"/scripts/*.sh
 uv run --frozen --project "$root/genesis_tools" ruff check \
@@ -62,6 +67,10 @@ uv run --frozen --project "$root/genesis_tools" ruff format --check \
 uv run --frozen --project "$root/genesis_tools" ty check --project "$root/genesis_tools"
 uv run --frozen --project "$root/genesis_tools" ty check --project "$root/genesis_tools" \
     --extra-search-path "$root/tests" "$root/tests"
+
+# The tests run Nextflow offline, so first install the plugins nextflow.config pins.
+plugins=$(grep -o "id '[^']*'" "$root/nextflow.config" | cut -d "'" -f 2 | paste -s -d , -)
+nextflow -q plugin install "$plugins"
 
 # Slowest first, so the pipeline regressions start before the quick checks.
 tests=()

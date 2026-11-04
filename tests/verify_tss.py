@@ -21,7 +21,14 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from verify_pipeline import executor_limits, in_parallel, launch_folder, serve, trace_rows
+from verify_pipeline import (
+    executor_limits,
+    in_parallel,
+    launch_folder,
+    run_logged,
+    serve,
+    trace_rows,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = [
@@ -230,20 +237,14 @@ def run_tss(
         "NXF_OFFLINE": "true",
         "NXF_DISABLE_CHECK_LATEST": "true",
     }
-    result = subprocess.run(
+    return run_logged(
         command,
         cwd=work,
         env=environment,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=3600,
-        check=False,
+        log=work / "output-run.log",
+        timeout=3600 if conda else 300,
+        expect_failure=expect_failure,
     )
-    (work / "output-run.log").write_text(result.stdout)
-    if result.returncode and not expect_failure:
-        print(result.stdout[-12000:], flush=True)
-    return result
 
 
 def check_trace(work: Path, libraries: int) -> None:

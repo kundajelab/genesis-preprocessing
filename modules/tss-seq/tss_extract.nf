@@ -10,7 +10,7 @@ process TSS_EXTRACT {
     conda "${moduleDir}/../../environments/GENESIS_TSS.yaml"
     container "${dotenv('GENESIS_TSS_IMAGE')}"
     tag "${meta.id}"
-    publishDir "${params.run_dir}/output/${meta.species}/${meta.id}/qc", mode: 'copy',
+    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.tso.log'
     input:
     tuple val(meta), path(reads)
