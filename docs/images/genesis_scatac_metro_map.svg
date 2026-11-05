@@ -86,4 +86,4 @@
 <text class="note" x="48" y="798">Starts from published fragments and a cell list. Organelle fragments and unlisted barcodes are counted, then dropped.</text>
 <text class="note" x="48" y="823">Each group gets MACS3 peaks, a per-base cut-site bigWig (first and last fragment base), FRiP and TSS enrichment.</text>
 <text class="note" x="48" y="848">QC is diagnostic, with no plant thresholds. Groups stay within one library; libraries are never pooled.</text>
-<metadata>Genesis diagram schema 2; workflows/scatac-seq.nf SHA256 4557234ed35a5e346f94bd046a297d0bd225086eb2ba791137875f30b8fbdaa3; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/scatac-seq.nf SHA256 7692649a33f25f8e8c74725cbe474c4acd53498faedfa253ed6bf02b68b180f9; schematic animation.</metadata></svg>

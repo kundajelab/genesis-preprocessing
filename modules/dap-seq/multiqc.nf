@@ -7,7 +7,7 @@ process MULTIQC {
     conda "${moduleDir}/../../environments/GENESIS_MULTIQC.yaml"
     container "${dotenv('GENESIS_MULTIQC_IMAGE')}"
     tag "${provenance.name}"
-    publishDir "${params.run_dir}/output/multiqc", mode: 'copy', pattern: 'multiqc*'
+    publishDir "${params.publish_base}/output/multiqc", mode: 'copy', pattern: 'multiqc*'
     input:
     path reports, stageAs: 'inputs/*'
     val samples

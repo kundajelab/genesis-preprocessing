@@ -10,7 +10,7 @@ process SCATAC_CELLS {
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${meta.id}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.barcodes.tsv'
     input:
     tuple val(meta), path(fragments)

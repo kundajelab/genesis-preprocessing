@@ -14,7 +14,7 @@ process DOWNLOAD {
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${samples.size() == 1 ? samples[0].id : "${samples[0].id} +${samples.size() - 1} more"}"
-    publishDir "${params.run_dir}/output", mode: 'copy', pattern: '*.fastq.lines',
+    publishDir "${params.publish_base}/output", mode: 'copy', pattern: '*.fastq.lines',
         saveAs: { name ->
             def meta = samples.find { sample -> "${sample.id}.fastq.lines" == name }
             "${meta.species}/${meta.id}/${name}"

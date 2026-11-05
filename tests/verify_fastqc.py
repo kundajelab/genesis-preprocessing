@@ -39,7 +39,7 @@ def check_fastqc_inputs(work: Path) -> None:
         "dotenv { filename = 'images.lock'; relative = '.' }\n"
         "docker.enabled = true\n"
         "docker.runOptions = '-u $(id -u):$(id -g)'\n"
-        "params.read = null\nparams.run_dir = null\n"
+        "params.read = null\nparams.publish_base = null\n"
     )
     valid = ("@read\n" + "A" * 75 + "\n+\n" + "I" * 75 + "\n") * 100
     cases = {
@@ -66,7 +66,7 @@ def check_fastqc_inputs(work: Path) -> None:
             str(config),
             "--read",
             str(read),
-            "--run_dir",
+            "--publish_base",
             str(folder / "published"),
             "-work-dir",
             str(folder / "work"),

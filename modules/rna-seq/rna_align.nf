@@ -12,7 +12,7 @@ process RNA_ALIGN {
     conda "${moduleDir}/../../environments/GENESIS_STAR.yaml"
     container "${dotenv('GENESIS_STAR_IMAGE')}"
     tag "${meta.id}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.star.*'
     input:
     // reads is one FASTQ for single-end libraries and both mates for paired-end ones.

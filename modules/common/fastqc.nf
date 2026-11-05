@@ -7,8 +7,8 @@ process FASTQC {
     conda "${moduleDir}/../../environments/GENESIS_FASTQC.yaml"
     container "${dotenv('GENESIS_FASTQC_IMAGE')}"
     tag "${meta.id}:${mate}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc/fastqc" }, mode: 'copy',
-        pattern: '*fastqc*'
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc/fastqc" },
+        mode: 'copy', pattern: '*fastqc*'
     input:
     tuple val(meta), val(mate), path(read)
     output:
