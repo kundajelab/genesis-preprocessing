@@ -100,12 +100,11 @@ if [[ -z $run_name ]]; then
 fi
 
 if [[ ,$profile, == *,nersc,* ]]; then
-    # Compute nodes only run images that podman-hpc has pulled and squashed into $SCRATCH; tasks
-    # that pull for themselves run out of memory. Pull every pinned image here, on the login
-    # node: an image already pulled costs little, and an interrupted earlier pull is completed.
-    while IFS='=' read -r _key image; do
-        podman-hpc pull "docker.io/$image"
-    done < <(grep '_IMAGE=' "$repo_dir/conf/genesis-images.lock")
+    # Pull the pinned images here, on the login node, unless scripts/submit-pipeline.sh already
+    # did before submitting this as a Slurm job.
+    if [[ -z ${GENESIS_IMAGES_PULLED:-} ]]; then
+        "$script_dir/pull-nersc-images.sh"
+    fi
     # The `podman` Nextflow runs must be podman-hpc (see scripts/podman-hpc-bin/podman).
     export PATH="$script_dir/podman-hpc-bin:$PATH"
 fi
