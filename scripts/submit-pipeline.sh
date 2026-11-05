@@ -25,8 +25,8 @@ ARGS:
     -h|--help: Show this message and exit.
     -Q|--manager-queue: Where the manager job runs (not the tasks; for those pass --queue to
         Nextflow): the QOS with nersc (default shared, at most 48 hours; workflow, for runs of up
-        to 90 days, needs NERSC's approval), the partition with sherlock (default normal) or
-        slurm (default regular).
+        to 90 days, needs NERSC's approval and may require scrontab instead of sbatch), the
+        partition with sherlock (default normal) or slurm (default regular).
     -T|--time: Walltime of the manager job. Default: $time_limit
     -C|--cpus: CPUs for the manager job. Default: $cpus
     -M|--mem: Memory for the manager job; Nextflow gets 3/4 of it. Default: $memory
