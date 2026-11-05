@@ -10,7 +10,7 @@ process ATAC_TRIM {
     conda "${moduleDir}/../../environments/GENESIS_CUTADAPT.yaml"
     container "${dotenv('GENESIS_CUTADAPT_IMAGE')}"
     tag "${meta.id}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*.cutadapt.log'
     input:
     tuple val(meta), path(reads)

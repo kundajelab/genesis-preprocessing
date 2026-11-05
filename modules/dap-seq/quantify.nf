@@ -8,7 +8,7 @@ process QUANTIFY {
     time { 1.h * (1 + bam.size() / 1e9) }
     conda "${moduleDir}/../../environments/GENESIS_TOOLS.yaml"
     container "${dotenv('GENESIS_TOOLS_IMAGE')}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.peaks.*.tsv'
     input:
     tuple val(meta), path(peaks), path(bam), path(coverage), path(chrom_sizes)

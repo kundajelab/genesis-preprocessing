@@ -7,7 +7,7 @@ process ATAC_QC {
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '{*_mqc.tsv,*.tss.*}'
     input:
     // genes is an empty list when the sheet gives no gene annotation.

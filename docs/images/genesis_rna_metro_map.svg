@@ -100,4 +100,4 @@
 <text class="note" x="48" y="798">The intron limit is the longest annotated intron; STAR&#x27;s default suits mammals. Up to 20 loci per read.</text>
 <text class="note" x="48" y="823">featureCounts counts uniquely aligned reads by the sheet&#x27;s strandedness; rRNA and organelle genes stay in the counts.</text>
 <text class="note" x="48" y="848">QC is diagnostic: the forward fraction checks the sheet&#x27;s strandedness. Replicates are never pooled.</text>
-<metadata>Genesis diagram schema 2; workflows/rna-seq.nf SHA256 6873762cda197833c0a76bb5a71f358165c75a62d37f853fcd13be35dfb879da; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/rna-seq.nf SHA256 3ff24578a9537c2f9599263c04f0aced4c3d79cc4a4ccf938e10f91e630019b2; schematic animation.</metadata></svg>

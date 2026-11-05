@@ -10,9 +10,9 @@ process SCATAC_FRAGMENTS {
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${meta.id}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '*.fragments.tsv.gz*'
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '{*.cells.tsv,*_mqc.tsv}'
     input:
     tuple val(meta), path(fragments), path(cells), path(chrom_sizes)

@@ -33,7 +33,12 @@
         "workspace": {
           "type": "string",
           "format": "directory-path",
-          "description": "Root for run folders holding work, published output, and trace files."
+          "description": "Root for run folders holding work, and published output and trace files unless persist_dir is set."
+        },
+        "persist_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Long-term storage for published output and trace files, in persist_dir/run_name; work stays in the workspace. Default: the run folder in the workspace."
         }
       }
     },
@@ -105,6 +110,11 @@
           "type": "string",
           "hidden": true,
           "description": "workspace/run_name. Set automatically; use --workspace and --run_name instead."
+        },
+        "publish_base": {
+          "type": "string",
+          "hidden": true,
+          "description": "Where output and trace files go: persist_dir/run_name, or run_dir. Set automatically; use --persist_dir instead."
         }
       }
     }

@@ -58,7 +58,7 @@ workflow {
             "  tasks:    ${workflow.stats.succeedCount} succeeded, ${workflow.stats.cachedCount} cached, " +
                 "${workflow.stats.failedCount} failed, ${workflow.stats.ignoredCount} ignored",
             "  exit:     ${workflow.exitStatus}",
-            "  output:   ${params.run_dir}/output",
+            "  output:   ${params.publish_base}/output",
             rule,
         ]
         log.info(report.join('\n'))
@@ -173,7 +173,7 @@ workflow {
             engine :
         "branch: ${branch}\ncommit: ${gitSha}\n" + engine +
             (changes ? "dirty files:\n${changes}\n" : "dirty files: none\n")
-    def runOutput = file("${params.run_dir}/output")
+    def runOutput = file("${params.publish_base}/output")
     runOutput.mkdirs()
     file("${repoDir}/conf/genesis-images.lock").copyTo(runOutput.resolve('genesis-images.lock'))
     runOutput.resolve('git-status.txt').text = gitReport

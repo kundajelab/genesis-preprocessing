@@ -990,6 +990,21 @@ def reference_products(references: Path, ref_id: str, built: Path | None) -> Non
     )
 
 
+def check_persist_dir(work: Path, sheet: Path) -> None:
+    """With --persist_dir, output and trace files go to persist_dir/run_name; work stays put."""
+    case = launch_folder(work, "persist")
+    persist = case / "persistent"
+    assert run_pipeline(case, sheet, extra=["--persist_dir", str(persist)]).returncode == 0
+    published = persist / sheet.stem
+    for name in ("genesis-images.lock", "git-status.txt", "multiqc/multiqc_report.html"):
+        assert (published / "output" / name).is_file(), name
+    assert any((published / "output").glob("*/*/*.metadata.tsv")), "no per-sample output"
+    assert list((published / "trace").glob("execution_report_*.html")), "no execution report"
+    run_folder = case / "published" / sheet.stem
+    assert not (run_folder / "output").exists() and not (run_folder / "trace").exists()
+    assert any((case / "work").iterdir()), "no work directory"
+
+
 def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
     """Rebuild a reference only when its FASTA hash or a recorded product size is off.
 
@@ -1184,6 +1199,7 @@ def main() -> None:
                 ]
             else:
                 phases.append(functools.partial(check_failures, work, sheet))
+                phases.append(functools.partial(check_persist_dir, work, sheet))
             in_parallel(phases)
             if args.docker:
                 # After the phases above, which read the references folder this changes.

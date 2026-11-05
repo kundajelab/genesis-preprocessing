@@ -10,7 +10,7 @@ process TSS_QC {
     conda "${moduleDir}/../../environments/GENESIS_TSS.yaml"
     container "${dotenv('GENESIS_TSS_IMAGE')}"
     tag "${meta.id}"
-    publishDir { "${params.run_dir}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
+    publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}/qc" }, mode: 'copy',
         pattern: '*_mqc.tsv'
     input:
     // extract_log: TSS_EXTRACT's counts for Smar2C2, an empty list for the other methods.

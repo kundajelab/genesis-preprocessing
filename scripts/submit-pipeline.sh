@@ -17,7 +17,7 @@ Usage: $0 [ARGS] [--] [RUN_PIPELINE_ARGS] INPUT.tsv [NEXTFLOW_ARGS]
 Submit scripts/run-pipeline.sh as a Slurm job, so the Nextflow manager runs in the queue instead
 of on the login node; it then submits each task as its own job. Returns once the job is queued.
 * ARGS come first. Everything else is passed to run-pipeline.sh unchanged (see its --help), e.g.
-  -p, -w, -R, -n, --workflow, the sample sheet, then Nextflow arguments such as -resume.
+  -p, -w, -R, -P, -n, --workflow, the sample sheet, then Nextflow arguments such as -resume.
 * The job runs from the current folder, so relative paths work as with run-pipeline.sh.
 * The walltime caps the whole run. A resubmitted run resumes where the last one stopped.
 
@@ -90,7 +90,7 @@ while ((i < ${#arguments[@]})); do
             profile=${arguments[i + 1]:-}
             i=$((i + 2))
             ;;
-        -w | --workspace | -R | --references | -n | --run-name | --workflow)
+        -w | --workspace | -R | --references | -P | --persist-dir | -n | --run-name | --workflow)
             i=$((i + 2))
             ;;
         --)

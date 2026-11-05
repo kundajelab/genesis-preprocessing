@@ -6,6 +6,7 @@ repo_dir=$(dirname -- "$script_dir")
 profile=$("$script_dir/get-default-profile.sh")
 workspace=$("$script_dir/get-default-workspace.sh")
 references=""
+persist_dir=""
 run_name=""
 workflow="dap-seq"
 
@@ -14,7 +15,8 @@ function usage {
 Usage: $0 [ARGS] [--] INPUT.tsv [NEXTFLOW_ARGS]
 
 Run a pipeline on exactly one sample sheet.
-* Work, published output, trace files and the Nextflow log go in WORKSPACE/RUN_NAME/.
+* Work and the Nextflow log go in WORKSPACE/RUN_NAME/; published output and trace files go
+  in PERSIST_DIR/RUN_NAME/, or with the rest when there is no persist folder.
 * Nextflow is launched from WORKSPACE/RUN_NAME, so -resume picks up that run's history.
   Relative paths in NEXTFLOW_ARGS resolve against that folder; prefer absolute paths.
 * NEXTFLOW_ARGS are passed directly to nextflow unchecked (e.g. -resume, --queue owners).
@@ -28,6 +30,10 @@ ARGS:
         indexes; created if missing. Default from scripts/get-default-references.sh, by profile:
         \$CFS/PROJECT/\$USER/references with nersc (PROJECT: your default Slurm account),
         \$OAK/\$USER/genesis/references with sherlock, otherwise the checkout's references/
+    -P|--persist-dir: Folder for output and trace files to keep, in PERSIST_DIR/RUN_NAME/, as the
+        workspace may be purged; created if missing. Default from get-default-persist-dir.sh, by
+        profile: \$CFS/PROJECT/\$USER/runs with nersc, \$OAK/\$USER/genesis/runs with sherlock,
+        otherwise none
     -n|--run-name: Name of the run folder in the workspace. Default: INPUT.tsv basename without .tsv
     --workflow: Workflow in workflows/ to run: dap-seq, atac-seq, scatac-seq, scatac-reads, rna-seq or tss-seq. Default: $workflow
 EOF
@@ -49,6 +55,10 @@ while (($# >= 1)); do
             ;;
         -R | --references)
             references=$2
+            shift 2
+            ;;
+        -P | --persist-dir)
+            persist_dir=$2
             shift 2
             ;;
         -n | --run-name)
@@ -95,6 +105,19 @@ fi
 if [[ $references != /* ]]; then references="$PWD/$references"; fi
 # Runs publish reference products such as indexes into this folder, so it must exist.
 mkdir -p -- "$references"
+# Without -P, use the default; where it cannot be found, outputs stay in the workspace.
+if [[ -z $persist_dir ]] &&
+    ! persist_dir=$("$script_dir/get-default-persist-dir.sh" "$profile"); then
+    printf 'Output and trace files stay in the workspace, which may be purged; pass %s\n' \
+        -P/--persist-dir >&2
+    persist_dir=""
+fi
+persist_args=()
+if [[ -n $persist_dir ]]; then
+    if [[ $persist_dir != /* ]]; then persist_dir="$PWD/$persist_dir"; fi
+    mkdir -p -- "$persist_dir"
+    persist_args=(--persist_dir "$persist_dir")
+fi
 if [[ -z $run_name ]]; then
     run_name=$(basename -- "$sheet" .tsv)
 fi
@@ -124,4 +147,5 @@ exec pixi run --manifest-path "$repo_dir" \
     --workspace "$workspace" \
     --run_name "$run_name" \
     --references "$references" \
+    ${persist_args[@]+"${persist_args[@]}"} \
     "$@"

@@ -294,7 +294,7 @@ def check_workflow_configs() -> None:
     workflows = sorted(path.stem for path in (ROOT / "workflows").glob("*.nf"))
     expected = ["atac-seq", "dap-seq", "rna-seq", "scatac-reads", "scatac-seq", "tss-seq"]
     assert workflows == expected, workflows
-    shared = config_params(ROOT / "nextflow.config") | {"run_dir"}
+    shared = config_params(ROOT / "nextflow.config") | {"run_dir", "publish_base"}
     schemas = {}
     for name in workflows:
         config = ROOT / "conf" / f"{name}.config"
