@@ -37,14 +37,17 @@ the `normal` partition on Sherlock. Its walltime (`-T`) caps the whole run. Two 
 it, Nextflow is told to stop and cancels its task jobs; submit again to resume the run.
 
 Each run lives in `WORKSPACE/RUN_NAME/`. On both clusters the default workspace is
-`$SCRATCH/workspace`, which the site purges. To keep results, pass `--persist_dir DIR` (a
-Nextflow argument, after the sheet): `output/` and `trace/` then go to `DIR/RUN_NAME/`, e.g. on
-`$CFS` or Oak, while `work/` stays on fast scratch. Pass it on the command line, not in a site
-config: `nextflow.config` derives the output paths before reading `-c` files.
+`$SCRATCH/workspace`, which the site purges, so the outputs to keep, `output/` and `trace/`, go
+to `PERSIST_DIR/RUN_NAME/` on project storage instead; `work/` stays on fast scratch.
+PERSIST_DIR defaults to `$CFS/PROJECT/$USER/runs` with the `nersc` profile, PROJECT being your
+default Slurm account (`sacctmgr show user $USER format=defaultaccount`), and
+`$OAK/$USER/genesis/runs` with `sherlock`; pass `-P`/`--persist-dir` to use another folder. Where
+there is no default (no `$OAK`), outputs stay in the workspace, with a warning. Elsewhere there
+is no persist folder unless you pass one. Set it with `-P`, not in a site config:
+`nextflow.config` derives the output paths before reading `-c` files.
 
-References, and the indexes runs publish beside them, default to project storage, since home
-folders are too small: `$CFS/PROJECT/$USER/references` with the `nersc` profile, PROJECT being
-your default Slurm account (`sacctmgr show user $USER format=defaultaccount`), and
+References, and the indexes runs publish beside them, default to `references/` beside `runs/`,
+since home folders are too small: `$CFS/PROJECT/$USER/references` with `nersc` and
 `$OAK/$USER/genesis/references` with `sherlock`. Elsewhere they default to the checkout's
 `references/`. Pass `-R`/`--references` to use another folder; either way, `scripts/run-pipeline.sh`
 creates it if missing. Put each sheet's FASTAs and annotations there before a run. The templates
@@ -108,5 +111,5 @@ runs the images with Apptainer. Nextflow pulls each image once, on the login nod
 `$SCRATCH/workspace/apptainer_cache`, where compute nodes read it. Set the Slurm account, if you
 need one, with `SBATCH_ACCOUNT`. References default to `$OAK/$USER/genesis/references`, which
 needs `$OAK` set (your group has Oak storage); otherwise pass `-R`/`--references`, e.g. a folder on
-`$GROUP_HOME`. Keep results on Oak or `$GROUP_HOME` with `--persist_dir`: `$HOME` is small and
-`$SCRATCH` is purged.
+`$GROUP_HOME`. Outputs are kept in `$OAK/$USER/genesis/runs/RUN_NAME/` by default; without `$OAK`,
+pass `-P` with a folder on `$GROUP_HOME`: `$HOME` is small and `$SCRATCH` is purged.

@@ -103,9 +103,26 @@ def check_default_references(work: Path) -> None:
     local = default("local,docker", host_environment(work / "local", {}))
     assert local.stdout.strip() == str(ROOT / "references"), local
 
+    # The persist folder, runs/ beside these references/: none for local profiles.
+    script = str(ROOT / "scripts/get-default-persist-dir.sh")
+    perlmutter = default(
+        "nersc", host_environment(work / "nersc", {"sacctmgr": account("gen0035")}, CFS=cfs)
+    )
+    assert perlmutter.stdout.strip() == f"{cfs}/gen0035/{user}/runs", perlmutter
+    gpu = default(
+        "nersc,test", host_environment(work / "gpu", {"sacctmgr": account("m1234_g")}, CFS=cfs)
+    )
+    assert gpu.stdout.strip() == f"{cfs}/m1234/{user}/runs", gpu
+    sherlock = default("sherlock", host_environment(work / "sherlock", {}, OAK=oak))
+    assert sherlock.stdout.strip() == f"{oak}/{user}/genesis/runs", sherlock
+    no_oak = default("sherlock", host_environment(work / "no-oak", {}))
+    assert no_oak.returncode == 2 and "OAK is not set" in no_oak.stderr, no_oak
+    local = default("local,docker", host_environment(work / "local", {}))
+    assert local.returncode == 0 and local.stdout == "", local
+
 
 def check_pipeline_references(work: Path) -> None:
-    """-R/--references, or the host's default, is created and passed to Nextflow once."""
+    """-R/--references and -P/--persist-dir, or the host's defaults, are created and passed on."""
     log = work / "pixi-arguments.txt"
     pixi = f"#!/bin/sh\nprintf '%s\\n' \"$@\" > '{log}'\n"
     sheet = work / "samples.tsv"
@@ -113,8 +130,10 @@ def check_pipeline_references(work: Path) -> None:
     sheet.write_text("sample_id\n")
     user = os.environ.get("USER", "user")
 
+    warnings: list[str] = []
+
     def launch(environment: dict[str, str], *arguments: str) -> list[str]:
-        subprocess.run(
+        result = subprocess.run(
             [str(ROOT / "scripts/run-pipeline.sh"), "-w", str(work / "workspace"), *arguments],
             env=environment,
             cwd=work,
@@ -122,10 +141,17 @@ def check_pipeline_references(work: Path) -> None:
             capture_output=True,
             text=True,
         )
+        warnings[:] = [result.stderr]
         return log.read_text().splitlines()
 
+    def values(arguments: list[str], option: str) -> list[str]:
+        return [arguments[i + 1] for i, a in enumerate(arguments) if a == option]
+
     def references(arguments: list[str]) -> list[str]:
-        return [arguments[i + 1] for i, a in enumerate(arguments) if a == "--references"]
+        return values(arguments, "--references")
+
+    def persist(arguments: list[str]) -> list[str]:
+        return values(arguments, "--persist_dir")
 
     perlmutter = host_environment(
         work / "nersc",
@@ -152,6 +178,24 @@ def check_pipeline_references(work: Path) -> None:
     # Nextflow arguments pass through untouched, even one named --references.
     arguments = launch(no_default, "-R", str(given), str(sheet), "-resume", "--references", "x")
     assert arguments[-3:] == ["-resume", "--references", "x"], arguments
+
+    # The persist folder: the host's default, created, or -P/--persist-dir, which may be relative.
+    kept = work / "cfs" / "gen0035" / user / "runs"
+    assert persist(launch(perlmutter, str(sheet))) == [str(kept)] and kept.is_dir()
+    (relative,) = persist(launch(perlmutter, "-P", "keep", str(sheet)))
+    assert Path(relative).resolve() == (work / "keep").resolve(), relative
+    assert (work / "keep").is_dir()
+    # Without a default (Sherlock without $OAK), outputs stay in the workspace, with a warning.
+    assert persist(launch(no_default, "-R", str(given), str(sheet))) == []
+    assert "pass -P/--persist-dir" in warnings[0], warnings
+    given_persist = work / "given" / "persist"
+    persisted = launch(
+        no_default, "-R", str(given), "--persist-dir", str(given_persist), str(sheet)
+    )
+    assert persist(persisted) == [str(given_persist)], persisted
+    # Locally there is no default and no warning: outputs stay in the workspace.
+    local = host_environment(work / "local", {"pixi": pixi, "docker": TRUE})
+    assert persist(launch(local, "-R", str(given), str(sheet))) == [] and not warnings[0]
 
 
 def check_submit_pipeline(work: Path) -> None:
@@ -180,7 +224,7 @@ def check_submit_pipeline(work: Path) -> None:
         return sbatch_arguments.read_text().splitlines()
 
     tools = {"sbatch": sbatch, "podman-hpc": podman, "pixi": pixi, "sacctmgr": account("m1")}
-    nersc = host_environment(work / "nersc", tools, "perlmutter")
+    nersc = host_environment(work / "nersc", tools, "perlmutter", CFS=str(work / "cfs"))
     run = ["-p", "nersc,test", "-R", str(work / "refs"), str(sheet), "-resume"]
     result = submit(nersc, "-T", "01:00:00", "-M", "4G", *run)
     assert result.returncode == 0, result
@@ -207,6 +251,11 @@ def check_submit_pipeline(work: Path) -> None:
     lines = recorded.read_text().splitlines()
     assert lines[lines.index("--input") + 1] == str(sheet), lines
     assert "-resume" in lines and "nersc,test" in lines, lines
+    # The default persist folder, from the account sacctmgr reports, reaches Nextflow too.
+    user = os.environ.get("USER", "user")
+    assert lines[lines.index("--persist_dir") + 1] == str(work / "cfs" / "m1" / user / "runs"), (
+        lines
+    )
     assert "SLURM_CONF=/etc/slurm.conf" in lines, lines
     assert not any(line.startswith(("SLURM_JOB_ID=", "SLURM_MEM_PER_NODE=")) for line in lines)
     # The heap comes first, so NXF_OPTS already set (e.g. by the checks) can override it.
@@ -242,6 +291,7 @@ def check_submit_pipeline(work: Path) -> None:
         env={**sherlock, "SCRATCH": str(work / "scratch")},
         cwd=work,
         stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     time.sleep(3)
     job_process.send_signal(signal.SIGTERM)

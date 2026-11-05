@@ -88,8 +88,9 @@ is set and `workspace/` in this repository otherwise; override it with
 - `.nextflow.log` and `.nextflow/`: the wrapper launches Nextflow from the run
   folder, so `-resume` uses that run's history.
 
-With `--persist_dir DIR` after the sheet, `output/` and `trace/` go to `DIR/RUN_NAME/` instead,
-for storage that is kept when the workspace is purged; the rest stays in the run folder.
+With `-P`/`--persist-dir DIR`, `output/` and `trace/` go to `DIR/RUN_NAME/` instead, for storage
+that is kept when the workspace is purged; the rest stays in the run folder. It defaults to
+project storage on Perlmutter and Sherlock, and to none elsewhere.
 
 Use `-R`/`--references /path` to choose the reference location; the wrapper creates it if
 missing. It defaults to project storage on Perlmutter and Sherlock (see
