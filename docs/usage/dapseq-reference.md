@@ -138,7 +138,13 @@ Reference names are gzipped FASTA basenames ending in `.fa.gz`, `.fasta.gz`, or
 `.fna.gz`. Identifiers and filenames may contain letters, digits, underscores,
 periods, and hyphens, with a letter, digit, or underscore first. Read URLs must
 be HTTP or HTTPS. Reads are downloaded in batches of `--download_batch_size`
-samples (default 8), one batch at a time; mates with matching basenames are fine.
+samples (default 1), up to eight batches at once. When a sample's URLs are ENA's
+FASTQs of one whole SRA run (`.../RUN/RUN.fastq.gz`, or `RUN_1` and `RUN_2`), the
+run's `.sra` file is fetched from NCBI's AWS copy instead, checked against NCBI's
+MD5, and converted with `fasterq-dump` into FASTQs whose decompressed bytes are
+ENA's, read names included. If that fails, the sample is fetched from its URLs,
+with a warning in the task's log. Other URLs are fetched as given; mates with
+matching basenames are fine. `--sra_locate_url` sets NCBI's locator.
 
 ## Analysis choices
 
@@ -148,8 +154,8 @@ Main and first-read QC alignments use **full reads**; only SPP's input is cut
 (see below). Read length is inferred
 from up to the first 100 reads per mate and recorded as metadata; it is not a
 trimming instruction. Inspected reads must be nonempty, structurally valid, and
-uniform in length across mates. Remote reads are fetched with parallel aria2c
-connections and fully decompressed with bgzip, which checks gzip integrity; first-read
+uniform in length across mates. Reads fetched from their URLs are fully
+decompressed, which checks gzip integrity; first-read
 line counts must be divisible by four, and paired FASTQs must have equal line
 counts. Genome size is the sum of chromosome sizes derived from the FASTA.
 

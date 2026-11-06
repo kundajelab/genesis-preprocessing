@@ -77,7 +77,7 @@ tests=()
 if ! $fast; then
     tests+=(verify_pipeline verify_rna verify_atac verify_scatac verify_scatac_reads verify_tss)
 fi
-tests+=(verify_deployment verify_nextflow_style verify_build_tags
+tests+=(verify_deployment verify_download verify_nextflow_style verify_build_tags
     verify_multiqc verify_metro verify_readme)
 
 # Each test writes to its own log, printed in full if it fails.

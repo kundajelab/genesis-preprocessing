@@ -72,8 +72,14 @@
         "download_batch_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 8,
-          "description": "Samples fetched by each DOWNLOAD task."
+          "default": 1,
+          "description": "Samples fetched by each DOWNLOAD task; up to eight tasks run at once."
+        },
+        "sra_locate_url": {
+          "type": "string",
+          "format": "uri",
+          "default": "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?location=s3.us-east-1&acc=",
+          "description": "NCBI's SRA locator, followed by a run accession; DOWNLOAD fetches ENA runs' .sra files from AWS where it finds them."
         }
       }
     },
