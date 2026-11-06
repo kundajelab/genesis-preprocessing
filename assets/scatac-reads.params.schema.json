@@ -72,8 +72,8 @@
         "download_batch_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 8,
-          "description": "Samples fetched by each DOWNLOAD task."
+          "default": 1,
+          "description": "Samples fetched by each DOWNLOAD task; up to eight tasks run at once."
         }
       }
     },

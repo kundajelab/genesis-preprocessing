@@ -138,7 +138,9 @@ Reference names are gzipped FASTA basenames ending in `.fa.gz`, `.fasta.gz`, or
 `.fna.gz`. Identifiers and filenames may contain letters, digits, underscores,
 periods, and hyphens, with a letter, digit, or underscore first. Read URLs must
 be HTTP or HTTPS. Reads are downloaded in batches of `--download_batch_size`
-samples (default 8), one batch at a time; mates with matching basenames are fine.
+samples (default 1), up to eight batches at once over two connections each, and
+checked against ENA's MD5s when the URL is an ENA FASTQ URL; mates with matching
+basenames are fine.
 
 ## Analysis choices
 
