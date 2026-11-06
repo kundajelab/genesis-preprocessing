@@ -299,6 +299,40 @@ def check_submit_pipeline(work: Path) -> None:
     assert status == 143 and marker.exists(), (status, marker.exists())
 
 
+def check_shim_descriptors(work: Path, shim: Path) -> None:
+    """A daemon podman-hpc leaves running cannot hold the job script's output pipes open.
+
+    Nextflow's job script starts the container under `3>&1 1>&2 2>&3 | tee .command.err`,
+    leaving fd 3 open on that pipe. podman-hpc's squashfuse daemon detaches with fds 0-2 on
+    /dev/null but kept fd 3, so the tee waited, and the finished job with it, until its time
+    limit. The shim closes such descriptors.
+    """
+    work.mkdir(parents=True)
+    # A stand-in podman-hpc that leaves a detached daemon, like squashfuse_ll, then exits.
+    stand_in(
+        work / "bin",
+        "podman-hpc",
+        "#!/bin/sh\nnohup sleep 30 < /dev/null > /dev/null 2>&1 &\n"
+        "echo container output\necho container error >&2\n",
+    )
+    out, err = work / ".command.out", work / ".command.err"
+    launch = (
+        f"(set -o pipefail; (podman run image | tee '{out}') 3>&1 1>&2 2>&3 | tee '{err}')"
+        " 3>&1 1>&2 2>&3 & pid=$!; wait $pid"
+    )
+    start = time.monotonic()
+    subprocess.run(
+        ["bash", "-c", launch],
+        env={**os.environ, "PATH": f"{shim}:{work / 'bin'}:{BASE_PATH}"},
+        capture_output=True,
+        timeout=60,
+        check=True,
+    )
+    elapsed = time.monotonic() - start
+    assert elapsed < 15, f"the job script waited {elapsed:.0f} s for the daemon"
+    assert out.read_text() == "container output\n" and err.read_text() == "container error\n"
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="genesis-profile-") as temporary:
         folder = Path(temporary)
@@ -358,6 +392,7 @@ def main() -> None:
         path, *arguments = output.splitlines()
         assert arguments == ["info", "two words"], arguments
         assert str(shim) not in path.split(":") and str(folder) in path.split(":"), path
+        check_shim_descriptors(folder / "descriptors", shim)
     print(
         "PASS: default profile and references per host, pipeline submission, seven parsed "
         "profiles, podman-hpc shim"
