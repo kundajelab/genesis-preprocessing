@@ -1,5 +1,36 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
+// The size in bytes the server reports for a URL (HTTP HEAD), or -1 if it reports none.
+def contentLength(url) {
+    try {
+        def connection = URI.create(url).toURL().openConnection() as java.net.HttpURLConnection
+        connection.requestMethod = 'HEAD'
+        connection.connectTimeout = 10000
+        connection.readTimeout = 10000
+        def length = connection.responseCode == 200 ? connection.contentLengthLong : -1L
+        connection.disconnect()
+        return length
+    } catch (Exception _error) {
+        return -1L
+    }
+}
+
+// Time for a DOWNLOAD task: its files' sizes at 0.5 MB/s, below the slowest rate seen from ENA
+// (0.67 MB/s for a whole file; a task fetches one file at a time), plus 30 minutes for counting
+// reads. Where a server reports no size, a generous 15 hours per sample. The sizes are looked up
+// here, on the manager, rather than passed in, so they do not change any task's cache key.
+def downloadTime(samples, attempt) {
+    def urls = samples.collectMany { meta ->
+        meta.layout == 'PE' ? [meta.read1_url, meta.read2_url] : [meta.read1_url]
+    }
+    def sizes = urls.collect { url -> contentLength(url) }
+    if (sizes.any { size -> size < 0 }) {
+        return 15.h * samples.size() * attempt
+    }
+    def seconds = 1800L + (sizes.sum() / 0.5e6) as long
+    return "${seconds * attempt}s"
+}
+
 process DOWNLOAD {
     // ENA caps each connection (about 1 MB/s from Perlmutter) and refuses (HTTP 403) clients with
     // too many, so throughput comes from many files in flight over few connections: 8 tasks, each
@@ -13,7 +44,7 @@ process DOWNLOAD {
     // decompression, as ENA's files are plain gzip rather than BGZF.
     cpus { samples.size() }
     memory '1 GB'
-    time { 1.h * samples.size() * task.attempt }
+    time { downloadTime(samples, task.attempt) }
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${samples.size() == 1 ? samples[0].id : "${samples[0].id} +${samples.size() - 1} more"}"
