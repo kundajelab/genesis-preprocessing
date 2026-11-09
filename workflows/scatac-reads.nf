@@ -111,7 +111,7 @@ workflow {
                runs: row.sra_runs.tokenize(','), barcode_length: barcodeLength(row.chemistry)]
     })
     // The shared reference step gives chromosome sizes, reusing existing products, and builds the
-    // bwa-mem2 index for other modalities; the chromap index is reused the same way.
+    // bwa-mem3 index for other modalities; the chromap index is reused the same way.
     references = samples.unique { sample -> sample.ref_id }
         .map { meta ->
             def ref = [id: meta.ref_id, filename: meta.reference_fasta]

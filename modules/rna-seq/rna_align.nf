@@ -1,13 +1,14 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process RNA_ALIGN {
     cpus 8
     // The loaded index is ~10 bytes per reference base. samtools sorts after STAR exits, so it
     // can use that memory too, and spills to disk rather than failing on large libraries.
-    memory { (4.GB + 11.B * meta.genome_size) * task.attempt }
+    memory { oomMemoryOf(task, 4.GB + 11.B * meta.genome_size) }
     time { 1.h * (1 + [reads].flatten().sum { read -> read.size() } / 1e9) * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption)
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_STAR.yaml"
     container "${dotenv('GENESIS_STAR_IMAGE')}"

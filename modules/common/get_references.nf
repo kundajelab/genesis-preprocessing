@@ -1,5 +1,5 @@
 include { CHROM_SIZES } from './chrom_sizes'
-include { BWA_MEM2_INDEX } from './bwa_mem2_index'
+include { BWA_MEM3_INDEX ; indexSuffixes } from './bwa_mem3_index'
 
 // SHA-256 of a file's bytes, streamed rather than read into memory.
 def sha256(path) {
@@ -30,9 +30,10 @@ def current(saved, hash, referencesDir, products) {
         }
 }
 
-// Chromosome sizes and a bwa-mem2 index for each reference, reused from the references
-// folder only while <fasta>.sha256 matches the compressed FASTA and every product's recorded
-// size; otherwise both are rebuilt there and a new record is saved.
+// Chromosome sizes and a bwa-mem3 index (in <id>.bwa-mem2) for each reference, reused from the
+// references folder only while <fasta>.sha256 matches the compressed FASTA and records exactly
+// these products at their sizes; otherwise both are rebuilt there and a new record is saved. A
+// record from bwa-mem2, which also listed .0123, no longer matches, so its index is rebuilt.
 workflow GET_REFERENCES {
     take:
     references     // tuple(ref, fasta): one per reference, ref = [id, filename]
@@ -43,7 +44,7 @@ workflow GET_REFERENCES {
     checked = references.map { ref, fasta ->
         def hash = sha256(fasta)
         def products = ["${ref.id}.chrom.sizes".toString()] +
-            ['.0123', '.amb', '.ann', '.bwt.2bit.64', '.pac'].collect { suffix ->
+            indexSuffixes().collect { suffix ->
                 "${ref.id}.bwa-mem2/genome${suffix}".toString()
             }
         def reusable = current(referencesDir.resolve("${ref.filename}.sha256"), hash, referencesDir, products)
@@ -64,7 +65,7 @@ workflow GET_REFERENCES {
             def length = path.readLines().sum { line -> line.tokenize('\t')[1].toLong() }
             tuple(ref + [length: length], fasta, path)
         }
-    BWA_MEM2_INDEX(index_inputs)
+    BWA_MEM3_INDEX(index_inputs)
 
     cached = branches.cached.map { ref, _fasta, _current -> ref }
 
@@ -72,5 +73,5 @@ workflow GET_REFERENCES {
     sizes = cached.map { ref -> tuple(ref.id, ref, referencesDir.resolve("${ref.id}.chrom.sizes")) }
         .mix(built_sizes)
     indexes = cached.map { ref -> tuple(ref.id, ref, referencesDir.resolve("${ref.id}.bwa-mem2")) }
-        .mix(BWA_MEM2_INDEX.out.index.map { ref, path -> tuple(ref.id, ref, path) })
+        .mix(BWA_MEM3_INDEX.out.index.map { ref, path -> tuple(ref.id, ref, path) })
 }

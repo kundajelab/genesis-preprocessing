@@ -1,4 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 // Shell that writes <ref_id>.chromap.sha256 in the format GET_CHROMAP_INDEX checks: the FASTA
 // hash, chromap's release, then every index file's size in bytes. Run after the index exists, so
@@ -22,10 +23,10 @@ process CHROMAP_INDEX {
     cpus 2
     // chromap peaks at about 10 bytes per reference base while indexing, for an index of about
     // 5 bytes per base (measured on 50 and 200 Mb genomes). ref.length is the summed chrom sizes.
-    memory { (2.GB + 12.B * ref.length) * task.attempt }
+    memory { oomMemoryOf(task, 2.GB + 12.B * ref.length) }
     time { 1.h * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption)
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_CHROMAP.yaml"
     container "${dotenv('GENESIS_CHROMAP_IMAGE')}"

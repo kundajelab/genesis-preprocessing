@@ -213,7 +213,7 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
     counts = Counter(row["name"].split(" ")[0] for row in rows)
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 2,
-        "GET_REFERENCES:BWA_MEM2_INDEX": 2,
+        "GET_REFERENCES:BWA_MEM3_INDEX": 2,
         "DOWNLOAD": 2,
         "FASTQC": 6,
         "ATAC_TRIM": 3,

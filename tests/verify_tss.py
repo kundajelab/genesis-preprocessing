@@ -253,7 +253,7 @@ def check_trace(work: Path, libraries: int) -> None:
     counts = Counter(row["name"].split(" ")[0] for row in rows)
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 1,
-        "GET_REFERENCES:BWA_MEM2_INDEX": 1,
+        "GET_REFERENCES:BWA_MEM3_INDEX": 1,
         "RNA_ANNOTATION": 1,
         "GET_STAR_INDEX:RNA_INDEX": 1,
         # One download task per library (download_batch_size defaults to 1).

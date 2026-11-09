@@ -178,7 +178,7 @@ def check_stub(work: Path) -> None:
     counts = Counter(row["name"].split(" ")[0] for row in rows)
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 1,
-        "GET_REFERENCES:BWA_MEM2_INDEX": 1,
+        "GET_REFERENCES:BWA_MEM3_INDEX": 1,
         "SCATAC_SRA:SRA_PREFETCH": 4,
         "SCATAC_SRA:SRA_FASTQ": 4,
         "GET_CHROMAP_INDEX:CHROMAP_INDEX": 1,

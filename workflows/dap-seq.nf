@@ -5,7 +5,7 @@ include { GET_REFERENCES } from '../modules/common/get_references'
 include { DOWNLOAD } from '../modules/common/download'
 include { FASTQC } from '../modules/common/fastqc'
 include { METADATA } from '../modules/dap-seq/metadata'
-include { BWA_MEM2_ALIGN } from '../modules/dap-seq/bwa_mem2_align'
+include { BWA_MEM3_ALIGN } from '../modules/dap-seq/bwa_mem3_align'
 include { QC } from '../modules/dap-seq/qc'
 include { MULTIQC } from '../modules/dap-seq/multiqc'
 include { TRACKS } from '../modules/dap-seq/tracks'
@@ -139,10 +139,10 @@ workflow {
         .map { _id, _original, reads, meta, metadata -> tuple(meta.ref_id, meta, reads, metadata) }
         .combine(indexes, by: 0)
         .map { _refId, meta, reads, metadata, _ref, index -> tuple(meta, reads, metadata, index) }
-    BWA_MEM2_ALIGN(alignmentInputs, bwaOptions, params.spp_read_length)
-    aligned = BWA_MEM2_ALIGN.out.aligned
+    BWA_MEM3_ALIGN(alignmentInputs, bwaOptions, params.spp_read_length)
+    aligned = BWA_MEM3_ALIGN.out.aligned
     mainBams = aligned.map { meta, bam, bai, _qcBam, _qcBai -> tuple(meta, bam, bai) }
-    sppBams = BWA_MEM2_ALIGN.out.spp.map { meta, sppBam -> tuple(meta.id, sppBam) }
+    sppBams = BWA_MEM3_ALIGN.out.spp.map { meta, sppBam -> tuple(meta.id, sppBam) }
     qcInputs = aligned
         .map { meta, bam, bai, qcBam, qcBai -> tuple(meta.id, meta, bam, bai, qcBam, qcBai) }
         .join(sppBams, by: 0, failOnDuplicate: true, failOnMismatch: true)
@@ -196,7 +196,7 @@ workflow {
     MULTIQC(multiqcFiles, multiqcSamples, reportProvenance,
             file("${repoDir}/multiqc_config.yaml"),
             file("${repoDir}/genesis_tools/src/genesis_tools/multiqc_reporting.py"))
-    TRACKS(aligned, resources)
+    TRACKS(aligned)
     treatments = mainBams.filter { meta, _bam, _bai -> meta.control != '-' }
         .map { meta, bam, bai -> tuple(meta.control, meta, bam, bai) }
     controls = mainBams.filter { meta, _bam, _bai -> meta.control == '-' }

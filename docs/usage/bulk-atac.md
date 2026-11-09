@@ -54,7 +54,7 @@ below:
 1. **Trimming.** cutadapt removes the Nextera adapter (`--atac_adapter`, default
    `CTGTCTCTTATACACATCT`) from both mates and drops pairs where either mate is
    shorter than 5 bases. FastQC runs on the raw mates.
-2. **Alignment.** bwa-mem2 with the same options as DAP-seq, then samtools fixmate
+2. **Alignment.** bwa-mem3 with the same options as DAP-seq, then samtools fixmate
    and markdup mark duplicates.
 3. **Filtering.** A usable pair has both mates primary, properly paired, not
    QC-failed, on a nuclear contig and at least MAPQ `--atac_mapq` (default 30).
@@ -82,7 +82,7 @@ QC thresholds are applied.
 
 These are deliberate but not yet justified against ENCODE on plant data:
 
-- **Aligner.** bwa-mem2 with the DAP-seq options; ENCODE uses Bowtie2.
+- **Aligner.** bwa-mem3 with the DAP-seq options; ENCODE uses Bowtie2.
 - **Peaks.** MACS3 `-q 0.01` in BAMPE mode on whole, unshifted fragments; ENCODE
   runs MACS2 `-p 0.01` on Tn5-shifted single reads, extended around each cut site.
 - **Replicates.** Each library gets its own peaks; there is no IDR or overlap step

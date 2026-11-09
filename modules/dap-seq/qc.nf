@@ -1,9 +1,16 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process QC {
     cpus { resources.cpus }
-    memory { resources.memory }
-    time { resources.time }
+    // SPP loads every read of its BAM into R: about 2.7 GB of memory per GB of that BAM (12.5 GB
+    // for 155M reads). Retry with twice the memory if Slurm reports running out; nothing else.
+    memory { oomMemoryOf(task, 6.GB + 4 * spp_bam.size().B) }
+    errorStrategy { oomErrorStrategy(task) }
+    maxRetries 2
+    // On Perlmutter, 63 Sorghum samples took at most 0.254 hours per GB of SPP's BAM (the largest,
+    // 2.9 GB, 0.74 hours), with no fixed cost to speak of. Allow twice 0.26, plus 10 minutes.
+    time { 10.min + 2 * 0.26.h * spp_bam.size() / 1e9 }
     conda "${moduleDir}/../../environments/GENESIS_SPP.yaml"
     container "${dotenv('GENESIS_SPP_IMAGE')}"
     tag "${meta.id}"
@@ -11,6 +18,8 @@ process QC {
         pattern: '*.qc.report.*'
     input:
     tuple val(meta), path(bam), path(bai), path(qc_bam), path(qc_bai), path(spp_bam)
+    // Unused now that QC sizes its own resources, but part of each task's cache key: removing it
+    // would rerun every finished QC task.
     val resources
     path spp_script
     output:

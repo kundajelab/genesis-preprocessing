@@ -87,7 +87,7 @@ DAP_NODES = [
     ("samples", 140, 330, "Sample sheet", "SE / PE + controls", "reads"),
     ("validate", 370, 330, "Validate sheet", "Schema + controls", "reads"),
     ("DOWNLOAD", 600, 330, "Download", "Unmodified raw mates", "reads"),
-    ("BWA_MEM2_ALIGN", 830, 330, "bwa-mem2", "Full-read alignment", "reads"),
+    ("BWA_MEM3_ALIGN", 830, 330, "bwa-mem3", "Full-read alignment", "reads"),
     ("CALL_PEAKS", 1060, 330, "MACS3 peaks", "Assigned control", "peaks"),
     ("QUANTIFY", 1290, 330, "Quantify", "RPM + mean RPKM", "peaks"),
     ("FASTQC", 600, 180, "FastQC", "One report per mate", "qc"),
@@ -97,7 +97,7 @@ DAP_NODES = [
     ("METADATA", 600, 510, "Metadata", "Genome + read length", "reads"),
     ("spp", 830, 510, "SPP", "Separate 50-bp R1", "spp"),
     ("GET_REFERENCES", 140, 690, "Reference FASTA", "Hash-checked reuse", "reference"),
-    ("BWA_MEM2_INDEX", 370, 690, "bwa-mem2 index", "Verified products", "reference"),
+    ("BWA_MEM3_INDEX", 370, 690, "bwa-mem3 index", "Verified products", "reference"),
     ("TRACKS", 1060, 690, "deepTools tracks", "BigWig signal", "tracks"),
 ]
 DAP_EDGES = [
@@ -125,7 +125,7 @@ ATAC_NODES = [
     ("samples",140,330,"Sample sheet","Paired-end libraries","reads"),
     ("DOWNLOAD",370,330,"Download","Unmodified raw mates","reads"),
     ("ATAC_TRIM",600,330,"cutadapt","Nextera adapters","reads"),
-    ("ATAC_ALIGN",830,330,"bwa-mem2","Align + mark duplicates","reads"),
+    ("ATAC_ALIGN",830,330,"bwa-mem3","Align + mark duplicates","reads"),
     ("ATAC_FILTER",1060,330,"Filter","MAPQ, organelles, duplicates","reads"),
     ("ATAC_PEAKS",1290,330,"MACS3 peaks","BAMPE fragments","peaks"),
     ("FASTQC",370,180,"FastQC","One report per mate","qc"),
@@ -133,7 +133,7 @@ ATAC_NODES = [
     ("ATAC_QC",1290,510,"ATAC QC","FRiP, TSS, complexity","qc"),
     ("CHROM_SIZES",140,510,"Chromosome sizes","Verified products","reference"),
     ("GET_REFERENCES",140,690,"Reference FASTA","Hash-checked reuse","reference"),
-    ("BWA_MEM2_INDEX",370,690,"bwa-mem2 index","Verified products","reference"),
+    ("BWA_MEM3_INDEX",370,690,"bwa-mem3 index","Verified products","reference"),
     ("genes",600,690,"Gene starts","Optional BED6","reference"),
     ("ATAC_TRACKS",1060,690,"Tn5 cut sites","+4 / −5 shifted bigWig","tracks"),
 ]

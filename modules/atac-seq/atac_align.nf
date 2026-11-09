@@ -1,13 +1,14 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process ATAC_ALIGN {
     cpus 8
-    // The loaded index is ~5.5 bytes per reference base; samtools sort uses 512 MB, and each bwa-mem2
-    // thread adds a little more.
-    memory { (1.5.GB + 7.B * meta.genome_size + 256.MB * task.cpus) * task.attempt }
+    // bwa-mem3 loads ~3.5 bytes per reference base (it reads no .0123); 7 leaves headroom. samtools
+    // sort uses 512 MB, and each bwa-mem3 thread adds a little more.
+    memory { oomMemoryOf(task, 1.5.GB + 7.B * meta.genome_size + 256.MB * task.cpus) }
     time { 1.h * (1 + reads.sum { read -> read.size() } / 1e9) * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption)
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
@@ -25,10 +26,10 @@ process ATAC_ALIGN {
     def threads = Math.max(1, task.cpus - 1)
     def options = "-K ${bwa_options.batch_size} -k ${bwa_options.seed_length} " +
         "-c ${bwa_options.max_seed_occurrences} -T ${bwa_options.score_threshold}"
-    // bwa-mem2 writes mates together, as fixmate needs. Duplicates are marked here and removed with
+    // bwa-mem3 writes mates together, as fixmate needs. Duplicates are marked here and removed with
     // the other filters, so the complexity metrics can still count them.
     """
-    bwa-mem2 mem -t ${threads} ${options} -R '@RG\\tID:${meta.id}\\tSM:${meta.id}\\tPL:ILLUMINA' \\
+    bwa-mem3 mem -t ${threads} ${options} -R '@RG\\tID:${meta.id}\\tSM:${meta.id}\\tPL:ILLUMINA' \\
         "${index}/genome" '${files[0]}' '${files[1]}' 2> bwa.log | \\
         samtools fixmate -m -u - - | \\
         samtools sort -u -m 512M - | \\

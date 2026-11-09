@@ -51,19 +51,19 @@
           "type": "integer",
           "minimum": 1,
           "default": 2,
-          "description": "CPUs for QC and tracks."
+          "description": "CPUs for the QC and track steps that do not size their own."
         },
         "memory": {
           "type": "string",
           "pattern": "^\\d+(\\.\\d+)?\\s*(K|M|G|T)?B$",
           "default": "8 GB",
-          "description": "Memory for QC and tracks."
+          "description": "Memory for the QC and track steps that do not size their own."
         },
         "time": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?\\s*(ms|s|m|h|d)\\s*)+$",
           "default": "4h",
-          "description": "Walltime for QC and tracks."
+          "description": "Walltime for the QC and track steps that do not size their own."
         },
         "queue": {
           "type": "string",
@@ -105,7 +105,7 @@
         "bwa_max_seed_occurrences": {
           "type": "integer",
           "minimum": 1,
-          "default": 10000,
+          "default": 500,
           "errorMessage": "Parameter --bwa_max_seed_occurrences must be a positive integer",
           "description": "bwa-mem2 -c: skip seeds with more occurrences."
         },

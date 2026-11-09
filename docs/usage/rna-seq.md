@@ -61,7 +61,7 @@ Each row is one library: biological replicates are never pooled.
    including resume, rehashes both. The index is reused only while the record matches
    them, the STAR version pinned in `environments/GENESIS_STAR.yaml` and exactly the
    files in the index folder; otherwise it is rebuilt and a new record saved. Stub runs
-   never publish into the references folder. The bwa-mem2 index is built and reused as
+   never publish into the references folder. The bwa-mem3 index is built and reused as
    for DAP-seq, for the other modalities.
 3. **Alignment.** STAR, with no intron longer than the longest annotated intron, and
    at least 1 kb (`--alignIntronMax`; the mate gap may add 1 kb for the unread middle

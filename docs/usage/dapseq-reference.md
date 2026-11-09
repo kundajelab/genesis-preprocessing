@@ -2,7 +2,7 @@
 
 Genesis is a Nextflow DSL2 pipeline for single-end and paired-end plant DAP-seq.
 It downloads libraries, derives reference indexes and chromosome sizes, aligns
-with bwa-mem2, inspects raw reads with FastQC, runs SPP and alignment QC, generates deepTools coverage tracks,
+with bwa-mem3, inspects raw reads with FastQC, runs SPP and alignment QC, generates deepTools coverage tracks,
 calls MACS3 peaks against each treatment's assigned control, and quantifies peaks.
 
 ![Genesis DAP-seq workflow metro map](../../docs/images/genesis_metro_map.svg)
@@ -31,8 +31,8 @@ pixi run install-all
 Place each sheet's gzipped reference FASTA under `references/`, using the exact
 basename in `reference_fasta`. Reference genomes are not downloaded automatically.
 The `GET_REFERENCES` subworkflow (`modules/common/get_references.nf`) builds each
-reference's chromosome sizes and bwa-mem2 index and publishes them beside the FASTA,
-with `<fasta>.sha256`. Its first line is the SHA-256 of the compressed FASTA (in
+reference's chromosome sizes and bwa-mem3 index (in `<id>.bwa-mem2/`) and publishes them
+beside the FASTA, with `<fasta>.sha256`. Its first line is the SHA-256 of the compressed FASTA (in
 `sha256sum` format); each further line records a product's size in bytes. Every run,
 including resume, rehashes each FASTA. It reuses `<id>.chrom.sizes` and
 `<id>.bwa-mem2/` only when the hash matches and every product is present at its
@@ -148,7 +148,9 @@ matching basenames are fine. `--sra_locate_url` sets NCBI's locator.
 
 ## Analysis choices
 
-The main workflow uses bwa-mem2 for alignment.
+The main workflow uses bwa-mem3 for alignment. With these options its records match bwa-mem2's,
+except for a few repeat reads where bwa-mem3 fixes bwa-mem2's inconsistent scores, and for
+the `MQ` and `HN` tags it adds; it is about four times as fast.
 
 Main and first-read QC alignments use **full reads**; only SPP's input is cut
 (see below). Read length is inferred
@@ -159,20 +161,20 @@ decompressed, which checks gzip integrity; first-read
 line counts must be divisible by four, and paired FASTQs must have equal line
 counts. Genome size is the sum of chromosome sizes derived from the FASTA.
 
-The main bwa-mem2 BAM retains primary mapped alignments, including **MAPQ 0**.
+The main BAM retains primary mapped alignments, including **MAPQ 0**.
 `samtools view -F 2308` excludes unmapped, secondary, and supplementary records.
 There is no MAPQ threshold, NH weighting, or separate deduplication step in the
-bwa-mem2 alignment. QC aligns full first reads as an unpaired library, used for
-first-read statistics and tracks. A third alignment, for SPP only, uses first
+alignment. QC aligns full first reads as an unpaired library, used for
+first-read statistics and tracks; for a single-end library that is the main
+alignment, reused rather than repeated. A third alignment, for SPP only, uses first
 reads cut to their first 50 bases (`--spp_read_length`). Each sample's alignment
-provenance records the bwa-mem2 version, layout, read length, flag exclusion,
+provenance records the bwa-mem3 version, layout, read length, flag exclusion,
 options, and the QC and SPP read policies.
 
-The currently pinned alignment image contains BWA-MEM2 **2.3**, although its
-executable banner reports `2.2.1`. Use the image digest, package metadata and
-executable hashes to identify that build.
+The currently pinned alignment image contains bwa-mem3 **0.16.0**, the newest bioconda build
+for all four platforms the environment locks.
 
-BWA defaults are `-K 10000000 -k 19 -c 10000 -T 30`. Override them with
+BWA defaults are `-K 10000000 -k 19 -c 500 -T 30`. Override them with
 `--bwa_batch_size`, `--bwa_seed_length`, `--bwa_max_seed_occurrences`, and
 `--bwa_score_threshold`; each must be a positive integer.
 Parameters are validated against `assets/dap-seq.params.schema.json` (nf-schema) before any
@@ -291,14 +293,20 @@ by DOWNLOAD; FastQC itself is not a comprehensive FASTQ validator (for example,
 v0.12.1 accepts a short quality string). A successful report is not evidence of
 biological suitability.
 
-bwa-mem2 indexing and alignment size their own requests. Indexing reads the
-gzipped FASTA directly on one CPU, with 1 GB plus 32 bytes per reference base
-(it peaks near 28) and one hour plus an hour per Gbp. Alignment uses eight CPUs,
-memory from the genome size, and one hour plus an hour per GB of compressed
-reads. Both retry twice with doubled, then tripled, requests when killed for
-memory or walltime. QC and tracks default to two CPUs, 8 GB, and four hours,
-configurable with `--cpus`, `--memory`, and `--time`. Other modules declare their
-own resources. The `local` profile caps requests at the machine's CPUs and memory.
+bwa-mem3 indexing and alignment size their own requests. Indexing reads the
+gzipped FASTA directly on four CPUs (more barely help), with 1 GB plus 16 bytes per
+reference base (it peaks near 14.5) and one hour plus an hour per Gbp. It writes no
+`.0123`, so a record from bwa-mem2, which listed it, makes the index rebuild once.
+Alignment uses 16 CPUs, memory from the genome size and CPUs, and time from the size
+of the compressed reads. Both retry, with twice the memory, only when they run out
+of memory. QC uses two CPUs, and memory and time from the size of SPP's BAM. Tracks use
+four CPUs (1.7 times as fast as two), 2 GB plus half the size of the primary BAM, and
+time from the genome size and the size of the BAMs they cover. bamCoverage waits for
+workers killed for memory until the time limit, so a task that times out after Slurm
+logged an out-of-memory kill also retries with twice the memory. `--cpus`, `--memory` and `--time`
+do not apply to DAP-seq. Other modules declare their own resources. The `local` profile caps
+requests at the machine's CPUs and memory.
+
 The `test` profile caps every task at two CPUs, 2 GB, and five minutes; it does
 not select a sample subset or replace tools. On clusters, run computation on
 allocated compute nodes within your site's resource limits.
@@ -348,7 +356,7 @@ stub workflows. It checks control fan-out, per-reference generation and reuse,
 `-resume`, invalid sheets and references, and publication boundaries. Mock builds cover
 both architectures and `--no-push` without contacting Docker or a registry.
 
-Docker validation runs the real download/staging, indexing, bwa-mem2, samtools,
+Docker validation runs the real download/staging, indexing, bwa-mem3, samtools,
 FastQC, SPP, deepTools, MACS3, and Python tools on deterministic 75-base SE/PE
 fixtures with enriched regions and duplicated sequence. It checks nonempty peaks,
 finite positive scores, provenance, read lengths (full, and 50 bases for SPP),

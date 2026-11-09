@@ -1,9 +1,25 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process TRACKS {
-    cpus { resources.cpus }
-    memory { resources.memory }
-    time { resources.time }
+    // bamCoverage runs 1.72x as fast on 4 CPUs as on 2 (on a 1 GB BAM), and 2.7x on 8 for 48%
+    // more CPU time; 4 is the better trade. On 2 CPUs, 57 Sorghum samples used 183-196% CPU.
+    cpus 4
+    // Samples with primary BAMs up to ~9 GB ran within 5.5 GB on 2 CPUs (1.5 GB requested plus the
+    // nersc profile's 4 GB), but 17 of 7.7-28.8 GB had bamCoverage workers killed for memory, and
+    // bamCoverage then waits for them until the time limit. Allow 2 GB plus 0.5 per GB of BAM.
+    memory { oomMemoryOf(task, 2.GB + 1.B * (0.5 * bam.size()).toLong()) }
+    // On 2 CPUs, 1 hour for the Sorghum genome (718 Mb, which the 1-bp tracks span) plus 0.24
+    // hours per GB of the BAMs tracked covered every sample; the largest, 17.9 GB, took 3.64
+    // hours. Allow twice that at 4 CPUs' speed (proportionally longer on fewer), plus 10 minutes.
+    time {
+        def tracked = bam.size() + (meta.layout == 'PE' ? qc_bam.size() : 0)
+        def hours = (1.4 * meta.genome_size + 0.24 * tracked) / 1e9 * 2 / 1.72 * 4 / task.cpus
+        10.min + 1.h * hours
+    }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
@@ -11,7 +27,6 @@ process TRACKS {
         pattern: '*.bw'
     input:
     tuple val(meta), path(bam), path(bai), path(qc_bam), path(qc_bai)
-    val resources
     output:
     tuple val(meta), path("${meta.id}.tracks*.bw"), emit: tracks
     tuple val(meta), path("${meta.id}.tracks.RPKM.bedGraph"), emit: rpkm
