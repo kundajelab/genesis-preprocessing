@@ -129,7 +129,7 @@ workflow {
     ATAC_FILTER(filterInputs, params.atac_mapq)
     usable = ATAC_FILTER.out.bam
     ATAC_PEAKS(usable)
-    ATAC_TRACKS(usable, resources)
+    ATAC_TRACKS(usable)
     qcInputs = usable.map { meta, bam, bai -> tuple(meta.id, meta, bam, bai) }
         .join(ATAC_PEAKS.out.peaks.map { meta, peaks -> tuple(meta.id, peaks) },
               failOnDuplicate: true, failOnMismatch: true)

@@ -1,9 +1,15 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from './retry'
 
 process MULTIQC_REPORT {
+    // As DAP-seq's MultiQC, which read 1,422 reports in 35 seconds at 91% CPU, peaking at 0.47 GB.
+    // Allow 1 GB plus 1 MB per report, and 15 minutes plus 0.2 seconds per report.
     cpus 1
-    memory '2 GB'
-    time '1h'
+    memory { oomMemoryOf(task, 1.GB + 1.MB * [reports].flatten().size()) }
+    time { 15.min + 200.ms * [reports].flatten().size() }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_MULTIQC.yaml"
     container "${dotenv('GENESIS_MULTIQC_IMAGE')}"
     publishDir "${params.publish_base}/output/multiqc", mode: 'copy', pattern: 'multiqc*'

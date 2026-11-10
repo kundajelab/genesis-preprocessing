@@ -1,9 +1,15 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process MULTIQC {
+    // On Perlmutter, a report of 142 Sorghum samples took 32-35 seconds at 91% CPU, peaking at
+    // 0.47 GB. Allow 1 GB plus 10 MB per sample, and 15 minutes plus 2 seconds per sample.
     cpus 1
-    memory '2 GB'
-    time '1h'
+    memory { oomMemoryOf(task, 1.GB + 10.MB * samples.size()) }
+    time { 15.min + 2.s * samples.size() }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_MULTIQC.yaml"
     container "${dotenv('GENESIS_MULTIQC_IMAGE')}"
     tag "${provenance.name}"

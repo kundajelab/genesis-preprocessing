@@ -2,7 +2,7 @@ include { dotenv } from 'plugin/nf-dotenv'
 include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process QC {
-    cpus { resources.cpus }
+    cpus 2
     // SPP loads every read of its BAM into R: about 2.7 GB of memory per GB of that BAM (12.5 GB
     // for 155M reads). Retry with twice the memory if Slurm reports running out; nothing else.
     memory { oomMemoryOf(task, 6.GB + 4 * spp_bam.size().B) }
@@ -18,9 +18,6 @@ process QC {
         pattern: '*.qc.report.*'
     input:
     tuple val(meta), path(bam), path(bai), path(qc_bam), path(qc_bai), path(spp_bam)
-    // Unused now that QC sizes its own resources, but part of each task's cache key: removing it
-    // would rerun every finished QC task.
-    val resources
     path spp_script
     output:
     tuple val(meta), path("${meta.id}.qc.report.*"), emit: reports

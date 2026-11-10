@@ -300,8 +300,9 @@ reference base (it peaks near 14.5) and one hour plus an hour per Gbp. It writes
 Alignment uses 16 CPUs, memory from the genome size and CPUs, and time from the size
 of the compressed reads. Both retry, with twice the memory, only when they run out
 of memory. QC uses two CPUs, and memory and time from the size of SPP's BAM. Tracks use
-four CPUs (1.7 times as fast as two), 2 GB plus half the size of the primary BAM, and
-time from the genome size and the size of the BAMs they cover. bamCoverage waits for
+four CPUs (1.7 times as fast as two), 2.0 GB, and time from the genome size and the size
+of the BAMs they cover. bamCoverage writes its temporary files in the task's folder,
+since a compute node's `/tmp` may be held in memory. It waits for
 workers killed for memory until the time limit, so a task that times out after Slurm
 logged an out-of-memory kill also retries with twice the memory. `--cpus`, `--memory` and `--time`
 do not apply to DAP-seq. Other modules declare their own resources. The `local` profile caps

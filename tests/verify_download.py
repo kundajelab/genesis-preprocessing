@@ -51,10 +51,13 @@ for mate, reads in enumerate(mates, 1):
             stream.write("\\n".join(lines) + "\\n")
 print(f"spots read      : {{len(mates[0]):,}}")
 """
-# pigz -p N -c FILE and pigz -dc FILE, as DOWNLOAD calls it.
+# pigz -p N -4 -c FILE and pigz -dc FILE, as DOWNLOAD calls it; each call's arguments are
+# appended to pigz.args.
 FAKE_PIGZ = """#!{python}
-import gzip, shutil, sys
+import gzip, json, shutil, sys
 args = sys.argv[1:]
+with open("pigz.args", "a") as log:
+    log.write(json.dumps(args[:-1]) + "\\n")
 source = args[-1]
 if "-dc" in args:
     with gzip.open(source, "rb") as stream:
@@ -287,6 +290,9 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
         "fasterq-dump wrote SRR0000005.fastq, not SRR0000005_1.fastq SRR0000005_2.fastq" in errors
     )
     assert not list(task.glob("*.sra")) and not list(task.glob("sra-*")), "conversion leftovers"
+    # Converted reads are compressed fast (level 4) with the task's CPUs (1 in the test profile).
+    calls = [json.loads(line) for line in (task / "pigz.args").read_text().splitlines()]
+    assert ["-p", "1", "-4", "-c"] in calls, calls
     arguments = json.loads((task / "fasterq-dump.args").read_text())
     assert arguments[:2] == ["--split-3", "--threads"], arguments
     assert ["--seq-defline", "@$ac.$si $sn/$ri", "--qual-defline", "+"] == arguments[-5:-1], (

@@ -5,10 +5,12 @@ process TRACKS {
     // bamCoverage runs 1.72x as fast on 4 CPUs as on 2 (on a 1 GB BAM), and 2.7x on 8 for 48%
     // more CPU time; 4 is the better trade. On 2 CPUs, 57 Sorghum samples used 183-196% CPU.
     cpus 4
-    // Samples with primary BAMs up to ~9 GB ran within 5.5 GB on 2 CPUs (1.5 GB requested plus the
-    // nersc profile's 4 GB), but 17 of 7.7-28.8 GB had bamCoverage workers killed for memory, and
-    // bamCoverage then waits for them until the time limit. Allow 2 GB plus 0.5 per GB of BAM.
-    memory { oomMemoryOf(task, 2.GB + 1.B * (0.5 * bam.size()).toLong()) }
+    // On Perlmutter, 142 Sorghum samples' processes peaked at 0.85 GB on 2 CPUs and 1.58 GB on 4,
+    // whatever the BAM size (up to 28.8 GB). Yet 17 large ones had bamCoverage workers killed for
+    // memory at 5.5 GB, apparently for bamCoverage's temporary files, which a compute node's /tmp
+    // keeps in memory; the script puts them in the task's folder instead. bamCoverage waits for
+    // killed workers until the time limit, which modules/common/retry.nf retries as out of memory.
+    memory { oomMemoryOf(task, 2.0.GB) }
     // On 2 CPUs, 1 hour for the Sorghum genome (718 Mb, which the 1-bp tracks span) plus 0.24
     // hours per GB of the BAMs tracked covered every sample; the largest, 17.9 GB, took 3.64
     // hours. Allow twice that at 4 CPUs' speed (proportionally longer on fewer), plus 10 minutes.
@@ -35,26 +37,28 @@ process TRACKS {
         "make_tracks '${qc_bam}' '${meta.id}.tracks.read1'" : ''
     """
     export MPLCONFIGDIR="\$PWD/.matplotlib"
-    mkdir -p "\$MPLCONFIGDIR"
+    # bamCoverage's temporary files go in the task's folder, not a /tmp that may be held in memory.
+    export TMPDIR="\$PWD/tmp"
+    mkdir -p "\$MPLCONFIGDIR" "\$TMPDIR"
     make_tracks() {
         local input=\$1 stem=\$2 count factor
         count=\$(samtools view -c "\$input")
         test "\$count" -gt 0
         factor=\$(awk -v count="\$count" 'BEGIN {printf "%.17g", 1000000/count}')
-        bamCoverage -b "\$input" -o "\$stem.CPM.bw" --binSize 1 \
+        bamCoverage -b "\$input" -o "\$stem.CPM.bw" --binSize 1 \\
             --normalizeUsing CPM --exactScaling -p ${task.cpus}
-        bamCoverage -b "\$input" -o "\$stem.plus.CPM.bw" --binSize 1 \
+        bamCoverage -b "\$input" -o "\$stem.plus.CPM.bw" --binSize 1 \\
             --normalizeUsing None --scaleFactor "\$factor" --samFlagExclude 16 -p ${task.cpus}
-        bamCoverage -b "\$input" -o "\$stem.minus.CPM.bw" --binSize 1 \
+        bamCoverage -b "\$input" -o "\$stem.minus.CPM.bw" --binSize 1 \\
             --normalizeUsing None --scaleFactor "\$factor" --samFlagInclude 16 -p ${task.cpus}
-        bamCoverage -b "\$input" -o "\$stem.plus.5p.counts.bw" --binSize 1 \
+        bamCoverage -b "\$input" -o "\$stem.plus.5p.counts.bw" --binSize 1 \\
             --normalizeUsing None --Offset 1 --samFlagExclude 16 -p ${task.cpus}
-        bamCoverage -b "\$input" -o "\$stem.minus.5p.counts.bw" --binSize 1 \
+        bamCoverage -b "\$input" -o "\$stem.minus.5p.counts.bw" --binSize 1 \\
             --normalizeUsing None --Offset 1 --samFlagInclude 16 -p ${task.cpus}
     }
     make_tracks '${bam}' '${meta.id}.tracks'
     ${qcTracks}
-    bamCoverage -b '${bam}' -o '${meta.id}.tracks.RPKM.bedGraph' \
+    bamCoverage -b '${bam}' -o '${meta.id}.tracks.RPKM.bedGraph' \\
         --outFileFormat bedgraph --binSize 1 --normalizeUsing RPKM --exactScaling -p ${task.cpus}
     """
     stub:

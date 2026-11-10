@@ -15,21 +15,28 @@ def contentLength(url) {
     }
 }
 
-// Time for a DOWNLOAD task: its FASTQs' sizes at 0.5 MB/s, below the slowest rate seen from ENA
-// (0.67 MB/s for a whole file), plus 30 minutes for converting and counting reads. SRA runs come
-// from AWS far faster (about 40 MB/s from Perlmutter), but a sample falls back to ENA when that
-// fails. Where a server reports no size, a generous 15 hours per sample. The sizes are looked up
-// here, on the manager, rather than passed in, so they do not change any task's cache key.
+// Time for a DOWNLOAD task, from its FASTQs' sizes as their servers report them (looked up here,
+// on the manager, rather than passed in, so they do not change any task's cache key):
+// - An SRA run on a first attempt: 15 minutes plus 3 per GB. It took 3.5 per GB with 4 CPUs and
+//   pigz's default level 6, mostly compressing; 8 CPUs at level 4 should take about 1.
+// - Otherwise, as when a first attempt fell back to ENA and ran out of time: 30 minutes plus the
+//   FASTQs at 0.5 MB/s, below the slowest rate seen from ENA (0.67 MB/s for a whole file), times the
+//   attempt. Where a server reports no size, a generous 15 hours.
 def downloadTime(samples, attempt) {
-    def urls = samples.collectMany { meta ->
-        meta.layout == 'PE' ? [meta.read1_url, meta.read2_url] : [meta.read1_url]
-    }
-    def sizes = urls.collect { url -> contentLength(url) }
-    if (sizes.any { size -> size < 0 }) {
-        return 15.h * samples.size() * attempt
-    }
-    def seconds = 1800L + (sizes.sum() / 0.5e6) as long
-    return "${seconds * attempt}s"
+    def seconds = samples.collect { meta ->
+        def urls = meta.layout == 'PE' ? [meta.read1_url, meta.read2_url] : [meta.read1_url]
+        def sizes = urls.collect { url -> contentLength(url) }
+        def fromSra = attempt == 1 && sraRun(meta) != null
+        if (sizes.any { size -> size < 0 }) {
+            return fromSra ? 2L * 3600 : 15L * 3600 * attempt
+        }
+        def bytes = sizes.sum() as long
+        if (fromSra) {
+            return 900L + ((bytes / 1e9 * 180) as long)
+        }
+        return (1800L + ((bytes / 0.5e6) as long)) * attempt
+    }.sum() as long
+    return "${seconds}s"
 }
 
 // The SRA run whose reads a sample's URLs are, when they are ENA's FASTQs of one whole run:
@@ -57,7 +64,7 @@ process DOWNLOAD {
     errorStrategy 'retry'
     maxRetries 2
     // fasterq-dump and pigz use them all.
-    cpus 4
+    cpus 8
     memory '2 GB'
     time { downloadTime(samples, task.attempt) }
     conda "${moduleDir}/../../environments/GENESIS_SRA.yaml"
@@ -115,7 +122,8 @@ process DOWNLOAD {
         for mate in \$(seq 1 "\$mates"); do
             if (( mates == 1 )); then file="sra-\$run/\$run.fastq"; else file="sra-\$run/\${run}_\$mate.fastq"; fi
             wc -l < "\$file" | tr -d ' ' > "\$id.read\$mate.lines" || return 1
-            pigz -p ${task.cpus} -c "\$file" > "\$id.read\$mate.fastq.gz" || return 1
+            # Level 4 compresses 5.5 times as fast as the default (6), into files 10% larger.
+            pigz -p ${task.cpus} -4 -c "\$file" > "\$id.read\$mate.fastq.gz" || return 1
             rm "\$file"
         done
         rm -r "sra-\$run" "tmp-\$run"

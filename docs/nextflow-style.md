@@ -18,8 +18,8 @@ Each workflow has a script, a config and a parameter schema:
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 
 - Each process declares its resources, conda YAML, and nf-dotenv container image.
-- QC takes its walltime from workflows/dap-seq.nf through a resources input; tracks and bwa-mem3
-  indexing and alignment size their own from the genome, BAM and read sizes.
+- DAP-seq's QC, tracks, and bwa-mem3 indexing and alignment size their own resources from the
+  genome, BAM and read sizes; QC still takes a resources input, unused, to keep its cache keys.
 - BWA options and the pinned SPP script are also explicit inputs.
 - Pure tool environments live in environments/*.yaml. Docker builds derive matching
   *.toml/*.lock files with Pixi and use dockers/pixi-yaml.Dockerfile.

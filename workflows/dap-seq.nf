@@ -79,7 +79,6 @@ workflow {
     def sheet = file(params.input)
     def referencesDir = file(params.references).toAbsolutePath()
     // Parameters given on the command line arrive as strings.
-    def resources = [cpus: params.cpus.toInteger(), memory: params.memory, time: params.time]
     def bwaOptions = [
         batch_size: params.bwa_batch_size, seed_length: params.bwa_seed_length,
         max_seed_occurrences: params.bwa_max_seed_occurrences,
@@ -149,7 +148,7 @@ workflow {
         .map { _id, meta, bam, bai, qcBam, qcBai, sppBam ->
             tuple(meta, bam, bai, qcBam, qcBai, sppBam)
         }
-    QC(qcInputs, resources, file(params.spp_script))
+    QC(qcInputs, file(params.spp_script))
     // Collect channels, not publishDir contents: wait for every library's QC and metadata.
     multiqcFiles = FASTQC.out.reports.map { _meta, _mate, _html, zip -> zip }
         .mix(QC.out.reports.map { _meta, reports -> reports })
