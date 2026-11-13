@@ -86,35 +86,35 @@
     "alignment_options": {
       "title": "Alignment options",
       "type": "object",
-      "description": "bwa-mem2 options.",
+      "description": "bwa-mem3 options.",
       "properties": {
         "bwa_batch_size": {
           "type": "integer",
           "minimum": 1,
           "default": 10000000,
           "errorMessage": "Parameter --bwa_batch_size must be a positive integer",
-          "description": "bwa-mem2 -K: input bases processed per batch."
+          "description": "bwa-mem3 -K: input bases processed per batch."
         },
         "bwa_seed_length": {
           "type": "integer",
           "minimum": 1,
           "default": 19,
           "errorMessage": "Parameter --bwa_seed_length must be a positive integer",
-          "description": "bwa-mem2 -k: minimum seed length."
+          "description": "bwa-mem3 -k: minimum seed length."
         },
         "bwa_max_seed_occurrences": {
           "type": "integer",
           "minimum": 1,
           "default": 500,
           "errorMessage": "Parameter --bwa_max_seed_occurrences must be a positive integer",
-          "description": "bwa-mem2 -c: skip seeds with more occurrences."
+          "description": "bwa-mem3 -c: skip seeds with more occurrences."
         },
         "bwa_score_threshold": {
           "type": "integer",
           "minimum": 1,
           "default": 30,
           "errorMessage": "Parameter --bwa_score_threshold must be a positive integer",
-          "description": "bwa-mem2 -T: minimum score to output."
+          "description": "bwa-mem3 -T: minimum score to output."
         }
       }
     },
