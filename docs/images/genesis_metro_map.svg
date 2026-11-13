@@ -68,9 +68,9 @@
 <circle class="station" cx="600" cy="330" r="9" stroke="#087f8c"/>
 <text class="label" text-anchor="middle" x="600" y="290">Download</text>
 <text class="detail" text-anchor="middle" x="600" y="313">Unmodified raw mates</text></g>
-<g id="BWA_MEM2_ALIGN"><title>bwa-mem2: Full-read alignment</title>
+<g id="BWA_MEM3_ALIGN"><title>bwa-mem3: Full-read alignment</title>
 <circle class="station" cx="830" cy="330" r="9" stroke="#087f8c"/>
-<text class="label" text-anchor="middle" x="830" y="290">bwa-mem2</text>
+<text class="label" text-anchor="middle" x="830" y="290">bwa-mem3</text>
 <text class="detail" text-anchor="middle" x="830" y="313">Full-read alignment</text></g>
 <g id="CALL_PEAKS"><title>MACS3 peaks: Assigned control</title>
 <circle class="station" cx="1060" cy="330" r="9" stroke="#ce6030"/>
@@ -108,9 +108,9 @@
 <circle class="station" cx="140" cy="690" r="9" stroke="#4169b1"/>
 <text class="label" text-anchor="middle" x="140" y="650">Reference FASTA</text>
 <text class="detail" text-anchor="middle" x="140" y="673">Hash-checked reuse</text></g>
-<g id="BWA_MEM2_INDEX"><title>bwa-mem2 index: Verified products</title>
+<g id="BWA_MEM3_INDEX"><title>bwa-mem3 index: Verified products</title>
 <circle class="station" cx="370" cy="690" r="9" stroke="#4169b1"/>
-<text class="label" text-anchor="middle" x="370" y="650">bwa-mem2 index</text>
+<text class="label" text-anchor="middle" x="370" y="650">bwa-mem3 index</text>
 <text class="detail" text-anchor="middle" x="370" y="673">Verified products</text></g>
 <g id="TRACKS"><title>deepTools tracks: BigWig signal</title>
 <circle class="station" cx="1060" cy="690" r="9" stroke="#438362"/>
@@ -120,4 +120,4 @@
 <text class="note" x="48" y="798">QC is diagnostic. FastQC warnings do not reject a dataset; SPP is reported separately.</text>
 <text class="note" x="48" y="823">Controls receive QC and tracks; treatments receive peaks and quantification. FASTQs and BAMs stay intermediate.</text>
 <text class="note" x="48" y="848">Routes summarize data dependencies, not runtime. Crossings without a station do not join channels.</text>
-<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 580fb20e1c9edcdd9b0ebdb10560c243ac0b2735c5a05feda9c12529a6386961; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/dap-seq.nf SHA256 cd0a2064ded899f98c0c324d7208dea733eb8ff86881d52b655d7a05a7a3de3a; schematic animation.</metadata></svg>

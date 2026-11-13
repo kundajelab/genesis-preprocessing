@@ -317,6 +317,51 @@ def check_workflow_configs() -> None:
         assert len(copies) == 1, key
 
 
+def check_retry_policy(work: Path) -> None:
+    """modules/common/retry.nf retries an attempt only when it ran out of memory.
+
+    Slurm reports out-of-memory kills in the job's .command.log; a script that handles the killed
+    command then exits 1, or one that waits for killed workers reaches the time limit (140), and
+    either is retried with twice the memory only with that report.
+    """
+    logs = work / "logs"
+    oom = "[2026-11-08T04:24:28.700] error: Detected 1 oom_kill event in StepId=1.batch.\n"
+    filler = "x" * 200_000 + "\n"
+    for name, text in {
+        "oom": "task output\n" + oom,
+        "other": "task output\nError: something else failed\n",
+        "empty": "",
+        # Only the end of a log is read, where Slurm writes its report.
+        "head-only": oom + filler,
+        "tail-oom": filler + oom,
+    }.items():
+        (logs / name).mkdir(parents=True)
+        (logs / name / ".command.log").write_text(text)
+    (logs / "missing").mkdir()
+
+    def harness(mode: str) -> subprocess.CompletedProcess[str]:
+        folder = work / mode
+        folder.mkdir()
+        command = ["nextflow", "-log", str(folder / "nextflow.log"), "run"]
+        command += [str(ROOT / "tests/retry_harness.nf"), "--mode", mode, "--logs", str(logs)]
+        command += ["-with-trace", str(folder / "trace.tsv"), "-ansi-log", "false"]
+        environment = {**os.environ, "NXF_SYNTAX_PARSER": "v2", "NXF_DISABLE_CHECK_LATEST": "true"}
+        return subprocess.run(
+            command, cwd=folder, env=environment, capture_output=True, text=True, timeout=300
+        )
+
+    functions = harness("functions")
+    assert "RESULT 0 wrong" in functions.stdout, functions.stdout + functions.stderr
+    # A real retry: an exit 1 with Slurm's report gets twice the memory; another exit 1 stops.
+    retried = harness("oom")
+    assert retried.returncode == 0, retried.stdout + retried.stderr
+    assert "attempt 2 memory 200" in retried.stdout, retried.stdout
+    stopped = harness("other")
+    assert stopped.returncode != 0, stopped.stdout
+    statuses = (work / "other" / "trace.tsv").read_text().splitlines()[1:]
+    assert len(statuses) == 1, statuses
+
+
 def main() -> None:
     """Run focused checks without external services, Docker, or genomic data."""
     assert not (ROOT / "lib" / "WorkflowSupport.groovy").exists()
@@ -328,8 +373,9 @@ def main() -> None:
         assert "WorkflowSupport" not in source, path
         assert "with-environment.sh" not in source and "uv run" not in source, path
         if re.search(r"^process \w+", source, re.M) is None:
-            # Subworkflows only compose process modules, which declare tools and resources.
-            assert re.search(r"^workflow \w+", source, re.M), path
+            # Subworkflows only compose process modules, which declare tools and resources, and
+            # function libraries (e.g. modules/common/retry.nf) only define functions.
+            assert re.search(r"^(workflow|def) \w+", source, re.M), path
             assert "    conda " not in source and "container " not in source, path
             continue
         assert "include { dotenv } from 'plugin/nf-dotenv'" in source, path
@@ -343,6 +389,7 @@ def main() -> None:
         quant = work / "quantification"
         quant.mkdir()
         check_quantification(quant)
+        check_retry_policy(work / "retry")
         for index, bash in enumerate(interpreters):
             folder = work / f"builds-{index}"
             folder.mkdir()

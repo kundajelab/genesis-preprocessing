@@ -1,11 +1,13 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process ATAC_FILTER {
     cpus 2
-    memory { 2.GB * task.attempt }
+    // samtools sort uses 512 MB per thread, and GNU sort another 512 MB.
+    memory { oomMemoryOf(task, 1.5.GB + 512.MB * task.cpus) }
     time { 1.h * (1 + bam.size() / 1e9) * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption)
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
@@ -30,6 +32,10 @@ process ATAC_FILTER {
     def spans = "awk -v OFS='\\t' '{start = (\$4 < \$8 ? \$4 : \$8) - 1; " +
         "print \$3, start, start + (\$9 < 0 ? -\$9 : \$9)}' | LC_ALL=C sort -S 512M -T . -k1,1 -k2,2n -k3,3n"
     """
+    # samtools collate writes temporary files the size of the filtered reads to TMPDIR; keep them in
+    # the task's folder, not a /tmp that may be held in memory (inputs over ~5 GB were OOM-killed).
+    export TMPDIR="\$PWD/tmp"
+    mkdir -p "\$TMPDIR"
     # A misspelled organelle contig would silently count organelle reads as nuclear.
     for contig in \$(printf '%s' '${organelles}' | tr ',' ' '); do
         awk -v contig="\$contig" '\$1 == contig {found = 1} END {exit !found}' '${chrom_sizes}' || {
@@ -43,23 +49,23 @@ process ATAC_FILTER {
     # Keep pairs where both mates are primary, properly paired, not QC-failed, on a nuclear contig and
     # at least MAPQ ${mapq}. A read whose mate fails loses its mate here; fixmate then clears its
     # proper-pair flag, so the second filter drops it. Duplicates stay until complexity is counted.
-    samtools view -u -f 2 -F 2828 -q ${mapq} -L nuclear.bed '${bam}' | \\
-        samtools collate -O -u - | \\
-        samtools fixmate -u - - | \\
-        samtools view -u -f 2 -F 2828 - | \\
-        samtools sort -m 512M -o filtered.bam -
+    samtools view -@ ${task.cpus} -u -f 2 -F 2828 -q ${mapq} -L nuclear.bed '${bam}' | \\
+        samtools collate -@ ${task.cpus} -O -u - | \\
+        samtools fixmate -@ ${task.cpus} -u - - | \\
+        samtools view -@ ${task.cpus} -u -f 2 -F 2828 - | \\
+        samtools sort -@ ${task.cpus} -m 512M -o filtered.bam -
     # Library complexity as ENCODE defines it, over fragments before duplicate removal.
-    samtools view -f 66 filtered.bam | ${spans} | uniq -c | awk -v OFS='\\t' '
+    samtools view -@ ${task.cpus} -f 66 filtered.bam | ${spans} | uniq -c | awk -v OFS='\\t' '
         {total += \$1; distinct++; one += (\$1 == 1); two += (\$1 == 2)}
         END {
             print "total_fragments", "distinct_fragments", "one_read_pair", "two_read_pairs", "NRF", "PBC1", "PBC2"
             print total, distinct, one, two, (total ? distinct / total : "NA"),
                 (distinct ? one / distinct : "NA"), (two ? one / two : "NA")
         }' > '${meta.id}.complexity.tsv'
-    samtools view -b -F 1024 -o '${meta.id}.usable.bam' filtered.bam
-    samtools index '${meta.id}.usable.bam'
-    samtools flagstat '${meta.id}.usable.bam' > '${meta.id}.usable.flagstat.txt'
-    samtools view -f 66 '${meta.id}.usable.bam' | ${spans} | bgzip > '${meta.id}.fragments.bed.gz'
+    samtools view -@ ${task.cpus} -b -F 1024 -o '${meta.id}.usable.bam' filtered.bam
+    samtools index -@ ${task.cpus} '${meta.id}.usable.bam'
+    samtools flagstat -@ ${task.cpus} '${meta.id}.usable.bam' > '${meta.id}.usable.flagstat.txt'
+    samtools view -@ ${task.cpus} -f 66 '${meta.id}.usable.bam' | ${spans} | bgzip -@ ${task.cpus} > '${meta.id}.fragments.bed.gz'
     tabix -p bed '${meta.id}.fragments.bed.gz'
     """
     stub:

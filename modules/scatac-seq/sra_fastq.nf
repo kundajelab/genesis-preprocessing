@@ -1,15 +1,16 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process SRA_FASTQ {
     // Each conversion needs temporary disk of about the FASTQs' size (about 100 GB for 116 million
     // 10x spots), so only a few run at once.
     maxForks 2
     cpus 4
-    memory '4 GB'
+    memory { oomMemoryOf(task, 4.GB) }
     time { 4.h * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption); any other
-    // failure is a run without the expected reads, which converting again cannot fix
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // Retry with twice the memory only when an attempt ran out of memory; any other failure (e.g.
+    // a run without the expected reads, which converting again cannot fix) stops the run.
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_SRA.yaml"
     container "${dotenv('GENESIS_SRA_IMAGE')}"

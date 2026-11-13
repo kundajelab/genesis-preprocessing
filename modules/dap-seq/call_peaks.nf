@@ -1,15 +1,20 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
 
 process CALL_PEAKS {
     // MACS3 bounds its threads and peak workers to --threads (upstream PR #787). On a
     // Sorghum sample (52M treatment + 12M control pairs) 4 CPUs ran 5.7x faster than 1, and 8
     // CPUs no faster than 4.
     cpus 4
-    // That sample needed ~1.1 GB at 1 CPU and ran within 2 GB at 4 CPUs, for 8.1 GB of BAMs.
-    memory { (1.GB + 1.B * (0.25 * (bam.size() + control_bam.size())).toLong()) * task.attempt }
-    time { 1.h * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption)
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // On Perlmutter, 73 Sorghum samples (2.0-30.6 GB of treatment plus control BAMs, all with the
+    // same 1.8 GB control) peaked at about 0.34 GB plus 0.25 per GB of BAMs, and all within 1.06 GB
+    // plus 0.30 per GB; the largest peaked at 9.0 GB. Allow 1.5 GB plus 0.30 per GB.
+    memory { oomMemoryOf(task, 1.5.GB + 1.B * (0.30 * (bam.size() + control_bam.size())).toLong()) }
+    // They took 8-78 seconds, at most 8.6 seconds per GB of BAMs. Allow 10 minutes plus 30 seconds
+    // per GB.
+    time { 10.min + 30.s * (bam.size() + control_bam.size()) / 1e9 }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_MACS3.yaml"
     container "${dotenv('GENESIS_MACS3_IMAGE')}"

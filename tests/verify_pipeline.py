@@ -514,12 +514,12 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert all(row["status"] == "COMPLETED" for row in rows), rows
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 2,
-        "GET_REFERENCES:BWA_MEM2_INDEX": 2,
+        "GET_REFERENCES:BWA_MEM3_INDEX": 2,
         "DOWNLOAD": 3,
         "FASTQC": 7,
         "MULTIQC": 1,
         "METADATA": 5,
-        "BWA_MEM2_ALIGN": 5,
+        "BWA_MEM3_ALIGN": 5,
         "QC": 5,
         "TRACKS": 5,
         "CALL_PEAKS": 3,
@@ -619,10 +619,11 @@ def check_outputs(work: Path, *, docker: bool) -> None:
             with (folder / f"{sample}.alignment.tsv").open() as stream:
                 provenance = next(csv.DictReader(stream, delimiter="\t"))
             assert provenance["read_length"] == "75"
+            assert (provenance["aligner"], provenance["version"]) == ("bwa-mem3", "0.16.0")
             assert provenance["mapq_filter"] == "none" and provenance["flag_exclude"] == "2308"
             assert provenance["qc_reads"] == "full_read1_unpaired"
             assert provenance["spp_reads"] == "read1_first_50bp_unpaired"
-            assert provenance["bwa_options"] == "-K 10000000 -k 19 -c 10000 -T 30"
+            assert provenance["bwa_options"] == "-K 10000000 -k 19 -c 500 -T 30"
         mates = ("read1", "read2") if layout == "PE" else ("read1",)
         fastqc = folder / "qc" / "fastqc"
         assert len(list(fastqc.glob("*_fastqc.html"))) == len(mates)
@@ -686,10 +687,17 @@ def check_outputs(work: Path, *, docker: bool) -> None:
         source = command.read_text()
         assert "bowtie " not in source and "--sam-nh" not in source
         assert "--minMappingQuality" not in source
-        if "bwa-mem2 mem" in source:
-            # Main and QC/track alignments use full reads; only the SPP input is cut, to 50 bp.
-            assert source.count("bwa-mem2 mem") == 3
+        if "bwa-mem3 mem" in source:
+            # Main and QC/track alignments use full reads; only the SPP input is cut, to 50 bp. A
+            # single-end sample's QC alignment is its main one, linked rather than aligned again
+            # (check_bams checks which branch ran).
+            assert source.count("bwa-mem3 mem") == 3, command
             assert source.count("samtools view -u -F 2308 -") == 3 and " -q " not in source
+            files = 2 if ".read2.fastq.gz" in source else 1
+            assert f"if [ {files} -eq 1 ]; then" in source, command
+            assert re.search(
+                r"^\s*ln '[^']*\.primary\.bam' '[^']*\.qc\.bam'$", source, re.MULTILINE
+            )
             assert "trimfastq" not in source and "head " not in source
             assert source.count("substr($0, 1, bases)") == 1 and "-v bases=50 " in source
         if docker and "bamCoverage " in source:
@@ -726,7 +734,7 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
         row
         for row in rows
         if row["name"].split(" ")[0]
-        in {"GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM2_INDEX"}
+        in {"GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM3_INDEX"}
     ]
     if docker:
         # Published references are reused from disk without any reference task.
@@ -753,7 +761,7 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
         "DOWNLOAD",
         "FASTQC",
         "MULTIQC",
-        "BWA_MEM2_ALIGN",
+        "BWA_MEM3_ALIGN",
         "QUANTIFY",
     ):
         tasks = [row for row in rows if row["name"].split(" ")[0] == process]
@@ -865,7 +873,7 @@ def check_download_failures(work: Path, base_url: str) -> None:
         assert any(
             row["name"].startswith("DOWNLOAD ") and row["status"] == "FAILED" for row in rows
         ), rows
-        assert not any(row["name"].split(" ")[0] in {"FASTQC", "BWA_MEM2_ALIGN"} for row in rows), (
+        assert not any(row["name"].split(" ")[0] in {"FASTQC", "BWA_MEM3_ALIGN"} for row in rows), (
             rows
         )
         assert raw.read_bytes() == contents
@@ -879,12 +887,20 @@ def check_bams(work: Path) -> None:
         if "=" in line
     )
     for row in trace_rows(work):
-        if not row["name"].startswith("BWA_MEM2_ALIGN "):
+        if not row["name"].startswith("BWA_MEM3_ALIGN "):
             continue
         folder = work / "work" / row["hash"]
         # Trace hashes abbreviate the task directory's second component.
         folders = list(folder.parent.glob(folder.name + "*"))
         assert len(folders) == 1, folders
+        stem = next(folders[0].glob("*.primary.bam")).name.removesuffix(".primary.bam")
+        single_end = not (folders[0] / f"{stem}.read2.fastq.gz").exists()
+        for suffix in ("bam", "bam.bai"):
+            primary, qc = (folders[0] / f"{stem}.{kind}.{suffix}" for kind in ("primary", "qc"))
+            # A single-end sample's QC alignment is its main one; a paired one's is read 1 alone.
+            assert primary.samefile(qc) == single_end, qc
+            assert primary.stat().st_size > 0 and qc.stat().st_size > 0, qc
+        assert (folders[0] / "qc.bwa.log").exists() != single_end, folders[0]
         for bam in folders[0].glob("*.bam"):
             result = subprocess.run(
                 [
@@ -959,11 +975,12 @@ def check_reference_failures(work: Path, sheet: Path, *, docker: bool) -> None:
     }
 
 
-INDEX_SUFFIXES = (".0123", ".amb", ".ann", ".bwt.2bit.64", ".pac")
+# bwa-mem3 writes no .0123, the unpacked reference bwa-mem2 also wrote and loaded.
+INDEX_SUFFIXES = (".amb", ".ann", ".bwt.2bit.64", ".pac")
 
 
 def reference_record(references: Path, ref_id: str, fasta: str) -> str:
-    """The <fasta>.sha256 content BWA_MEM2_INDEX writes: FASTA hash, then product sizes."""
+    """The <fasta>.sha256 content BWA_MEM3_INDEX writes: FASTA hash, then product sizes."""
     lines = [f"{hashlib.sha256((references / fasta).read_bytes()).hexdigest()}  {fasta}"]
     for relative in [f"{ref_id}.chrom.sizes"] + [
         f"{ref_id}.bwa-mem2/genome{s}" for s in INDEX_SUFFIXES
@@ -1036,6 +1053,14 @@ def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
         record = references / f"{ref_id}.fa.gz.sha256"
         record.write_text("0" * 64 + record.read_text()[64:])
 
+    def bwa_mem2_record(references: Path, ref_id: str) -> None:
+        # Products of bwa-mem2, which also wrote and recorded genome.0123.
+        unpacked = references / f"{ref_id}.bwa-mem2/genome.0123"
+        unpacked.write_bytes(b"unpacked reference\n")
+        record = references / f"{ref_id}.fa.gz.sha256"
+        line = f"{unpacked.stat().st_size}  {ref_id}.bwa-mem2/genome.0123\n"
+        record.write_text(record.read_text() + line)
+
     cases: dict[str, Callable[[Path, str], object] | None] = {
         "unchanged": None,
         "changed_fasta": changed_fasta,
@@ -1044,6 +1069,7 @@ def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
         "resized_index": resized_index,
         "hash_only_record": hash_only,
         "stale_hash": stale_hash,
+        "bwa_mem2_record": bwa_mem2_record,
     }
     case = work / "reference-rebuild"
     references = case / "references"
@@ -1068,7 +1094,7 @@ def check_reference_rebuild(work: Path, sheet: Path, *, docker: bool) -> None:
     assert run_pipeline(case, candidate, docker=docker).returncode == 0
     names = [row["name"] for row in trace_rows(case)]
     rebuilt = {ref_id for ref_id, change in cases.items() if change}
-    for process in ("GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM2_INDEX"):
+    for process in ("GET_REFERENCES:CHROM_SIZES", "GET_REFERENCES:BWA_MEM3_INDEX"):
         tags = {
             name.removeprefix(f"{process} (").removesuffix(")")
             for name in names
@@ -1105,7 +1131,7 @@ def check_resume_repair(work: Path, sheet: Path) -> None:
     rebuilt = [
         row
         for row in trace_rows(work, "repair")
-        if row["name"] in {"GET_REFERENCES:CHROM_SIZES (se)", "GET_REFERENCES:BWA_MEM2_INDEX (se)"}
+        if row["name"] in {"GET_REFERENCES:CHROM_SIZES (se)", "GET_REFERENCES:BWA_MEM3_INDEX (se)"}
     ]
     # The rebuild is taken from the task cache, as its inputs did not change.
     assert len(rebuilt) == 2 and all(row["status"] == "CACHED" for row in rebuilt), rebuilt

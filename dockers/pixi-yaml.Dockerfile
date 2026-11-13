@@ -5,9 +5,9 @@
 # a base .yaml
 ARG ENV_NAME
 
-# Use an ubuntu (release noble/2026.04) with pixi 0.70.1 pre-installed for the build image
-# https://github.com/prefix-dev/pixi-docker/pkgs/container/pixi/914261862?tag=0.70.1-noble
-FROM ghcr.io/prefix-dev/pixi@sha256:2537738f8b7e2c7a7f070f56928ab959c4559a8d7e04f71eb16b0f779f0588f6 AS build
+# Use an ubuntu (release noble, 24.04) with pixi 0.82.1 pre-installed for the build image
+# https://github.com/prefix-dev/pixi-docker/pkgs/container/pixi (tag 0.82.1-noble)
+FROM ghcr.io/prefix-dev/pixi@sha256:f83a5fc6d1bb9a2ced27faf2b26c04c5eb618eed22fe13eb60f9225db4817ce0 AS build
 ARG ENV_NAME
 
 # Install the project into the ENV_NAME
@@ -38,15 +38,20 @@ RUN --mount=type=cache,target=/root/.cache/pixi \
 # extend the shell-hook script to run the command passed to the container
 RUN echo 'exec "$@"' >> /opt/shell-hook.sh
 
-# ubuntu 26.04
-# https://hub.docker.com/layers/library/ubuntu/26.04/images/sha256-37a0633b900e99d0937986022b4b4018908e1361704425313cc1c348bebd7230
-FROM ubuntu@sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64 AS production
+# ubuntu 26.04.1
+# https://hub.docker.com/_/ubuntu (tag 26.04, the multi-platform index)
+FROM ubuntu@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944 AS production
 ARG ENV_NAME
 WORKDIR "/opt/$ENV_NAME"
 
 # Setup a non-root user
 RUN groupadd --system --gid 999 nonroot \
     && useradd --system --gid 999 --uid 999 --create-home nonroot
+
+# NCBI's linux-64 sra-tools binaries only look for CA certificates at the system path, which this
+# base image leaves empty; use the environment's bundle.
+RUN mkdir -p /etc/ssl/certs \
+    && ln -s "/opt/$ENV_NAME/.pixi/envs/default/ssl/cacert.pem" /etc/ssl/certs/ca-certificates.crt
 
 # use the nonroot user
 USER nonroot

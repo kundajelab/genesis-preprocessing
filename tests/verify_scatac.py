@@ -211,7 +211,7 @@ def check_outputs(work: Path, *, engine: str | None) -> None:
     groups = 4 if engine else 2
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 1,
-        "GET_REFERENCES:BWA_MEM2_INDEX": 1,
+        "GET_REFERENCES:BWA_MEM3_INDEX": 1,
         "SCATAC_DOWNLOAD": 2,
         "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 2,
         "SCATAC_PSEUDOBULKS:SCATAC_PEAKS": groups,

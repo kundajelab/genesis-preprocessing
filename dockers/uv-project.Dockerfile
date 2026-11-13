@@ -54,9 +54,9 @@ RUN echo 'exec "$@"' >> /opt/shell-hook.sh
 RUN PYTHON_LOC=$(readlink -f "/opt/$ENV_NAME/.venv/bin/python" | sed 's,^/root/.local,/opt/local,') && \
     ln -sf "$PYTHON_LOC" "/opt/$ENV_NAME/.venv/bin/python"
 
-# ubuntu 26.04
-# https://hub.docker.com/layers/library/ubuntu/26.04/images/sha256-37a0633b900e99d0937986022b4b4018908e1361704425313cc1c348bebd7230
-FROM ubuntu@sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64 AS production
+# ubuntu 26.04.1
+# https://hub.docker.com/_/ubuntu (tag 26.04, the multi-platform index)
+FROM ubuntu@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944 AS production
 ARG ENV_NAME
 WORKDIR "/opt/$ENV_NAME"
 

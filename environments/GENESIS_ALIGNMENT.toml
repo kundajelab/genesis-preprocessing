@@ -7,7 +7,7 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-bwa-mem2 = { version = "2.3.*", channel = "bioconda" }
+bwa-mem3 = { version = "0.16.0.*", channel = "bioconda" }
 bowtie = { version = ">=1.3.1,<2", channel = "bioconda" }
 samtools = { version = ">=1.22,<2", channel = "bioconda" }
 htslib = { version = ">=1.22,<2", channel = "bioconda" }

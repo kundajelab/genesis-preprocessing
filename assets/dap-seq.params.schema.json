@@ -51,19 +51,19 @@
           "type": "integer",
           "minimum": 1,
           "default": 2,
-          "description": "CPUs for QC and tracks."
+          "description": "CPUs for the QC and track steps that do not size their own."
         },
         "memory": {
           "type": "string",
           "pattern": "^\\d+(\\.\\d+)?\\s*(K|M|G|T)?B$",
           "default": "8 GB",
-          "description": "Memory for QC and tracks."
+          "description": "Memory for the QC and track steps that do not size their own."
         },
         "time": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?\\s*(ms|s|m|h|d)\\s*)+$",
           "default": "4h",
-          "description": "Walltime for QC and tracks."
+          "description": "Walltime for the QC and track steps that do not size their own."
         },
         "queue": {
           "type": "string",
@@ -72,43 +72,49 @@
         "download_batch_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 8,
-          "description": "Samples fetched by each DOWNLOAD task."
+          "default": 1,
+          "description": "Samples fetched by each DOWNLOAD task; up to eight tasks run at once."
+        },
+        "sra_locate_url": {
+          "type": "string",
+          "format": "uri",
+          "default": "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?location=s3.us-east-1&acc=",
+          "description": "NCBI's SRA locator, followed by a run accession; DOWNLOAD fetches ENA runs' .sra files from AWS where it finds them."
         }
       }
     },
     "alignment_options": {
       "title": "Alignment options",
       "type": "object",
-      "description": "bwa-mem2 options.",
+      "description": "bwa-mem3 options.",
       "properties": {
         "bwa_batch_size": {
           "type": "integer",
           "minimum": 1,
           "default": 10000000,
           "errorMessage": "Parameter --bwa_batch_size must be a positive integer",
-          "description": "bwa-mem2 -K: input bases processed per batch."
+          "description": "bwa-mem3 -K: input bases processed per batch."
         },
         "bwa_seed_length": {
           "type": "integer",
           "minimum": 1,
           "default": 19,
           "errorMessage": "Parameter --bwa_seed_length must be a positive integer",
-          "description": "bwa-mem2 -k: minimum seed length."
+          "description": "bwa-mem3 -k: minimum seed length."
         },
         "bwa_max_seed_occurrences": {
           "type": "integer",
           "minimum": 1,
-          "default": 10000,
+          "default": 500,
           "errorMessage": "Parameter --bwa_max_seed_occurrences must be a positive integer",
-          "description": "bwa-mem2 -c: skip seeds with more occurrences."
+          "description": "bwa-mem3 -c: skip seeds with more occurrences."
         },
         "bwa_score_threshold": {
           "type": "integer",
           "minimum": 1,
           "default": 30,
           "errorMessage": "Parameter --bwa_score_threshold must be a positive integer",
-          "description": "bwa-mem2 -T: minimum score to output."
+          "description": "bwa-mem3 -T: minimum score to output."
         }
       }
     },

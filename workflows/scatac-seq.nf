@@ -74,7 +74,7 @@ workflow {
                organelles: row.organelle_contigs == '-' ? [] : row.organelle_contigs.tokenize(',')]
     })
     // Only chromosome sizes are needed, as the fragments are already aligned, but the shared
-    // reference step reuses existing products and leaves the bwa-mem2 index for other modalities.
+    // reference step reuses existing products and leaves the bwa-mem3 index for other modalities.
     references = samples.unique { sample -> sample.ref_id }
         .map { meta ->
             def ref = [id: meta.ref_id, filename: meta.reference_fasta]

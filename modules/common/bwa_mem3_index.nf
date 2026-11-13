@@ -1,4 +1,11 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; oomErrorStrategy } from './retry'
+
+// The index files under <id>.bwa-mem2/genome that alignment needs. bwa-mem3 writes no .0123 (the
+// unpacked reference bwa-mem2 also loaded); it reads bases from .pac instead.
+def indexSuffixes() {
+    return ['.amb', '.ann', '.bwt.2bit.64', '.pac']
+}
 
 // Shell that writes <fasta>.sha256: the FASTA hash, then each product's size in bytes.
 // Run after the products exist, so the recorded sizes are their final sizes.
@@ -7,21 +14,22 @@ def recordProducts(ref, chromSizes) {
 {
     printf '%s  %s\\n' '${ref.sha256}' '${ref.filename}'
     printf '%s  %s\\n' "\$(wc -c < '${chromSizes}' | tr -d ' ')" '${ref.id}.chrom.sizes'
-    for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
+    for suffix in ${indexSuffixes().join(' ')}; do
         printf '%s  %s\\n' "\$(wc -c < '${ref.id}.bwa-mem2/genome'"\$suffix" | tr -d ' ')" \\
             '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
 } > '${ref.filename}.sha256'"""
 }
 
-process BWA_MEM2_INDEX {
-    // bwa-mem2 index is single-threaded. It peaks at ~28 bytes per reference base (measured 28.3,
-    // and documented as 28N), so request 32 plus headroom. ref.length is the summed chrom sizes.
-    cpus 1
-    memory { (1.GB + 32.B * ref.length) * task.attempt }
+process BWA_MEM3_INDEX {
+    // bwa-mem3 index builds the Sorghum reference (718 Mb) in 77 s on 1 thread, 46 s on 4, and 42 s
+    // on 16: past 4, writing the FM-index takes most of the time. It peaks at ~14.5 bytes per
+    // reference base whatever the threads; ref.length is the summed chrom sizes.
+    cpus 4
+    memory { oomMemoryOf(task, 1.GB + 16.B * ref.length) }
     time { 1.h * (1 + ref.length / 1e9) * task.attempt }
-    // retry with more memory and time when killed (OOM, walltime, or preemption)
-    errorStrategy { task.exitStatus in 130..145 ? 'retry' : 'terminate' }
+    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
+    errorStrategy { oomErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
@@ -41,9 +49,11 @@ process BWA_MEM2_INDEX {
     script:
     """
     mkdir '${ref.id}.bwa-mem2'
-    # bwa-mem2 reads gzipped FASTA directly, producing an index identical to the uncompressed one.
-    bwa-mem2 index -p '${ref.id}.bwa-mem2/genome' '${fasta}'
-    for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
+    # bwa-mem3 reads gzipped FASTA directly. Its thread count and memory budget default to what the
+    # machine has, so give it the task's. The index is the same for any number of threads.
+    bwa-mem3 index -t ${task.cpus} --max-memory ${task.memory.toMega()}M --tmp-dir . \\
+        -p '${ref.id}.bwa-mem2/genome' '${fasta}'
+    for suffix in ${indexSuffixes().join(' ')}; do
         test -s '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
 ${recordProducts(ref, chrom_sizes)}
@@ -51,7 +61,7 @@ ${recordProducts(ref, chrom_sizes)}
     stub:
     """
     mkdir '${ref.id}.bwa-mem2'
-    for suffix in .0123 .amb .ann .bwt.2bit.64 .pac; do
+    for suffix in ${indexSuffixes().join(' ')}; do
         printf 'stub\\n' > '${ref.id}.bwa-mem2/genome'"\$suffix"
     done
 ${recordProducts(ref, chrom_sizes)}

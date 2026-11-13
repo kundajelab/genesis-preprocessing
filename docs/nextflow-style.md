@@ -18,13 +18,13 @@ Each workflow has a script, a config and a parameter schema:
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 
 - Each process declares its resources, conda YAML, and nf-dotenv container image.
-- QC and tracks take configurable resources from workflows/dap-seq.nf through a resources input;
-  bwa-mem2 indexing and alignment size their own from the genome and read sizes.
+- DAP-seq's QC, tracks, and bwa-mem3 indexing and alignment size their own resources from the
+  genome, BAM and read sizes; QC still takes a resources input, unused, to keep its cache keys.
 - BWA options and the pinned SPP script are also explicit inputs.
 - Pure tool environments live in environments/*.yaml. Docker builds derive matching
   *.toml/*.lock files with Pixi and use dockers/pixi-yaml.Dockerfile.
 - Environments and images are named `genesis_` plus their contents, not the assay, since
-  workflows share them: genesis_alignment (bwa-mem2, bowtie, samtools, aria2), genesis_fastqc,
+  workflows share them: genesis_alignment (bwa-mem3, bowtie, samtools, aria2), genesis_fastqc,
   genesis_multiqc, genesis_macs3, genesis_spp (SPP and R QC), genesis_deeptools,
   genesis_cutadapt (bulk ATAC trimming), genesis_star (STAR and samtools; other aligners get
   their own environments) and genesis_rna_counts (featureCounts, gffread and samtools).

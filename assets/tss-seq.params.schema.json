@@ -51,19 +51,19 @@
           "type": "integer",
           "minimum": 1,
           "default": 2,
-          "description": "CPUs for QC and tracks."
+          "description": "CPUs for the QC and track steps that do not size their own."
         },
         "memory": {
           "type": "string",
           "pattern": "^\\d+(\\.\\d+)?\\s*(K|M|G|T)?B$",
           "default": "8 GB",
-          "description": "Memory for QC and tracks."
+          "description": "Memory for the QC and track steps that do not size their own."
         },
         "time": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?\\s*(ms|s|m|h|d)\\s*)+$",
           "default": "4h",
-          "description": "Walltime for QC and tracks."
+          "description": "Walltime for the QC and track steps that do not size their own."
         },
         "queue": {
           "type": "string",
@@ -72,8 +72,14 @@
         "download_batch_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 8,
-          "description": "Samples fetched by each DOWNLOAD task."
+          "default": 1,
+          "description": "Samples fetched by each DOWNLOAD task; up to eight tasks run at once."
+        },
+        "sra_locate_url": {
+          "type": "string",
+          "format": "uri",
+          "default": "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?location=s3.us-east-1&acc=",
+          "description": "NCBI's SRA locator, followed by a run accession; DOWNLOAD fetches ENA runs' .sra files from AWS where it finds them."
         }
       }
     },

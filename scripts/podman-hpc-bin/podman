@@ -9,4 +9,11 @@ path=":$PATH:"
 path=${path//:$here:/:}
 path=${path#:}
 export PATH=${path%:}
+# Close descriptors above stdin, stdout and stderr. Nextflow's job script starts the container
+# under `3>&1 1>&2 2>&3 | tee .command.err`, which leaves fd 3 open on the pipe into that tee.
+# podman-hpc's squashfuse daemon inherits it and can outlive the container, so the tee never sees
+# end of file and the job waits, finished, until its time limit.
+for fd in {3..63}; do
+    eval "exec $fd>&-"
+done
 exec podman-hpc "$@"

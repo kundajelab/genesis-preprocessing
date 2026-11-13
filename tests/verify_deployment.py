@@ -63,7 +63,11 @@ def host_environment(
     for name, text in names.items():
         stand_in(tools, name, text)
     tools.mkdir(parents=True, exist_ok=True)
-    environment = {**os.environ, "PATH": f"{tools}:{BASE_PATH}", "NERSC_HOST": nersc_host}
+    environment = {
+        **os.environ,
+        "PATH": f"{tools}:{BASE_PATH}",
+        "NERSC_HOST": nersc_host,
+    }
     for name in ("CFS", "OAK"):
         environment.pop(name, None)
     return {**environment, **variables}
@@ -86,12 +90,14 @@ def check_default_references(work: Path) -> None:
         return subprocess.run([script, profile], env=environment, capture_output=True, text=True)
 
     perlmutter = default(
-        "nersc", host_environment(work / "nersc", {"sacctmgr": account("gen0035")}, CFS=cfs)
+        "nersc",
+        host_environment(work / "nersc", {"sacctmgr": account("gen0035")}, CFS=cfs),
     )
     assert perlmutter.stdout.strip() == f"{cfs}/gen0035/{user}/references", perlmutter
     # Any profile list naming nersc; a GPU allocation (PROJECT_g) uses the project's storage.
     gpu = default(
-        "nersc,test", host_environment(work / "gpu", {"sacctmgr": account("m1234_g")}, CFS=cfs)
+        "nersc,test",
+        host_environment(work / "gpu", {"sacctmgr": account("m1234_g")}, CFS=cfs),
     )
     assert gpu.stdout.strip() == f"{cfs}/m1234/{user}/references", gpu
     missing = default("nersc", host_environment(work / "none", {"sacctmgr": account("")}))
@@ -106,11 +112,13 @@ def check_default_references(work: Path) -> None:
     # The persist folder, runs/ beside these references/: none for local profiles.
     script = str(ROOT / "scripts/get-default-persist-dir.sh")
     perlmutter = default(
-        "nersc", host_environment(work / "nersc", {"sacctmgr": account("gen0035")}, CFS=cfs)
+        "nersc",
+        host_environment(work / "nersc", {"sacctmgr": account("gen0035")}, CFS=cfs),
     )
     assert perlmutter.stdout.strip() == f"{cfs}/gen0035/{user}/runs", perlmutter
     gpu = default(
-        "nersc,test", host_environment(work / "gpu", {"sacctmgr": account("m1234_g")}, CFS=cfs)
+        "nersc,test",
+        host_environment(work / "gpu", {"sacctmgr": account("m1234_g")}, CFS=cfs),
     )
     assert gpu.stdout.strip() == f"{cfs}/m1234/{user}/runs", gpu
     sherlock = default("sherlock", host_environment(work / "sherlock", {}, OAK=oak))
@@ -134,7 +142,12 @@ def check_pipeline_references(work: Path) -> None:
 
     def launch(environment: dict[str, str], *arguments: str) -> list[str]:
         result = subprocess.run(
-            [str(ROOT / "scripts/run-pipeline.sh"), "-w", str(work / "workspace"), *arguments],
+            [
+                str(ROOT / "scripts/run-pipeline.sh"),
+                "-w",
+                str(work / "workspace"),
+                *arguments,
+            ],
             env=environment,
             cwd=work,
             check=True,
@@ -201,21 +214,30 @@ def check_pipeline_references(work: Path) -> None:
 def check_submit_pipeline(work: Path) -> None:
     """submit-pipeline.sh queues run-pipeline.sh, its arguments unchanged, with site settings."""
     work.mkdir(parents=True)
-    sbatch_arguments, script, pulls = work / "sbatch.txt", work / "script.sh", work / "pulls.txt"
+    sbatch_arguments, script, pulls = (
+        work / "sbatch.txt",
+        work / "script.sh",
+        work / "pulls.txt",
+    )
     recorded = work / "pixi.txt"
     sbatch = f"#!/bin/sh\nprintf '%s\\n' \"$@\" > '{sbatch_arguments}'\ncat > '{script}'\necho 42\n"
     podman = f"#!/bin/sh\necho \"$@\" >> '{pulls}'\n"
     # pixi records what it would run and the environment it would run it in.
     pixi = (
-        f"#!/bin/sh\n{{ printf '%s\\n' \"$@\"; env | grep -E '^(SLURM_|NXF_|GENESIS_)' | sort; }}"
-        f" > '{recorded}'\n"
+        "#!/bin/sh\n{ printf '%s\\n' \"$@\"; env | "
+        f"grep -E '^(SLURM_|NXF_|GENESIS_)' | sort; }} > '{recorded}'\n"
     )
     sheet = work / "my sheet.tsv"
     sheet.write_text("sample_id\n")
     images = sum("_IMAGE=" in line for line in (ROOT / "conf/genesis-images.lock").open())
 
     def submit(environment: dict[str, str], *arguments: str) -> subprocess.CompletedProcess[str]:
-        command = [str(ROOT / "scripts/submit-pipeline.sh"), "-L", str(work / "logs"), *arguments]
+        command = [
+            str(ROOT / "scripts/submit-pipeline.sh"),
+            "-L",
+            str(work / "logs"),
+            *arguments,
+        ]
         # Run folders go in this test's $SCRATCH/workspace, never the checkout's.
         environment = {**environment, "SCRATCH": str(work / "scratch")}
         return subprocess.run(command, env=environment, cwd=work, capture_output=True, text=True)
@@ -223,7 +245,12 @@ def check_submit_pipeline(work: Path) -> None:
     def options() -> list[str]:
         return sbatch_arguments.read_text().splitlines()
 
-    tools = {"sbatch": sbatch, "podman-hpc": podman, "pixi": pixi, "sacctmgr": account("m1")}
+    tools = {
+        "sbatch": sbatch,
+        "podman-hpc": podman,
+        "pixi": pixi,
+        "sacctmgr": account("m1"),
+    }
     nersc = host_environment(work / "nersc", tools, "perlmutter", CFS=str(work / "cfs"))
     run = ["-p", "nersc,test", "-R", str(work / "refs"), str(sheet), "-resume"]
     result = submit(nersc, "-T", "01:00:00", "-M", "4G", *run)
@@ -231,7 +258,11 @@ def check_submit_pipeline(work: Path) -> None:
     assert "job 42" in result.stdout, result.stdout
     for option in ["--qos=shared", "--constraint=cpu", "--time=01:00:00", "--mem=4G"]:
         assert option in options(), (option, options())
-    for option in ["--no-requeue", "--signal=B:TERM@120", "--job-name=genesis-my sheet"]:
+    for option in [
+        "--no-requeue",
+        "--signal=B:TERM@120",
+        "--job-name=genesis-my sheet",
+    ]:
         assert option in options(), (option, options())
     # The job runs where the command ran (compared resolved: macOS temporary folders are symlinks).
     (chdir,) = [option for option in options() if option.startswith("--chdir=")]
@@ -242,10 +273,18 @@ def check_submit_pipeline(work: Path) -> None:
     assert "export GENESIS_IMAGES_PULLED=1" in text and "-Xmx3g" in text, text
     # The job: run-pipeline.sh gets the arguments unchanged, and Slurm settings of this job, except
     # SLURM_CONF, do not reach the tasks Nextflow submits.
-    slurm = {"SLURM_JOB_ID": "42", "SLURM_MEM_PER_NODE": "4096", "SLURM_CONF": "/etc/slurm.conf"}
+    slurm = {
+        "SLURM_JOB_ID": "42",
+        "SLURM_MEM_PER_NODE": "4096",
+        "SLURM_CONF": "/etc/slurm.conf",
+    }
     job_environment = {**nersc, **slurm, "SCRATCH": str(work / "scratch")}
     job = subprocess.run(
-        ["bash", str(script)], env=job_environment, cwd=work, capture_output=True, text=True
+        ["bash", str(script)],
+        env=job_environment,
+        cwd=work,
+        capture_output=True,
+        text=True,
     )
     assert job.returncode == 0, job
     lines = recorded.read_text().splitlines()
@@ -299,6 +338,40 @@ def check_submit_pipeline(work: Path) -> None:
     assert status == 143 and marker.exists(), (status, marker.exists())
 
 
+def check_shim_descriptors(work: Path, shim: Path) -> None:
+    """A daemon podman-hpc leaves running cannot hold the job script's output pipes open.
+
+    Nextflow's job script starts the container under `3>&1 1>&2 2>&3 | tee .command.err`,
+    leaving fd 3 open on that pipe. podman-hpc's squashfuse daemon detaches with fds 0-2 on
+    /dev/null but kept fd 3, so the tee waited, and the finished job with it, until its time
+    limit. The shim closes such descriptors.
+    """
+    work.mkdir(parents=True)
+    # A stand-in podman-hpc that leaves a detached daemon, like squashfuse_ll, then exits.
+    stand_in(
+        work / "bin",
+        "podman-hpc",
+        "#!/bin/sh\nnohup sleep 30 < /dev/null > /dev/null 2>&1 &\n"
+        "echo container output\necho container error >&2\n",
+    )
+    out, err = work / ".command.out", work / ".command.err"
+    launch = (
+        f"(set -o pipefail; (podman run image | tee '{out}') 3>&1 1>&2 2>&3 | tee '{err}')"
+        " 3>&1 1>&2 2>&3 & pid=$!; wait $pid"
+    )
+    start = time.monotonic()
+    subprocess.run(
+        ["bash", "-c", launch],
+        env={**os.environ, "PATH": f"{shim}:{work / 'bin'}:{BASE_PATH}"},
+        capture_output=True,
+        timeout=60,
+        check=True,
+    )
+    elapsed = time.monotonic() - start
+    assert elapsed < 15, f"the job script waited {elapsed:.0f} s for the daemon"
+    assert out.read_text() == "container output\n" and err.read_text() == "container error\n"
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="genesis-profile-") as temporary:
         folder = Path(temporary)
@@ -328,13 +401,16 @@ def main() -> None:
                     profile,
                     "-flat",
                 ],
+                # The strict parser flattens maps (resourceLimits.cpus = ...); the legacy one,
+                # which a shell may select, prints them whole.
+                env={**os.environ, "NXF_SYNTAX_PARSER": "v2"},
                 text=True,
                 timeout=30,
             )
             assert f"process.executor = '{executor}'" in output
             assert f"{runtime}.enabled = true" in output
             if profile == "nersc":
-                assert "executor.queueSize = 15" in output
+                assert "executor.queueSize = 50" in output
                 assert "executor.pollInterval = '5 min'" in output
                 assert "--constraint=cpu --qos=${params.queue ?: 'shared'}" in output
                 assert "toMega() + 4096}M" in output
@@ -358,9 +434,10 @@ def main() -> None:
         path, *arguments = output.splitlines()
         assert arguments == ["info", "two words"], arguments
         assert str(shim) not in path.split(":") and str(folder) in path.split(":"), path
+        check_shim_descriptors(folder / "descriptors", shim)
     print(
-        "PASS: default profile and references per host, pipeline submission, seven parsed "
-        "profiles, podman-hpc shim"
+        "PASS: default profile and references per host, pipeline submission, seven parsed"
+        " profiles, podman-hpc shim"
     )
 
 
