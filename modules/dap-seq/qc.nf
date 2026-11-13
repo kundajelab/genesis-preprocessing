@@ -1,16 +1,16 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process QC {
     cpus 2
     // SPP loads every read of its BAM into R: about 2.7 GB of memory per GB of that BAM (12.5 GB
-    // for 155M reads). Retry with twice the memory if Slurm reports running out; nothing else.
+    // for 155M reads). Retry with twice the memory or time if it runs out; nothing else.
     memory { oomMemoryOf(task, 6.GB + 4 * spp_bam.size().B) }
-    errorStrategy { oomErrorStrategy(task) }
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     // On Perlmutter, 63 Sorghum samples took at most 0.254 hours per GB of SPP's BAM (the largest,
     // 2.9 GB, 0.74 hours), with no fixed cost to speak of. Allow twice 0.26, plus 10 minutes.
-    time { 10.min + 2 * 0.26.h * spp_bam.size() / 1e9 }
+    time { retryTimeOf(task, 10.min + 2 * 0.26.h * spp_bam.size() / 1e9) }
     conda "${moduleDir}/../../environments/GENESIS_SPP.yaml"
     container "${dotenv('GENESIS_SPP_IMAGE')}"
     tag "${meta.id}"

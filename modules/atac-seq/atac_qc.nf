@@ -1,9 +1,13 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process ATAC_QC {
     cpus { resources.cpus }
-    memory { resources.memory }
-    time { resources.time }
+    memory { oomMemoryOf(task, resources.memory) }
+    time { retryTimeOf(task, resources.time) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"

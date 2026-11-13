@@ -1,9 +1,13 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from './retry'
 
 process CHROM_SIZES {
     cpus 1
-    memory '1 GB'
-    time '1h'
+    memory { oomMemoryOf(task, 1.GB) }
+    time { retryTimeOf(task, 1.h) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"
     tag "${ref.id}"

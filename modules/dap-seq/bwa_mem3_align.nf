@@ -1,5 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process BWA_MEM3_ALIGN {
     cpus 16
@@ -9,9 +9,12 @@ process BWA_MEM3_ALIGN {
     // On Perlmutter with 16 CPUs (7 samples of 1.3-4.7 GB of compressed reads), bwa-mem3's three
     // alignments took about a minute plus 3.2-6.2 minutes per GB, and 9.2 for the repeat-rich
     // AL2G32420 (25 minutes). Allow twice 2 minutes plus 9.2 per GB, for 16 CPUs.
-    time { (2.min + 9.2.min * [reads].flatten().sum { read -> read.size() } / 1e9) * 2 * 16 / task.cpus }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time {
+        def gigabytes = [reads].flatten().sum { read -> read.size() } / 1e9
+        retryTimeOf(task, (2.min + 9.2.min * gigabytes) * 2 * 16 / task.cpus)
+    }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"

@@ -1,5 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process ATAC_TRACKS {
     // As DAP-seq's TRACKS: bamCoverage runs 1.7x as fast on 4 CPUs as on 2.
@@ -10,9 +10,11 @@ process ATAC_TRACKS {
     // Not yet measured for ATAC-seq. DAP-seq's 1-bp tracks took about 0.15 hours per Gbp of genome
     // plus 0.013 per GB of BAM for each bamCoverage run on 4 CPUs; this has alignmentSieve, a sort
     // and one bamCoverage run. Allow 30 minutes plus 1 hour per Gbp and 0.1 hours per GB of BAM.
-    time { (30.min + 1.h * (meta.genome_size + 0.1 * bam.size()) / 1e9) * 4 / task.cpus }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time {
+        retryTimeOf(task, (30.min + 1.h * (meta.genome_size + 0.1 * bam.size()) / 1e9) * 4 / task.cpus)
+    }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"

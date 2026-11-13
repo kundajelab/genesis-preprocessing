@@ -1,12 +1,12 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process TSS_CTSS {
     cpus 2
     memory { oomMemoryOf(task, 4.GB) }
-    time { 1.h * (1 + bam.size() / 1e9) * task.attempt }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time { retryTimeOf(task, 1.h * (1 + bam.size() / 1e9)) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_TSS.yaml"
     container "${dotenv('GENESIS_TSS_IMAGE')}"

@@ -1,13 +1,13 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process SCATAC_PEAKS {
     // As CALL_PEAKS: MACS3 bounds its threads and peak workers to --threads.
     cpus 4
     memory { oomMemoryOf(task, 1.GB + 1.B * (0.5 * fragments.size()).toLong()) }
-    time { 1.h * task.attempt }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time { retryTimeOf(task, 1.h) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_MACS3.yaml"
     container "${dotenv('GENESIS_MACS3_IMAGE')}"

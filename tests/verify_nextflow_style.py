@@ -318,11 +318,12 @@ def check_workflow_configs() -> None:
 
 
 def check_retry_policy(work: Path) -> None:
-    """modules/common/retry.nf retries an attempt only when it ran out of memory.
+    """modules/common/retry.nf retries an attempt only when it ran out of memory or of time.
 
     Slurm reports out-of-memory kills in the job's .command.log; a script that handles the killed
     command then exits 1, or one that waits for killed workers reaches the time limit (140), and
-    either is retried with twice the memory only with that report.
+    either is retried with twice the memory only with that report. Otherwise a 140, or Slurm's
+    time limit report, is retried with twice the time.
     """
     logs = work / "logs"
     oom = "[2026-11-08T04:24:28.700] error: Detected 1 oom_kill event in StepId=1.batch.\n"
@@ -334,6 +335,8 @@ def check_retry_policy(work: Path) -> None:
         # Only the end of a log is read, where Slurm writes its report.
         "head-only": oom + filler,
         "tail-oom": filler + oom,
+        "timeout": "task output\nslurmstepd: error: *** JOB 7 ON nid001 CANCELLED AT"
+        " 2026-11-13T12:44:25 DUE TO TIME LIMIT ***\n",
     }.items():
         (logs / name).mkdir(parents=True)
         (logs / name / ".command.log").write_text(text)
@@ -355,7 +358,11 @@ def check_retry_policy(work: Path) -> None:
     # A real retry: an exit 1 with Slurm's report gets twice the memory; another exit 1 stops.
     retried = harness("oom")
     assert retried.returncode == 0, retried.stdout + retried.stderr
-    assert "attempt 2 memory 200" in retried.stdout, retried.stdout
+    assert "attempt 2 memory 200 time 10" in retried.stdout, retried.stdout
+    # An exit 140 with Slurm's time limit report gets twice the time and the same memory.
+    timed_out = harness("timeout")
+    assert timed_out.returncode == 0, timed_out.stdout + timed_out.stderr
+    assert "attempt 2 memory 100 time 20" in timed_out.stdout, timed_out.stdout
     stopped = harness("other")
     assert stopped.returncode != 0, stopped.stdout
     statuses = (work / "other" / "trace.tsv").read_text().splitlines()[1:]

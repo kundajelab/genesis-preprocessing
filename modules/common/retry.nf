@@ -1,21 +1,21 @@
-// Out-of-memory retries for processes whose memory needs are hard to predict. Such a process
-// estimates its memory from its inputs and retries only when an attempt ran out of memory, with
-// twice the memory each time; any other failure stops the run as before:
+// Retries for processes whose memory and time needs are hard to predict. Such a process
+// estimates both from its inputs and retries only when an attempt ran out of memory or of time,
+// with twice that resource each time; any other failure stops the run as before:
 //
-//     include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+//     include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 //
 //     process EXAMPLE {
 //         memory { oomMemoryOf(task, 2.GB + 4 * bam.size().B) }
-//         errorStrategy { oomErrorStrategy(task) }
+//         time { retryTimeOf(task, 10.min + 1.h * bam.size() / 1e9) }
+//         errorStrategy { retryErrorStrategy(task) }
 //         maxRetries 2
 //
 // NOTE: these must be called inside a directive closure. A bare call in a process body is taken
 // for a directive name and fails with "Unknown process directive".
 
-// Whether Slurm recorded killing processes of the job in workDir for running out of memory, in
-// the job's .command.log: "error: Detected N oom_kill event(s) in StepId=...". Only the end of
-// the log is read, which is where Slurm writes it.
-def slurmReportedOutOfMemory(workDir) {
+// Whether the end of the Slurm log of the job in workDir, its .command.log, contains text. Only
+// the end is read, which is where Slurm writes its reports.
+def slurmLogEndContains(workDir, text) {
     if (workDir == null) {
         return false
     }
@@ -30,11 +30,23 @@ def slurmReportedOutOfMemory(workDir) {
             def tail = java.nio.ByteBuffer.allocate(tailSize as int)
             // A read of a regular file fills the buffer, up to the end of the file.
             log.read(tail, log.size() - tailSize)
-            return new String(tail.array(), 0, tail.position(), 'UTF-8').contains('oom_kill')
+            return new String(tail.array(), 0, tail.position(), 'UTF-8').contains(text)
         }
     } catch (IOException _exception) {
         return false
     }
+}
+
+// Whether Slurm recorded killing processes of the job in workDir for running out of memory:
+// "error: Detected N oom_kill event(s) in StepId=...".
+def slurmReportedOutOfMemory(workDir) {
+    slurmLogEndContains(workDir, 'oom_kill')
+}
+
+// Whether Slurm recorded cancelling the job in workDir at its time limit:
+// "*** JOB N ON NODE CANCELLED AT TIME DUE TO TIME LIMIT ***".
+def slurmReportedTimeLimit(workDir) {
+    slurmLogEndContains(workDir, 'DUE TO TIME LIMIT')
 }
 
 // Whether an attempt ran out of memory: killed with SIGKILL (137), or SIGBUS (135), which a job
@@ -49,6 +61,16 @@ def wasOutOfMemory(exitStatus, workDir) {
     exitStatus in [135, 137] || (exitStatus in [1, 140] && slurmReportedOutOfMemory(workDir))
 }
 
+// Whether an attempt ran out of time. Nextflow has Slurm send the job SIGUSR2 30 s before its
+// time limit (--signal B:USR2@30), on which the job script exits 140, as the DAP-seq run's timed
+// out tasks did. A job still running at the limit is cancelled before it records an exit status,
+// with Slurm's report in its log. Not when it also ran out of memory (see wasOutOfMemory): a
+// program can wait for workers killed for memory until the time limit, and more time would not
+// help it.
+def wasOutOfTime(exitStatus, workDir) {
+    !wasOutOfMemory(exitStatus, workDir) && (exitStatus == 140 || slurmReportedTimeLimit(workDir))
+}
+
 // Memory for this attempt: the estimate on the first, then twice the last attempt's when it ran
 // out of memory, or the same when it failed otherwise.
 def oomMemoryOf(task, baseMem) {
@@ -60,10 +82,25 @@ def oomMemoryOf(task, baseMem) {
     return (previousOom ? 2 * previous : previous).B
 }
 
-// Retry an attempt only when it ran out of memory, and not when it already had the most memory
-// the profile allows (resourceLimits): the next attempt would get the same again.
-def oomErrorStrategy(task) {
-    def ceiling = task.resourceLimits?.memory
-    def atCeiling = ceiling && task.memory && task.memory >= ceiling
-    wasOutOfMemory(task.exitStatus, task.workDir) && !atCeiling ? 'retry' : 'terminate'
+// Time for this attempt: the estimate on the first, then twice the last attempt's when it ran
+// out of time, or the same when it failed otherwise.
+def retryTimeOf(task, baseTime) {
+    if (!task.previousTrace) {
+        return baseTime
+    }
+    def previous = task.previousTrace.time as long
+    def previousTimeout = wasOutOfTime(task.exitStatus, task.previousTrace.get('workdir'))
+    return (previousTimeout ? 2 * previous : previous).ms
+}
+
+// Retry an attempt only when it ran out of memory or of time, and not when it already had the
+// most of that the profile allows (resourceLimits): the next attempt would get the same again.
+def retryErrorStrategy(task) {
+    def memoryCeiling = task.resourceLimits?.memory
+    def timeCeiling = task.resourceLimits?.time
+    def memoryAtCeiling = memoryCeiling && task.memory && task.memory >= memoryCeiling
+    def timeAtCeiling = timeCeiling && task.time && task.time >= timeCeiling
+    def retryMemory = wasOutOfMemory(task.exitStatus, task.workDir) && !memoryAtCeiling
+    def retryTime = wasOutOfTime(task.exitStatus, task.workDir) && !timeAtCeiling
+    retryMemory || retryTime ? 'retry' : 'terminate'
 }

@@ -1,5 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process QUANTIFY {
     tag "${meta.id}"
@@ -10,9 +10,9 @@ process QUANTIFY {
     memory { oomMemoryOf(task, 512.MB) }
     // They took 52 seconds per GB of BAM (at most 58), 9.4 minutes for the largest. Allow twice
     // that, at least 10 minutes.
-    time { 10.min + 2.min * bam.size() / 1e9 }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time { retryTimeOf(task, 10.min + 2.min * bam.size() / 1e9) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_TOOLS.yaml"
     container "${dotenv('GENESIS_TOOLS_IMAGE')}"

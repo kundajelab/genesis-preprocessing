@@ -1,5 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from './retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from './retry'
 
 // The index files under <id>.bwa-mem2/genome that alignment needs. bwa-mem3 writes no .0123 (the
 // unpacked reference bwa-mem2 also loaded); it reads bases from .pac instead.
@@ -27,9 +27,9 @@ process BWA_MEM3_INDEX {
     // reference base whatever the threads; ref.length is the summed chrom sizes.
     cpus 4
     memory { oomMemoryOf(task, 1.GB + 16.B * ref.length) }
-    time { 1.h * (1 + ref.length / 1e9) * task.attempt }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time { retryTimeOf(task, 1.h * (1 + ref.length / 1e9)) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_ALIGNMENT.yaml"
     container "${dotenv('GENESIS_ALIGNMENT_IMAGE')}"

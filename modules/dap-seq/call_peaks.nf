@@ -1,5 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process CALL_PEAKS {
     // MACS3 bounds its threads and peak workers to --threads (upstream PR #787). On a
@@ -12,9 +12,9 @@ process CALL_PEAKS {
     memory { oomMemoryOf(task, 1.5.GB + 1.B * (0.30 * (bam.size() + control_bam.size())).toLong()) }
     // They took 8-78 seconds, at most 8.6 seconds per GB of BAMs. Allow 10 minutes plus 30 seconds
     // per GB.
-    time { 10.min + 30.s * (bam.size() + control_bam.size()) / 1e9 }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time { retryTimeOf(task, 10.min + 30.s * (bam.size() + control_bam.size()) / 1e9) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_MACS3.yaml"
     container "${dotenv('GENESIS_MACS3_IMAGE')}"

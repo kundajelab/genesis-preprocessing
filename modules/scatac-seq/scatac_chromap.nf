@@ -1,5 +1,5 @@
 include { dotenv } from 'plugin/nf-dotenv'
-include { oomMemoryOf ; oomErrorStrategy } from '../common/retry'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 // A library's runs as one argument list: chromap takes them comma-separated, gzip space-separated.
 def joined(files, separator) {
@@ -11,9 +11,9 @@ process SCATAC_CHROMAP {
     // The index (GET_CHROMAP_INDEX) is about 5 bytes per base; the barcode whitelist and per-cell
     // duplicate removal need most of the memory, which grows with the library's fragments.
     memory { oomMemoryOf(task, 16.GB + 4.B * meta.genome_length) }
-    time { 4.h * task.attempt }
-    // Retry with twice the memory only when an attempt ran out of memory (modules/common/retry.nf).
-    errorStrategy { oomErrorStrategy(task) }
+    time { retryTimeOf(task, 4.h) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_CHROMAP.yaml"
     container "${dotenv('GENESIS_CHROMAP_IMAGE')}"

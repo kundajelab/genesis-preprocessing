@@ -1,11 +1,15 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from './retry'
 
 process FASTQC {
     // On Perlmutter, 472 FASTQs of 0.1-16.7 GB (gzipped) peaked at 0.56-0.61 GB on one CPU, and took
     // at most 147 seconds per GB (29 minutes for the longest). Allow 10 minutes plus 5 per GB.
     cpus 1
-    memory '1 GB'
-    time { 10.min + 5.min * read.size() / 1e9 }
+    memory { oomMemoryOf(task, 1.GB) }
+    time { retryTimeOf(task, 10.min + 5.min * read.size() / 1e9) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_FASTQC.yaml"
     container "${dotenv('GENESIS_FASTQC_IMAGE')}"
     tag "${meta.id}:${mate}"
