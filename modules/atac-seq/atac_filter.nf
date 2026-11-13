@@ -32,6 +32,10 @@ process ATAC_FILTER {
     def spans = "awk -v OFS='\\t' '{start = (\$4 < \$8 ? \$4 : \$8) - 1; " +
         "print \$3, start, start + (\$9 < 0 ? -\$9 : \$9)}' | LC_ALL=C sort -S 512M -T . -k1,1 -k2,2n -k3,3n"
     """
+    # samtools collate writes temporary files the size of the filtered reads to TMPDIR; keep them in
+    # the task's folder, not a /tmp that may be held in memory (inputs over ~5 GB were OOM-killed).
+    export TMPDIR="\$PWD/tmp"
+    mkdir -p "\$TMPDIR"
     # A misspelled organelle contig would silently count organelle reads as nuclear.
     for contig in \$(printf '%s' '${organelles}' | tr ',' ' '); do
         awk -v contig="\$contig" '\$1 == contig {found = 1} END {exit !found}' '${chrom_sizes}' || {
