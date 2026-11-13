@@ -106,6 +106,9 @@ so each task's `.command.log` records the commands it ran.
 pixi run get-latest-report
 # Follow a task's log by the hash Nextflow prints, hiding `set -x` lines.
 pixi run watch-log ab/123456
+# Totals for a run (hours, disk, utilization) in PERSIST_DIR/RUN_NAME/resources.tsv; needs
+# its work folder. Runs submitted with submit-pipeline write it when they finish.
+pixi run summarize-resources PERSIST_DIR/RUN_NAME
 ```
 
 ## Sample sheet

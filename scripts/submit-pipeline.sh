@@ -20,6 +20,8 @@ of on the login node; it then submits each task as its own job. Returns once the
   -p, -w, -R, -P, -n, --workflow, the sample sheet, then Nextflow arguments such as -resume.
 * The job runs from the current folder, so relative paths work as with run-pipeline.sh.
 * The walltime caps the whole run. A resubmitted run resumes where the last one stopped.
+* A run that finishes is summarized in resources.tsv beside its trace files
+  (scripts/summarize-resources.sh).
 
 ARGS:
     -h|--help: Show this message and exit.
@@ -160,6 +162,8 @@ script=$(
 #!/usr/bin/env bash
 set -euo pipefail
 echo "Nextflow manager: job \${SLURM_JOB_ID:-?} on \$(hostname)"
+# This job's log, where Nextflow reports the run's folders for the summary below.
+log=$(printf '%q' "$log_dir/$job_name-")\${SLURM_JOB_ID:-}.out
 # Task jobs that Nextflow submits from here would inherit this job's SLURM_* settings (CPUs,
 # memory, partition). Keep only SLURM_CONF, which the Slurm commands need.
 unset \$(compgen -v SLURM_ | grep -vx SLURM_CONF) || true
@@ -178,6 +182,15 @@ while :; do
     wait "\$pid" && status=0 || status=\$?
     kill -0 "\$pid" 2> /dev/null || break
 done
+# Summarize a finished run beside its trace files, in the folders Nextflow reported in this log.
+if ((status == 0)) && [[ -f \$log ]]; then
+    publish=\$(awk '\$1 == "publish_base" && \$2 == ":" {sub(/^[^:]*: /, ""); print; exit}' "\$log")
+    work=\$(awk '\$1 == "workDir" && \$2 == ":" {sub(/^[^:]*: /, ""); print; exit}' "\$log")
+    if [[ -n \$publish && -n \$work ]]; then
+        $(printf '%q' "$script_dir/summarize-resources.sh") "\$publish" "\$work" ||
+            echo "Could not summarize resources in \$publish/resources.tsv" >&2
+    fi
+fi
 exit "\$status"
 EOF
 )

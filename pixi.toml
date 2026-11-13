@@ -32,4 +32,5 @@ checks-fast = { cmd = "scripts/check-projects.sh --fast", description = "Run all
 build-dockers = { cmd = "scripts/build-dockers.sh", description = "Build all the dockers for the project." }
 get-latest-report = { cmd = "scripts/get-latest-report.sh", description = "Get the path to the most recent execution report. Optional argument: WORKSPACE." }
 watch-log = { cmd = "scripts/watch-log.sh", description = "Follow the log of a task, given its hash (e.g. ab/123456) or a log file. Optional second argument: WORKSPACE." }
+summarize-resources = { cmd = "scripts/summarize-resources.sh", description = "Write PERSIST_RUN/resources.tsv: CPU, memory and node hours, disk use, GB written and average utilization. Arguments: PERSIST_RUN [WORK_DIR]." }
 validate-docker = "uv run --frozen --project genesis_tools python tests/verify_pipeline.py --docker"

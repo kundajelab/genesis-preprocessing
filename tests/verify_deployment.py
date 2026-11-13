@@ -318,6 +318,37 @@ def check_submit_pipeline(work: Path) -> None:
     local = submit(host_environment(work / "local", {"docker": TRUE}), str(sheet))
     assert local.returncode == 2 and "needs a Slurm profile" in local.stderr, local
 
+    # A finished run is summarized from the folders Nextflow reported in the job's log; a failed
+    # one is not.
+    publish, task = work / "runs/my sheet", work / "scratch/my sheet/work/ab/cdef1234"
+    reporting_pixi = f"""#!/bin/sh
+mkdir -p '{publish}/trace' '{task}'
+trace='{publish}/trace/execution_trace_1.txt'
+printf 'hash\\tnative_id\\tstatus\\trealtime\\t%%cpu\\tpeak_rss\\twchar\\n' > "$trace"
+printf 'ab/cdef12\\t1\\tCOMPLETED\\t1h\\t100%%\\t1 GB\\t1 GB\\n' >> "$trace"
+printf '#SBATCH -c 1\\n#SBATCH --mem 2048M\\n' > '{task}/.command.run'
+echo '  publish_base   : {publish}'
+echo '  workDir        : {task.parent.parent}'
+exit "${{EXIT:-0}}"
+"""
+    reporting = host_environment(
+        work / "reporting", {"sbatch": sbatch, "pixi": reporting_pixi, "apptainer": TRUE}
+    )
+    assert submit(reporting, "-R", str(work / "refs"), str(sheet)).returncode == 0
+    log = work / "logs/genesis-my sheet-7.out"
+    for status in (3, 0):
+        with log.open("w") as stream:
+            job = subprocess.run(
+                ["bash", str(script)],
+                env={**reporting, "SLURM_JOB_ID": "7", "EXIT": str(status)},
+                cwd=work, stdout=stream, stderr=subprocess.PIPE, text=True,
+            )  # fmt: skip
+        assert job.returncode == status, job.stderr
+        summary = publish / "resources.tsv"
+        assert summary.exists() == (status == 0), (status, log.read_text())
+    summary_lines = (publish / "resources.tsv").read_text().splitlines()
+    assert "cpu-hours\t1.000" in summary_lines and "node-hours\tnan" in summary_lines
+
     # Slurm's SIGTERM before the walltime reaches Nextflow, and the job waits for its cleanup.
     marker = work / "cleaned-up"
     slow_pixi = (
@@ -372,10 +403,78 @@ def check_shim_descriptors(work: Path, shim: Path) -> None:
     assert out.read_text() == "container output\n" and err.read_text() == "container error\n"
 
 
+def check_resource_summary(work: Path) -> None:
+    """scripts/summarize-resources.sh totals each task attempt that ran, from its trace and work.
+
+    Requests come from Slurm's directives or else the container's limits; cached rows and attempts
+    with no realtime are skipped; node-hours add the manager job and are nan without Slurm.
+    """
+    persist, scratch, home = work / "runs/demo", work / "workspace/demo/work", work / "home"
+    (persist / "trace").mkdir(parents=True)
+    header = "task_id\thash\tnative_id\tname\tstatus\texit\tsubmit\tduration\trealtime\t%cpu"
+    header += "\tpeak_rss\tpeak_vmem\trchar\twchar\n"
+    (persist / "trace/execution_trace_2026-11-01_00-00-00.txt").write_text(
+        header
+        + "1\tab/cdef12\t101\tA (s1)\tCOMPLETED\t0\t-\t1h 5m\t1h\t150.0%\t1 GB\t2 GB\t0\t2 GB\n"
+        + "2\t12/345678\t102\tB (s1)\tFAILED\t137\t-\t31m\t30m\t-\t-\t-\t0\t1 MB\n"
+    )
+    (persist / "trace/execution_trace_2026-11-02_00-00-00.txt").write_text(
+        header
+        + "1\tab/cdef12\t101\tA (s1)\tCACHED\t0\t-\t1h 5m\t1h\t150.0%\t1 GB\t2 GB\t0\t2 GB\n"
+        + "3\tff/000000\t103\tC (s1)\tABORTED\t-\t-\t-\t-\t-\t-\t-\t-\t-\n"
+    )
+    for task, script in {
+        "ab/cdef1234": "#SBATCH -c 2\n#SBATCH --mem 4096M\n#SBATCH --qos=shared --mem=8192M\n",
+        "12/3456789a": "podman run -i --cpu-shares 4096 --memory 2048m image bash\n",
+    }.items():
+        (scratch / task).mkdir(parents=True)
+        (scratch / task / ".command.run").write_text(script)
+    (home / "logs/genesis").mkdir(parents=True)
+    (home / "logs/genesis/genesis-demo-900.out").write_text(
+        f"Nextflow manager: job 900 on nid000001\n  publish_base   : {persist}\n"
+    )
+    # Each job, the two tasks and the manager, ran an hour billed 64 of a node's 256 threads.
+    sacct = '#!/bin/sh\nwhile [ "$1" != -j ]; do shift; done\n'
+    sacct += "for job in $(echo \"$2\" | tr , ' '); do echo '3600|billing=64,cpu=64'; done\n"
+    script = [str(ROOT / "scripts/summarize-resources.sh"), str(persist), str(scratch)]
+
+    def summarize(tools: dict[str, str]) -> dict[str, str]:
+        environment = host_environment(work / f"tools-{len(tools)}", tools, HOME=str(home))
+        run = subprocess.run(script, env=environment, capture_output=True, text=True)
+        assert run.returncode == 0, run.stderr
+        lines = (persist / "resources.tsv").read_text().splitlines()
+        pairs = [line.split("\t") for line in lines]
+        assert all(len(pair) == 2 for pair in pairs), lines
+        assert [name for name, _ in pairs] == [
+            "cpu-hours", "mem-gb-hours", "node-hours", "scratch-gb", "persistent-disk-gb",
+            "gb-written", "avg-%cpu", "avg-%mem",
+        ], lines  # fmt: skip
+        return dict(pairs)
+
+    values = summarize({"sacct": sacct})
+    # A: 2 CPUs and 4 GB for an hour at 150% and 1 GB; B: 4 CPUs and 2 GB for half an hour, with
+    # no %cpu or peak_rss, so it counts in the totals but not the averages. They wrote 2 GB + 1 MB.
+    disk = {name: values.pop(name) for name in ("scratch-gb", "persistent-disk-gb")}
+    assert values == {
+        "cpu-hours": "4.000", "mem-gb-hours": "5.000", "node-hours": "0.750",
+        "gb-written": "2.001", "avg-%cpu": "75.000", "avg-%mem": "25.000",
+    }, values  # fmt: skip
+    assert all(float(value) >= 0 for value in disk.values()), disk
+    assert summarize({})["node-hours"] == "nan"
+    # A task that ran needs its work folder for its requests.
+    shutil.rmtree(scratch / "12")
+    missing = subprocess.run(
+        script, env=host_environment(work / "tools-missing", {}, HOME=str(home)),
+        capture_output=True, text=True,
+    )  # fmt: skip
+    assert missing.returncode != 0 and "No work folder for 12/345678" in missing.stderr, missing
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="genesis-profile-") as temporary:
         folder = Path(temporary)
         check_default_profiles(folder / "defaults")
+        check_resource_summary(folder / "resources")
         if not any(shutil.which(tool, path=BASE_PATH) for tool in ("sbatch", "apptainer")):
             check_default_references(folder / "references")
             check_pipeline_references(folder / "pipeline")
@@ -437,7 +536,7 @@ def main() -> None:
         check_shim_descriptors(folder / "descriptors", shim)
     print(
         "PASS: default profile and references per host, pipeline submission, seven parsed"
-        " profiles, podman-hpc shim"
+        " profiles, podman-hpc shim, resource summary"
     )
 
 
