@@ -71,8 +71,10 @@ Perlmutter's Podman only searches `registry.suse.com`, so `podman.registry` is `
 
 **Podman.** Nextflow runs containers with `podman`, but on Perlmutter that must be podman-hpc.
 `scripts/run-pipeline.sh` puts `scripts/podman-hpc-bin/` first on `PATH`, whose `podman` runs
-`podman-hpc`; Slurm passes `PATH` on to the jobs. Containers run as you
-(`--userns=keep-id`), so task files stay readable.
+`podman-hpc`; Slurm passes `PATH` on to the jobs. Containers run as root (`--user 0:0`), which
+podman-hpc maps to you, so task files are yours. `--userns=keep-id` would do the same, but
+podman-hpc then copies the whole image into the node's `/tmp`, which is held in memory and
+counts against the job (1.7 GB for the SPP image).
 
 **Account and QOS.** Jobs are charged to your default NERSC project. For another project, or
 another QOS for one run, set `SBATCH_ACCOUNT` or `SBATCH_QOS` in your shell; `sbatch` reads them
@@ -82,8 +84,10 @@ here), which is charged only for the cores and memory used and allows at most ha
 profile caps each task at 128 CPUs, 247 GB and 48 hours. Without a QOS, NERSC would use `debug`,
 which is limited to 30 minutes.
 
-**Memory.** podman-hpc's image mounts count against a job's memory, so each job asks Slurm for
-4 GB more than its task; the container itself stays limited to the task's memory.
+**Memory.** Each job asks Slurm for 512 MB more than its task, for podman-hpc's own processes;
+the container itself stays limited to the task's memory. Files a tool writes to `/tmp` also count
+against the job's memory, so a task that writes large temporary files should keep them in its
+work folder, as ATAC_FILTER does.
 
 **Scheduling.** As [NERSC recommends](https://docs.nersc.gov/jobs/workflow/nextflow/), the
 profile checks Slurm every 5 minutes and submits at most 20 jobs a minute, 15 at a time. Each
