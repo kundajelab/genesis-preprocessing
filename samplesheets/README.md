@@ -15,6 +15,7 @@ folder given by `-R`/`--references`; they are not downloaded automatically.
 | `Arabidopsis_thaliana/scatac-reads-GSE155304.tsv` | scatac-reads | 2 (10x ATAC v1) | GSE155304 (Farmer 2021), root nuclei, rep1 and rep2, 2 runs each |
 | `Arabidopsis_thaliana/tss-seq-GSE136356.tsv` | tss-seq | 9 (SE CAGE) | GSE136356 (Thieffry 2020), Col-0 seedlings: wild type, hen2-4 and rrp4-2, 3 replicates each; reads start with a 3-base barcode and `CAGCAG` (`trim_5p` 9) |
 | `Arabidopsis_thaliana/rna-seq-GSE206323.tsv` | rna-seq | 16 (PE) | GSE206323, Col-0 inflorescence stem, the 8 wild-type samples, 2 runs each; TruSeq stranded mRNA (`reverse`) |
+| `Arabidopsis_thaliana/rna-seq-curated.tsv` | rna-seq | 16,788 (8,941 PE), 1,625 studies | ENA, Col-0, untreated or no treatment stated; leaf, root, shoot or seedling (below) |
 | `Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv` | dap-seq | 405 (PE) | multiDAP |
 | `Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | dap-seq | 142 (PE) | multiDAP, RTx430 plants; Genesis DAP-seq set 24 |
 | `Sorghum_bicolor/dap-seq-PRJNA1177471-test.tsv` | dap-seq | 6 (PE) | Subset of the sheet above, for a quick test |
@@ -23,6 +24,7 @@ folder given by `-R`/`--references`; they are not downloaded automatically.
 | `Sorghum_bicolor/tss-seq-ERP126061.tsv` | tss-seq | 4 (RAMPAGE) | ERP126061, cultivars RTx436 and Tx2783, 2 runs each, on the BTx623 reference; `read1_url` is the TSS read, the library's read 2 |
 | `Sorghum_bicolor/tss-seq-SRP360924.tsv` | tss-seq | 4 (PE Smar2C2) | GSE197144 (Murray 2022), shoot and root, 2 replicates each; TSS reads in either mate, 12-base UMI |
 | `Sorghum_bicolor/rna-seq-GSE184725.tsv` | rna-seq | 6 (SE) | GSE184725, BTx623 shoot, control and sulfur-deficient, 3 each; NEBNext Ultra II Directional (`reverse`) |
+| `Sorghum_bicolor/rna-seq-curated.tsv` | rna-seq | 484 (401 PE), 150 studies | ENA, BTx623, as for A. thaliana (below) |
 
 Sample IDs in the curated Sorghum ATAC sheet are `<study>_<tissue>_<replicate>`. The Genesis
 metadata sheet lists 25 Sorghum ATAC runs; SRR8742452 (SRP188687) is left out because it is the
@@ -106,6 +108,34 @@ version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 
 140,754 bp; 717,997,770 bp in all), every GFF3 sequence is in it, and the annotation has
 32,062 genes, 193 of them on `Mt` and `Pt`. Gene IDs carry a suffix, as in
 `Sobic.001G000100.v5.1`. The BED lists each piece of a trans-spliced gene separately.
+
+## Curated RNA-seq
+
+The `rna-seq-curated.tsv` sheets list ENA's bulk short-read RNA-seq runs that have:
+- the reference genotype (Col-0 or BTx623), read from each sample's attributes;
+- no treatment, or none stated;
+- tissue that is leaf, root, shoot/apex or seedling.
+
+Each run has its own row, named `<study>_<tissue>_<sample>_<run>`.
+
+- **Strandedness is measured per run, as the metadata rarely states it:**
+  - The first 20,000 reads of the read-1 file are aligned with STAR.
+  - The aligned reads are counted on each gene strand with featureCounts.
+  - A forward fraction above 0.8 is `forward`, below 0.2 `reverse`, and 0.35–0.65
+    `unstranded`.
+
+  The calls agree with the pipeline's `forward_fraction` on all 20 test runs that remain in
+  the sheets.
+- **Left out:**
+  - **Not measurable:** runs whose strandedness can't be measured (unclear, or under 2,000 reads
+    on genes).
+  - **Not standard RNA-seq:** 247 runs whose titles or library selection name another assay
+    (DeLTa-Seq, polysome or translatome, degradome, CAGE, SHAPE/DMS, small RNA, RIP, ChIP).
+  - **Mates in one file:** 367 runs submitted as paired but served by ENA as one FASTQ of both
+    mates. As single-end, their strands mix and fragments count twice.
+  - **Tiny files:** 8 runs with a FASTQ under 1 MB.
+- **Still in the sheets:** some libraries are rRNA- or organelle-rich. Filter on the `assigned`
+  and `organelle` QC if needed.
 
 ## scATAC
 
