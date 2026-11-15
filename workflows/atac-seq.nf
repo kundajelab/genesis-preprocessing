@@ -69,8 +69,6 @@ workflow {
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
     def referencesDir = file(params.references).toAbsolutePath()
-    // Parameters given on the command line arrive as strings.
-    def resources = [cpus: params.cpus.toInteger(), memory: params.memory, time: params.time]
     def bwaOptions = [
         batch_size: params.bwa_batch_size, seed_length: params.bwa_seed_length,
         max_seed_occurrences: params.bwa_max_seed_occurrences,
@@ -141,7 +139,7 @@ workflow {
             def genes = meta.reference_genes == '-' ? [] : file("${referencesDir}/${meta.reference_genes}")
             tuple(meta, bam, bai, peaks, cuts, complexity, genes)
         }
-    ATAC_QC(qcInputs, resources)
+    ATAC_QC(qcInputs)
     // Collect channels, not publishDir contents: wait for every library's reports.
     multiqcFiles = FASTQC.out.reports.map { _meta, _mate, _html, zip -> zip }
         .mix(ATAC_TRIM.out.report.map { _meta, report -> report })

@@ -2,9 +2,12 @@ include { dotenv } from 'plugin/nf-dotenv'
 include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process ATAC_QC {
-    cpus { resources.cpus }
-    memory { oomMemoryOf(task, resources.memory) }
-    time { retryTimeOf(task, resources.time) }
+    // On Perlmutter, 12 Sorghum samples (0.15-1.21 GB of BAM) used 1.8 of 2 CPUs and peaked at
+    // 3.1 GB whatever the BAM size, and took 0.47-0.85 hours, mostly computeMatrix over the gene
+    // starts. Allow 4 GB and 1.5 hours.
+    cpus 2
+    memory { oomMemoryOf(task, 4.GB) }
+    time { retryTimeOf(task, 1.5.h) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
@@ -16,7 +19,6 @@ process ATAC_QC {
     input:
     // genes is an empty list when the sheet gives no gene annotation.
     tuple val(meta), path(bam), path(bai), path(peaks), path(cuts), path(complexity), path(genes)
-    val resources
     output:
     tuple val(meta), path("${meta.id}.atac_qc_mqc.tsv"), emit: summary
     tuple val(meta), path("${meta.id}.tss.*"), optional: true, emit: tss

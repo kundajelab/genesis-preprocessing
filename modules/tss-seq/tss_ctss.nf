@@ -27,6 +27,9 @@ process TSS_CTSS {
     // of running out of memory.
     def unique = meta.umi_length ? '-u ' : ''
     """
+    # GNU sort: the images' Ubuntu 26.04 sort is uutils', whose -S bounds memory only loosely (a
+    # 512M buffer held 4.4 GB); Ubuntu keeps GNU's as gnusort.
+    sort=\$(command -v gnusort || echo sort)
     samtools view -q 255 -F 0x904 '${bam}' | gawk -v OFS='\\t' -v correct=${meta.g_correction ? 1 : 0} \\
         -v umi=${meta.umi_length} '
         {
@@ -48,10 +51,10 @@ process TSS_CTSS {
             # With a UMI (the end of the read name), sort -u below keeps each molecule once.
             print \$3, strand, pos (umi ? OFS substr(\$1, length(\$1) - umi + 1) : "")
         }' |
-        LC_ALL=C sort ${unique}-S 1G -T . |
+        LC_ALL=C "\$sort" ${unique}-S 1G -T . |
         # Rows of one TSS are now adjacent: count them in one pass, then order by position.
         cut -f1-3 | LC_ALL=C uniq -c | awk -v OFS='\\t' '{print \$2, \$3, \$4, \$1}' |
-        LC_ALL=C sort -t \$'\\t' -k1,1 -k2,2 -k3,3n > ctss.tsv
+        LC_ALL=C "\$sort" -t \$'\\t' -k1,1 -k2,2 -k3,3n > ctss.tsv
     test -s ctss.tsv || { printf 'No uniquely aligned reads\\n' >&2; exit 1; }
     gzip -n -c ctss.tsv > '${meta.id}.ctss.tsv.gz'
     # Per strand: raw tag counts and counts per million tags, as bigWigs (bedGraph is 0-based).
@@ -59,7 +62,7 @@ process TSS_CTSS {
     for strand in plus minus; do
         sign=\$( [ "\$strand" = plus ] && echo + || echo - )
         awk -F '\\t' -v OFS='\\t' -v s="\$sign" '\$2 == s {print \$1, \$3 - 1, \$3, \$4}' ctss.tsv \\
-            | LC_ALL=C sort -k1,1 -k2,2n > "\$strand.bedGraph"
+            | LC_ALL=C "\$sort" -k1,1 -k2,2n > "\$strand.bedGraph"
         awk -v OFS='\\t' -v total="\$total" '{print \$1, \$2, \$3, \$4 * 1e6 / total}' \\
             "\$strand.bedGraph" > "\$strand.cpm.bedGraph"
         bedGraphToBigWig "\$strand.bedGraph" '${chrom_sizes}' '${meta.id}.ctss.'"\$strand"'.bw'

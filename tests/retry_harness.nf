@@ -3,7 +3,7 @@
 // --mode oom or --mode other, a task fails its first attempt with exit 1, after Slurm's oom_kill
 // message (oom) or without it (other), and with --mode timeout with exit 140 after Slurm's time
 // limit message; it succeeds on any retry.
-include { slurmReportedOutOfMemory ; slurmReportedTimeLimit ; wasOutOfMemory ; wasOutOfTime ; oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../modules/common/retry'
+include { slurmReportedOutOfMemory ; slurmReportedTimeLimit ; wasOutOfMemory ; wasOutOfTime ; wasTerminatedExternally ; oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../modules/common/retry'
 
 process ATTEMPT {
     memory { oomMemoryOf(task, 100.MB) }
@@ -65,6 +65,10 @@ def checkFunctions(logs) {
      [0, 'other', false]].each { status, dir, want ->
         results << report("wasOutOfTime(${status}, ${dir})", wasOutOfTime(status, "${logs}/${dir}"), want)
     }
+    [[unknown, 'other', true], [unknown, 'missing', true], [unknown, 'timeout', false],
+     [137, 'other', false], [1, 'other', false], [0, 'other', false]].each { status, dir, want ->
+        results << report("wasTerminatedExternally(${status}, ${dir})", wasTerminatedExternally(status, "${logs}/${dir}"), want)
+    }
     def afterOom = [previousTrace: [memory: 8.GB.toBytes(), workdir: "${logs}/oom"], exitStatus: 1]
     def afterOther = [previousTrace: [memory: 8.GB.toBytes(), workdir: "${logs}/other"], exitStatus: 143]
     results << report('memory, first attempt', oomMemoryOf([previousTrace: null], 17.GB), 17.GB)
@@ -85,5 +89,13 @@ def checkFunctions(logs) {
     results << report('retry at the time ceiling', retryErrorStrategy(timeAtCeiling), 'terminate')
     def failed = [exitStatus: 1, workDir: "${logs}/other", memory: 1.GB, time: 1.h, resourceLimits: [:]]
     results << report('retry another failure', retryErrorStrategy(failed), 'terminate')
+    def cancelled = [exitStatus: unknown, workDir: "${logs}/missing", memory: 247.GB, time: 48.h,
+                     resourceLimits: [memory: 247.GB, time: 48.h]]
+    results << report('retry a system termination', retryErrorStrategy(cancelled), 'retry')
+    def afterCancel = [previousTrace: [time: 3.h.toMillis(), memory: 8.GB.toBytes(), workdir: "${logs}/missing"], exitStatus: unknown]
+    results << report('memory after a system termination', oomMemoryOf(afterCancel, 17.GB), 8.GB)
+    results << report('time after a system termination', retryTimeOf(afterCancel, 5.h), 3.h)
+    def unknownTimeout = timedOut + [exitStatus: unknown, time: 48.h]
+    results << report('timeout without exit status at the time ceiling', retryErrorStrategy(unknownTimeout), 'terminate')
     println "RESULT ${results.count { r -> !r }} wrong of ${results.size()}"
 }

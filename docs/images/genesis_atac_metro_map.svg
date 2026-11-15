@@ -106,4 +106,4 @@
 <text class="note" x="48" y="798">Adapters are trimmed first. Usable pairs need both mates at MAPQ ≥ 30 on nuclear contigs; duplicates are removed.</text>
 <text class="note" x="48" y="823">BAMPE peaks use unshifted fragments. Cut sites use +4 / −5 shifts; the TSS profile uses strand-aware windows.</text>
 <text class="note" x="48" y="848">QC is diagnostic, with no plant thresholds. Libraries and biological replicates are never pooled.</text>
-<metadata>Genesis diagram schema 2; workflows/atac-seq.nf SHA256 05398c37b3767e1cee4a821c8a029dae452339bb9e90269905582789fc023fd0; schematic animation.</metadata></svg>
+<metadata>Genesis diagram schema 2; workflows/atac-seq.nf SHA256 8e87cecd8cede697a249995fc667b7edf12f21417c48c4baca71ae95195249c9; schematic animation.</metadata></svg>

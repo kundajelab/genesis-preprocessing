@@ -302,7 +302,8 @@ reference base (it peaks near 14.5) and one hour plus an hour per Gbp. It writes
 `.0123`, so a record from bwa-mem2, which listed it, makes the index rebuild once.
 Alignment uses 16 CPUs, memory from the genome size and CPUs, and time from the size
 of the compressed reads. Like every DAP-seq task, both retry only when they run out of
-memory or of time, with twice what ran out. QC uses two CPUs, and memory and time from the size of SPP's BAM. Tracks use
+memory or of time, with twice what ran out, or when the system cancels them, with the same
+resources. QC uses two CPUs, and memory and time from the size of SPP's BAM. Tracks use
 four CPUs (1.7 times as fast as two), 2.0 GB, and time from the genome size and the size
 of the BAMs they cover. bamCoverage writes its temporary files in the task's folder,
 since a compute node's `/tmp` may be held in memory. It waits for

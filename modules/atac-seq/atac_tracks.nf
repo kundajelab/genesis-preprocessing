@@ -4,14 +4,15 @@ include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry
 process ATAC_TRACKS {
     // As DAP-seq's TRACKS: bamCoverage runs 1.7x as fast on 4 CPUs as on 2.
     cpus 4
-    // DAP-seq's bamCoverage processes peaked at 1.58 GB on 4 CPUs whatever the BAM size, with their
-    // temporary files in the task's folder; samtools sort uses 512 MB per thread.
-    memory { oomMemoryOf(task, 1.GB + 512.MB * task.cpus) }
-    // Not yet measured for ATAC-seq. DAP-seq's 1-bp tracks took about 0.15 hours per Gbp of genome
-    // plus 0.013 per GB of BAM for each bamCoverage run on 4 CPUs; this has alignmentSieve, a sort
-    // and one bamCoverage run. Allow 30 minutes plus 1 hour per Gbp and 0.1 hours per GB of BAM.
+    // On Perlmutter, 24 Sorghum samples peaked at 2.9 GB of 3, whatever the BAM size: samtools
+    // sort's 512 MB per thread, plus bamCoverage. Allow 1.5 GB more than the sort's buffers.
+    memory { oomMemoryOf(task, 1.5.GB + 512.MB * task.cpus) }
+    // On Perlmutter with 4 CPUs, 24 Sorghum BAMs (0.13-11.9 GB; 0.73 Gbp genome) took at most 0.14
+    // hours per GB (50 minutes for 6.0 GB; 64 for the largest). Allow 10 minutes plus 0.25 hours
+    // per Gbp and 0.2 per GB of BAM, at 4 CPUs' speed.
     time {
-        retryTimeOf(task, (30.min + 1.h * (meta.genome_size + 0.1 * bam.size()) / 1e9) * 4 / task.cpus)
+        def hours = (0.25 * meta.genome_size + 0.2 * bam.size()) / 1e9
+        retryTimeOf(task, (10.min + 1.h * hours) * 4 / task.cpus)
     }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }

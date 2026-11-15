@@ -5,7 +5,9 @@ process ATAC_FILTER {
     cpus 2
     // samtools sort uses 512 MB per thread, and GNU sort another 512 MB.
     memory { oomMemoryOf(task, 1.5.GB + 512.MB * task.cpus) }
-    time { retryTimeOf(task, 1.h * (1 + bam.size() / 1e9)) }
+    // On Perlmutter, 24 Sorghum BAMs of 0.7-23.5 GB took at most 0.11 hours per GB (48 minutes for
+    // 7.6 GB; 63 for the largest). Allow 15 minutes plus 0.15 hours per GB.
+    time { retryTimeOf(task, 15.min + 0.15.h * bam.size() / 1e9) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
@@ -29,8 +31,11 @@ process ATAC_FILTER {
     def organelles = meta.organelles.join(',')
     // Each proper pair's outer span, BED0 half-open, from read 1: the leftmost mate's start plus the
     // template length.
+    // GNU sort: the images' Ubuntu 26.04 sort is uutils', which ignores -S and held a whole BAM's
+    // spans in memory (4.4 GB for a 4.9 GB BAM, against GNU's 512 MB). Ubuntu has GNU's as gnusort.
     def spans = "awk -v OFS='\\t' '{start = (\$4 < \$8 ? \$4 : \$8) - 1; " +
-        "print \$3, start, start + (\$9 < 0 ? -\$9 : \$9)}' | LC_ALL=C sort -S 512M -T . -k1,1 -k2,2n -k3,3n"
+        "print \$3, start, start + (\$9 < 0 ? -\$9 : \$9)}' | " +
+        "LC_ALL=C \$(command -v gnusort || echo sort) -S 512M -T . -k1,1 -k2,2n -k3,3n"
     """
     # samtools collate writes temporary files the size of the filtered reads to TMPDIR; keep them in
     # the task's folder, not a /tmp that may be held in memory (inputs over ~5 GB were OOM-killed).
@@ -46,11 +51,14 @@ process ATAC_FILTER {
     awk -v OFS='\\t' -v organelles='${organelles}' '
         BEGIN {n = split(organelles, names, ","); for (i = 1; i <= n; i++) skip[names[i]] = 1}
         !(\$1 in skip) {print \$1, 0, \$2}' '${chrom_sizes}' > nuclear.bed
+    # collate holds one of its -n temporary files in memory at a time, so with its default of 64 its
+    # memory grew with the BAM (1.3 GB with 4 files against 0.3 GB with 64, on 8M reads), and BAMs
+    # of 15 GB and more ran out of memory; 1024 keeps it small.
     # Keep pairs where both mates are primary, properly paired, not QC-failed, on a nuclear contig and
     # at least MAPQ ${mapq}. A read whose mate fails loses its mate here; fixmate then clears its
     # proper-pair flag, so the second filter drops it. Duplicates stay until complexity is counted.
     samtools view -@ ${task.cpus} -u -f 2 -F 2828 -q ${mapq} -L nuclear.bed '${bam}' | \\
-        samtools collate -@ ${task.cpus} -O -u - | \\
+        samtools collate -@ ${task.cpus} -O -u -n 1024 - | \\
         samtools fixmate -@ ${task.cpus} -u - - | \\
         samtools view -@ ${task.cpus} -u -f 2 -F 2828 - | \\
         samtools sort -@ ${task.cpus} -m 512M -o filtered.bam -

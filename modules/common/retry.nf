@@ -1,6 +1,7 @@
 // Retries for processes whose memory and time needs are hard to predict. Such a process
 // estimates both from its inputs and retries only when an attempt ran out of memory or of time,
-// with twice that resource each time; any other failure stops the run as before:
+// with twice that resource each time, or was terminated by the system, with the same resources;
+// any other failure stops the run as before:
 //
 //     include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 //
@@ -71,6 +72,13 @@ def wasOutOfTime(exitStatus, workDir) {
     !wasOutOfMemory(exitStatus, workDir) && (exitStatus == 140 || slurmReportedTimeLimit(workDir))
 }
 
+// Whether an attempt ended without an exit status for a reason Slurm did not log: cancelled by the
+// system, or its node failed (Nextflow: "terminated for an unknown reason"; exit status
+// Integer.MAX_VALUE). Retried with the same memory and time, since neither ran out.
+def wasTerminatedExternally(exitStatus, workDir) {
+    exitStatus == Integer.MAX_VALUE && !wasOutOfTime(exitStatus, workDir)
+}
+
 // Memory for this attempt: the estimate on the first, then twice the last attempt's when it ran
 // out of memory, or the same when it failed otherwise.
 def oomMemoryOf(task, baseMem) {
@@ -95,6 +103,7 @@ def retryTimeOf(task, baseTime) {
 
 // Retry an attempt only when it ran out of memory or of time, and not when it already had the
 // most of that the profile allows (resourceLimits): the next attempt would get the same again.
+// Also retry, with the same resources, an attempt the system terminated.
 def retryErrorStrategy(task) {
     def memoryCeiling = task.resourceLimits?.memory
     def timeCeiling = task.resourceLimits?.time
@@ -102,5 +111,6 @@ def retryErrorStrategy(task) {
     def timeAtCeiling = timeCeiling && task.time && task.time >= timeCeiling
     def retryMemory = wasOutOfMemory(task.exitStatus, task.workDir) && !memoryAtCeiling
     def retryTime = wasOutOfTime(task.exitStatus, task.workDir) && !timeAtCeiling
-    retryMemory || retryTime ? 'retry' : 'terminate'
+    def terminated = wasTerminatedExternally(task.exitStatus, task.workDir)
+    retryMemory || retryTime || terminated ? 'retry' : 'terminate'
 }
