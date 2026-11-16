@@ -1,9 +1,16 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process RNA_QC {
     cpus 4
-    memory '2 GB'
-    time { 1.h * (1 + bam.size() / 1e9) }
+    // Two featureCounts runs, so about twice RNA_COUNTS' time. On Perlmutter, 20 Sorghum BAMs
+    // (0.17-24 GB) peaked at 1.4 GB, at most 6.3 minutes per GB of BAM (1.5 hours for 14.7 GB).
+    // Allow 10 minutes plus 0.2 hours per GB.
+    memory { oomMemoryOf(task, 2.GB) }
+    time { retryTimeOf(task, 10.min + 0.2.h * bam.size() / 1e9) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_RNA_COUNTS.yaml"
     container "${dotenv('GENESIS_RNA_COUNTS_IMAGE')}"
     tag "${meta.id}"

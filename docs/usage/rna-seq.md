@@ -52,7 +52,7 @@ Each row is one library: biological replicates are never pooled.
    transcript and all copies count toward the gene. The `gene:` prefix of Ensembl
    Plants GFF3 IDs is dropped, so genes keep their usual IDs, such as `AT1G01010`.
 2. **Index.** STAR indexes the FASTA with the annotated junctions. Its memory is sized
-   from the genome: about 35 GB for maize B73. The `GET_STAR_INDEX` subworkflow
+   from the genome: about 38 GB for maize B73. The `GET_STAR_INDEX` subworkflow
    (`modules/rna-seq/get_star_index.nf`) publishes the index beside the FASTA as
    `<id>.<annotation>.star/`, with the annotation's name less any `.gz`, so each
    annotation of a FASTA gets its own index. Its record `<id>.<annotation>.star.sha256`

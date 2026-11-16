@@ -1,9 +1,14 @@
 include { dotenv } from 'plugin/nf-dotenv'
+include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
 process RNA_ANNOTATION {
     cpus 1
-    memory '4 GB'
-    time '1h'
+    // On Perlmutter, the Sorghum annotation took 5 seconds and 76 MB.
+    memory { oomMemoryOf(task, 1.GB) }
+    time { retryTimeOf(task, 15.min) }
+    // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
+    errorStrategy { retryErrorStrategy(task) }
+    maxRetries 2
     conda "${moduleDir}/../../environments/GENESIS_RNA_COUNTS.yaml"
     container "${dotenv('GENESIS_RNA_COUNTS_IMAGE')}"
     tag "${ref.id}"

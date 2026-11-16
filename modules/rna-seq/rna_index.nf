@@ -23,9 +23,10 @@ def recordIndex(ref) {
 
 process RNA_INDEX {
     cpus 8
-    // STAR builds its suffix array in about 14 bytes per reference base (about 36 GB for a 2.3 Gb
-    // maize genome). ref.length is the summed chrom sizes.
-    memory { oomMemoryOf(task, 4.GB + 14.B * ref.length) }
+    // On Perlmutter, STAR peaked at 12.6 GB building the 0.72 Gbp Sorghum index (7.3 GB on disk):
+    // about 13 bytes per reference base beyond 4 GB. Allow 16 (about 38 GB for a 2.3 Gbp maize
+    // genome). ref.length is the summed chrom sizes.
+    memory { oomMemoryOf(task, 4.GB + 16.B * ref.length) }
     time { retryTimeOf(task, 1.h * (1 + ref.length / 1e9)) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }

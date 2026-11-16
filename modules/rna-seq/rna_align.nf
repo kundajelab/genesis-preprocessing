@@ -4,9 +4,13 @@ include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry
 process RNA_ALIGN {
     cpus 8
     // The loaded index is ~10 bytes per reference base. samtools sorts after STAR exits, so it
-    // can use that memory too, and spills to disk rather than failing on large libraries.
+    // can use that memory too, and spills to disk rather than failing on large libraries. On
+    // Perlmutter, 20 Sorghum libraries peaked at 7.9-10 GB of 11.4, whatever their size.
     memory { oomMemoryOf(task, 4.GB + 11.B * meta.genome_size) }
-    time { retryTimeOf(task, 1.h * (1 + [reads].flatten().sum { read -> read.size() } / 1e9)) }
+    // On Perlmutter, STAR and the sort took at most 5.4 minutes per GB of FASTQ for 20 Sorghum
+    // libraries (0.23-77 GB): 3.7 hours for 41 GB; 11 minutes for the slowest small one, 0.81 GB.
+    // Allow 15 minutes plus 0.12 hours per GB.
+    time { retryTimeOf(task, 15.min + 0.12.h * [reads].flatten().sum { read -> read.size() } / 1e9) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
