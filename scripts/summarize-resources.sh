@@ -20,7 +20,10 @@ Write PERSIST_RUN/resources.tsv: one line per field, its name and value (%.3f) t
     avg-%mem            Σ(peak_rss ÷ memory × 100 × mem-gb-hours) ÷ Σ mem-gb-hours
 GB is 2^30 bytes, as in Nextflow. Every task attempt with a measured realtime counts, from every
 PERSIST_RUN/trace/execution_trace_*.txt; cached rows repeat earlier attempts and are skipped.
-Requests come from each task's .command.run, so the work folders must still exist.
+Requests come from the trace's cpus and memory columns, with any executor (Slurm, or local with
+conda or a container). Traces without them, from older runs, need the tasks' work folders: the
+requests are then Slurm's directives or the container's limits in each .command.run. Only
+scripts/submit-pipeline.sh runs this when a run finishes; run it yourself after other runs.
 
 PERSIST_RUN: the run's folder of published output and trace files (PERSIST_DIR/RUN_NAME).
 WORK_DIR: the run's Nextflow work folder. Default: WORKSPACE/RUN_NAME/work, WORKSPACE from
@@ -54,7 +57,8 @@ temporary=$(mktemp -d)
 trap 'rm -rf -- "$temporary"' EXIT
 
 # Task attempts that ran, once each (a hash is one attempt): hash, native_id, realtime (hours),
-# %cpu, peak_rss (bytes) and wchar (bytes), with "-" where the trace has none.
+# %cpu, peak_rss (bytes), wchar (bytes), and the requested CPUs and memory (MB) where the trace
+# records them, with "-" where the trace has none.
 awk -F '\t' -v OFS='\t' '
     function hours(text,    total, n, i, part, value) {
         if (text == "-" || text == "") return "-"
@@ -90,8 +94,12 @@ awk -F '\t' -v OFS='\t' '
         for (i in names) required[names[i]] = 1 }
     $column["status"] != "CACHED" && $column["realtime"] != "-" {
         cpu = $column["%cpu"]; sub(/%$/, "", cpu)
+        cpus = ("cpus" in column ? $column["cpus"] : "-")
+        memory = ("memory" in column ? bytes($column["memory"]) : "-")
+        if (cpus !~ /^[0-9]+$/ || memory == "-") cpus = memory = "-"
+        else memory = memory / 2^20
         row[$column["hash"]] = $column["native_id"] OFS hours($column["realtime"]) OFS cpu OFS \
-            bytes($column["peak_rss"]) OFS bytes($column["wchar"])
+            bytes($column["peak_rss"]) OFS bytes($column["wchar"]) OFS cpus OFS memory
     }
     END { if (failed) exit 1
         for (hash in row) print hash, row[hash] }
@@ -102,16 +110,17 @@ if [[ ! -s $temporary/tasks.tsv ]]; then
 fi
 
 # Each attempt's work folder (WORK/ab/cdef..., the trace's hash ab/cdef12 abbreviated), then the
-# CPUs and memory (MB) it requested: Slurm's directives, or else the container's limits.
+# CPUs and memory (MB) it requested: Slurm's directives, or else the container's limits. Only an
+# attempt whose trace row has no requests needs its folder; the others' show whether Slurm ran it.
 find "$work" -mindepth 2 -maxdepth 2 -type d > "$temporary/folders.txt"
-awk -v OFS='\t' -v work="$work/" '
-    NR == FNR { hash = $1; folder[substr(hash, 1, 9)] = ""; next }
+awk -F '\t' -v OFS='\t' -v work="$work/" '
+    NR == FNR { key = substr($1, 1, 9); folder[key] = ""; needed[key] = ($7 == "-"); next }
     { relative = substr($0, length(work) + 1); key = substr(relative, 1, 9)
       if (key in folder) folder[key] = $0 }
     END { for (key in folder) {
-        if (folder[key] == "") { printf "No work folder for %s in %s\n", key, work > "/dev/stderr"
-            failed = 1 }
-        else print key, folder[key] }
+        if (folder[key] != "") print key, folder[key]
+        else if (needed[key]) { printf "No work folder for %s in %s\n", key, work > "/dev/stderr"
+            failed = 1 } }
       exit failed }
 ' "$temporary/tasks.tsv" "$temporary/folders.txt" > "$temporary/paths.tsv"
 # The $ fields are awk's, after xargs, not the shell's.
@@ -159,12 +168,16 @@ awk -F '\t' -v OFS='\t' -v node_hours="$node_hours" -v scratch_kb="$scratch_kb" 
     -v persistent_kb="$persistent_kb" -v work="$work/" '
     FILENAME ~ /paths.tsv$/ { path[$2 "/.command.run"] = $1; next }
     FILENAME ~ /requests.tsv$/ {
-        if ($2 == "" || $3 == "") { printf "No CPU or memory request in %s\n", $1 > "/dev/stderr"
-            failed = 1; exit 1 }
-        cpus[path[$1]] = $2; memory[path[$1]] = $3 / 1024; next
+        if ($2 != "" && $3 != "") { cpus[path[$1]] = $2; memory[path[$1]] = $3 / 1024 }
+        else folder[path[$1]] = $1
+        next
     }
     {
         key = substr($1, 1, 9); realtime = $3
+        # Requests from the trace, or else from the work folder.
+        if ($7 != "-") { cpus[key] = $7; memory[key] = $8 / 1024 }
+        else if (!(key in cpus)) { printf "No CPU or memory request in %s\n", folder[key] > "/dev/stderr"
+            failed = 1; exit 1 }
         cpu_hours = cpus[key] * realtime; memory_hours = memory[key] * realtime
         total_cpu += cpu_hours; total_memory += memory_hours
         if ($6 != "-") written += $6

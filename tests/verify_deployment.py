@@ -406,8 +406,9 @@ def check_shim_descriptors(work: Path, shim: Path) -> None:
 def check_resource_summary(work: Path) -> None:
     """scripts/summarize-resources.sh totals each task attempt that ran, from its trace and work.
 
-    Requests come from Slurm's directives or else the container's limits; cached rows and attempts
-    with no realtime are skipped; node-hours add the manager job and are nan without Slurm.
+    Requests come from the trace's cpus and memory columns, or, in older traces without them, from
+    Slurm's directives or else the container's limits; cached rows and attempts with no realtime
+    are skipped; node-hours add the manager job and are nan without Slurm.
     """
     persist, scratch, home = work / "runs/demo", work / "workspace/demo/work", work / "home"
     (persist / "trace").mkdir(parents=True)
@@ -468,6 +469,38 @@ def check_resource_summary(work: Path) -> None:
         capture_output=True, text=True,
     )  # fmt: skip
     assert missing.returncode != 0 and "No work folder for 12/345678" in missing.stderr, missing
+
+    # A local conda run: the trace records the requests, so neither the .command.run (which has
+    # none) nor a work folder is needed, and Slurm accounting is not consulted.
+    local, local_work = work / "runs/local", work / "workspace/local/work"
+    (local / "trace").mkdir(parents=True)
+    (local / "trace/execution_trace_2026-11-03_00-00-00.txt").write_text(
+        header.rstrip("\n")
+        + "\tcpus\tmemory\n"
+        + "1\tcd/ef0123\t201\tA (s1)\tCOMPLETED\t0\t-\t1h 1m\t1h\t150.0%\t1 GB\t2 GB\t0\t1 GB"
+        + "\t2\t4 GB\n"
+        + "2\t98/765432\t202\tB (s1)\tCOMPLETED\t0\t-\t31m\t30m\t50.0%\t512 MB\t1 GB\t0\t0"
+        + "\t1\t2 GB\n"
+    )
+    (local_work / "cd/ef0123456").mkdir(parents=True)
+    (local_work / "cd/ef0123456/.command.run").write_text("#!/bin/bash\nbash .command.sh\n")
+    local_run = subprocess.run(
+        [str(ROOT / "scripts/summarize-resources.sh"), str(local), str(local_work)],
+        env=host_environment(work / "tools-local", {"sacct": sacct}, HOME=str(home)),
+        capture_output=True, text=True,
+    )  # fmt: skip
+    assert local_run.returncode == 0, local_run.stderr
+    local_values = dict(
+        line.split("\t") for line in (local / "resources.tsv").read_text().splitlines()
+    )
+    # A: 2 CPUs and 4 GB for an hour at 150% and 1 GB; B: 1 CPU and 2 GB for half an hour at 50%
+    # and 0.5 GB.
+    for name in ("scratch-gb", "persistent-disk-gb"):
+        local_values.pop(name)
+    assert local_values == {
+        "cpu-hours": "2.500", "mem-gb-hours": "5.000", "node-hours": "nan",
+        "gb-written": "1.000", "avg-%cpu": "70.000", "avg-%mem": "25.000",
+    }, local_values  # fmt: skip
 
 
 def main() -> None:
