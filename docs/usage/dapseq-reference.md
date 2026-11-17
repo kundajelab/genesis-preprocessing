@@ -71,15 +71,17 @@ approval before a cluster can use them. Cluster work, cache, reference, and outp
 be visible to compute nodes and writable by the user; see
 [running on Perlmutter and Sherlock](clusters.md).
 
-Each run lives in `WORKSPACE/RUN_NAME/`, where `RUN_NAME` defaults to the sheet's
-basename without `.tsv` (override with `-n`/`--run-name`). The default workspace,
+The sheet can be a file or an `http(s)` URL ending in `.tsv`, which Nextflow reads
+directly. Each run lives in `WORKSPACE/RUN_NAME/`, where `RUN_NAME` defaults to the sheet's
+basename without `.tsv`, for a URL too (override with `-n`/`--run-name`). The default workspace,
 from `scripts/get-default-workspace.sh`, is `$SCRATCH/workspace` when `$SCRATCH`
 is set and `workspace/` in this repository otherwise; override it with
 `-w`/`--workspace`. A run folder contains:
 
 - `work/`: the Nextflow work directory.
 - `output/`: published results.
-- `trace/`: timestamped execution report, timeline, trace, and DAG files.
+- `trace/`: timestamped execution report, timeline, trace, and DAG files, and
+  `samplesheet_TIMESTAMP.tsv`, the sheet the run read.
 - `.nextflow.log` and `.nextflow/`: the wrapper launches Nextflow from the run
   folder, so `-resume` uses that run's history.
 

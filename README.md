@@ -86,6 +86,8 @@ Perlmutter, `$SCRATCH/workspace` and `$CFS/PROJECT/$USER/runs`), where a resourc
 (`resources.tsv`) is written when it finishes. `pixi run submit-pipeline --help` lists the manager's
 options (walltime, QOS, log folder); the [cluster guide](docs/usage/clusters.md) covers references,
 images, accounts and QOS. The pipeline checks the whole sheet before starting any task.
+The sheet can also be an `https` URL ending in `.tsv`; each run saves the sheet it read in its
+`trace/` folder.
 
 Small test sheets for every workflow are in [samplesheets/](samplesheets/README.md).
 

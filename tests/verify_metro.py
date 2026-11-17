@@ -52,6 +52,9 @@ def main() -> None:
             expected = set()
             for name, module in re.findall(include, code):
                 source = (ROOT / "modules" / f"{module}.nf").read_text()
+                # Functions (e.g. savedSampleSheet) are not stations.
+                if not re.search(rf"^(process|workflow) {name}\b", source, re.M):
+                    continue
                 if name in stations or not re.search(rf"^workflow {name}\b", source, re.M):
                     expected.add(name)
                     continue

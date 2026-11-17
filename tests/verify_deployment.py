@@ -209,6 +209,11 @@ def check_pipeline_references(work: Path) -> None:
     # Locally there is no default and no warning: outputs stay in the workspace.
     local = host_environment(work / "local", {"pixi": pixi, "docker": TRUE})
     assert persist(launch(local, "-R", str(given), str(sheet))) == [] and not warnings[0]
+    # A sheet at a URL goes to Nextflow unchanged, which reads it; its basename names the run.
+    url = "https://example.org/sheets/remote.tsv"
+    remote = launch(local, "-R", str(given), url)
+    assert values(remote, "--input") == [url] and values(remote, "--run_name") == ["remote"], remote
+    assert (work / "workspace" / "remote").is_dir()
 
 
 def check_submit_pipeline(work: Path) -> None:

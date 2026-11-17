@@ -1,6 +1,7 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
+include { savedSampleSheet } from '../modules/common/sample_sheet'
 include { DOWNLOAD } from '../modules/common/download'
 include { FASTQC } from '../modules/common/fastqc'
 include { GET_REFERENCES } from '../modules/common/get_references'
@@ -40,33 +41,33 @@ def checkSamples(sheet, rows, references) {
                   'reference_fasta', 'reference_annotation', 'organelle_contigs']
     def columns = sheet.withReader { reader -> reader.readLine() }?.split('\t')?.toList()
     if (columns != header) {
-        error("${sheet}: expected header ${header.join(' ')}")
+        error("${params.input}: expected header ${header.join(' ')}")
     }
     def referenceIds = [:]
     def annotations = [:]
     rows.each { row ->
         // Smar2C2 needs both mates (its TSS reads are in either); the other methods read one file.
         if ((methodDefaults(row.method).mates == 2) != (row.read2_url != '-')) {
-            error("${sheet}: ${row.id}: ${row.method} takes " +
+            error("${params.input}: ${row.id}: ${row.method} takes " +
                   (methodDefaults(row.method).mates == 2 ? 'both read1_url and read2_url' :
                    'one FASTQ in read1_url and read2_url -'))
         }
         if (!references.resolve(row.reference_fasta).isFile()) {
-            error("${sheet}: reference missing: ${row.reference_fasta}")
+            error("${params.input}: reference missing: ${row.reference_fasta}")
         }
         if (!references.resolve(row.reference_annotation).isFile()) {
-            error("${sheet}: annotation missing: ${row.reference_annotation}")
+            error("${params.input}: annotation missing: ${row.reference_annotation}")
         }
         def referenceId = row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, '')
         def previous = referenceIds.putIfAbsent(referenceId, row.reference_fasta)
         if (previous != null && previous != row.reference_fasta) {
-            error("${sheet}: reference ID collision: ${previous} and ${row.reference_fasta} " +
+            error("${params.input}: reference ID collision: ${previous} and ${row.reference_fasta} " +
                   "both use ${referenceId}; use distinct reference basenames")
         }
         def annotation = [row.reference_annotation, row.organelle_contigs]
         def recorded = annotations.putIfAbsent(row.reference_fasta, annotation)
         if (recorded != null && recorded != annotation) {
-            error("${sheet}: rows using ${row.reference_fasta} disagree on reference_annotation " +
+            error("${params.input}: rows using ${row.reference_fasta} disagree on reference_annotation " +
                   "or organelle_contigs")
         }
     }
@@ -95,7 +96,7 @@ workflow {
     // assets/tss-seq.params.schema.json checks the sheet, paths and options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
-    def sheet = file(params.input)
+    def sheet = savedSampleSheet()
     def referencesDir = file(params.references).toAbsolutePath()
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
     def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/tss-seq.samples.schema.json")

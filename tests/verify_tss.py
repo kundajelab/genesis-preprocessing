@@ -205,7 +205,7 @@ def create_fixture(work: Path, base_url: str, *, docker: bool) -> tuple[Path, di
 
 
 def run_tss(
-    work: Path, sheet: Path, *, docker: bool = False, expect_failure: bool = False
+    work: Path, sheet: Path | str, *, docker: bool = False, expect_failure: bool = False
 ) -> subprocess.CompletedProcess[str]:
     command = [
         "nextflow",
@@ -353,6 +353,9 @@ def check_failures(work: Path, sheet: Path) -> None:
         assert trace_rows(case) == [], suffix
         log = (case / "output-run.log").read_text()
         assert diagnostic in log, (suffix, log[-2000:])
+        # The workflow's own checks name the sheet as given, not the copy it saved and read.
+        if suffix == "extra-column":
+            assert f"{candidate}: expected header" in log, log[-2000:]
 
     in_parallel([functools.partial(reject, *case) for case in cases])
 
@@ -376,7 +379,14 @@ def main() -> None:
         (work / "inputs").mkdir()
         with serve(work / "inputs", docker=args.docker) as base_url:
             sheet, expected = create_fixture(work, base_url, docker=args.docker)
-            assert run_tss(work, sheet, docker=args.docker).returncode == 0
+            # The sheet at a URL: Nextflow reads it directly, on the host (so through the
+            # loopback even when tasks use Docker's host.docker.internal), and the run saves
+            # what it read beside its trace files.
+            shutil.copyfile(sheet, work / "inputs" / sheet.name)
+            url = f"{base_url.replace('host.docker.internal', '127.0.0.1')}/{sheet.name}"
+            assert run_tss(work, url, docker=args.docker).returncode == 0
+            saved = list((work / "published/samples/trace").glob("samplesheet_*.tsv"))
+            assert len(saved) == 1 and saved[0].read_bytes() == sheet.read_bytes(), saved
             # The real-tool run adds a library with a wrong trim_5p.
             check_trace(work, len(LIBRARIES) + 1 if args.docker else len(LIBRARIES))
             if args.docker:

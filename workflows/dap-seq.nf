@@ -1,6 +1,7 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
+include { savedSampleSheet } from '../modules/common/sample_sheet'
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { DOWNLOAD } from '../modules/common/download'
 include { FASTQC } from '../modules/common/fastqc'
@@ -18,17 +19,17 @@ def checkSamples(sheet, rows, references) {
     def header = ['sample_id', 'species', 'read1_url', 'read2_url', 'control_sample', 'reference_fasta']
     def columns = sheet.withReader { reader -> reader.readLine() }?.split('\t')?.toList()
     if (columns != header) {
-        error("${sheet}: expected header ${header.join(' ')}")
+        error("${params.input}: expected header ${header.join(' ')}")
     }
     def referenceIds = [:]
     rows.each { row ->
         if (!references.resolve(row.reference_fasta).isFile()) {
-            error("${sheet}: reference missing: ${row.reference_fasta}")
+            error("${params.input}: reference missing: ${row.reference_fasta}")
         }
         def referenceId = row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, '')
         def previous = referenceIds.putIfAbsent(referenceId, row.reference_fasta)
         if (previous != null && previous != row.reference_fasta) {
-            error("${sheet}: reference ID collision: ${previous} and ${row.reference_fasta} " +
+            error("${params.input}: reference ID collision: ${previous} and ${row.reference_fasta} " +
                   "both use ${referenceId}; use distinct reference basenames")
         }
     }
@@ -38,7 +39,7 @@ def checkSamples(sheet, rows, references) {
         if (control == null || row.control == row.id || control.control != '-' ||
                 control.species != row.species || control.reference_fasta != row.reference_fasta ||
                 (control.read2_url == '-') != (row.read2_url == '-')) {
-            error("${sheet}: invalid control ${row.control} for ${row.id}")
+            error("${params.input}: invalid control ${row.control} for ${row.id}")
         }
     }
 }
@@ -73,10 +74,10 @@ workflow {
         log.info(report.join('\n'))
     }
 
-    // assets/dap-seq.params.schema.json checks the sheet, paths, resources and BWA options.
+    // assets/dap-seq.params.schema.json checks the sheet, paths and BWA options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
-    def sheet = file(params.input)
+    def sheet = savedSampleSheet()
     def referencesDir = file(params.references).toAbsolutePath()
     // Parameters given on the command line arrive as strings.
     def bwaOptions = [
