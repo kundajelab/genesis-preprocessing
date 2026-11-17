@@ -55,21 +55,33 @@ def slurmReportedTimeLimit(workDir) {
 // some of the job's processes for memory:
 // - exit status 1: a script that handles a failed command (as QC does SPP's) or a killed trace
 //   monitor then exits 1, hiding the 137;
-// - exit status 140, the time limit's SIGUSR2 on Slurm: a program whose worker processes were
-//   killed can wait for them until then, as bamCoverage does. Without an OOM kill, a 140 is
-//   only out of time, which more memory would not help.
+// - exit status 140 or 143, the time limit's SIGUSR2 or SIGTERM (see wasOutOfTime): a program
+//   whose worker processes were killed can wait for them until then, as bamCoverage does.
+//   Without an OOM kill, either is only out of time, which more memory would not help.
 def wasOutOfMemory(exitStatus, workDir) {
-    exitStatus in [135, 137] || (exitStatus in [1, 140] && slurmReportedOutOfMemory(workDir))
+    exitStatus in [135, 137] || (exitStatus in [1, 140, 143] && slurmReportedOutOfMemory(workDir))
+}
+
+// Whether an attempt, by its trace record, ran for at least 95% of the time it requested.
+def ranToTimeLimit(trace) {
+    def realtime = trace?.get('realtime')
+    def time = trace?.get('time')
+    realtime != null && time && (realtime as long) >= 0.95 * (time as long)
 }
 
 // Whether an attempt ran out of time. Nextflow has Slurm send the job SIGUSR2 30 s before its
 // time limit (--signal B:USR2@30), on which the job script exits 140, as the DAP-seq run's timed
 // out tasks did. A job still running at the limit is cancelled before it records an exit status,
-// with Slurm's report in its log. Not when it also ran out of memory (see wasOutOfMemory): a
-// program can wait for workers killed for memory until the time limit, and more time would not
-// help it.
-def wasOutOfTime(exitStatus, workDir) {
-    !wasOutOfMemory(exitStatus, workDir) && (exitStatus == 140 || slurmReportedTimeLimit(workDir))
+// with Slurm's report in its log. The local executor instead stops a task that exceeds its time
+// with SIGTERM, on which the job script exits 143; so would Slurm's own SIGTERM at the limit. A
+// task cancelled by hand (scancel, Ctrl-C) exits 143 too, so a 143 counts only when the attempt
+// ran to its time limit (ranToTimeLimit, from trace: the attempt's trace record). Not when it also
+// ran out of memory (see wasOutOfMemory): a program can wait for workers killed for memory until
+// the time limit, and more time would not help it.
+def wasOutOfTime(exitStatus, workDir, trace = null) {
+    def stoppedAtLimit = exitStatus == 143 && ranToTimeLimit(trace)
+    !wasOutOfMemory(exitStatus, workDir) &&
+        (exitStatus == 140 || stoppedAtLimit || slurmReportedTimeLimit(workDir))
 }
 
 // Whether an attempt ended without an exit status for a reason Slurm did not log: cancelled by the
@@ -97,7 +109,8 @@ def retryTimeOf(task, baseTime) {
         return baseTime
     }
     def previous = task.previousTrace.time as long
-    def previousTimeout = wasOutOfTime(task.exitStatus, task.previousTrace.get('workdir'))
+    def previousTimeout = wasOutOfTime(task.exitStatus, task.previousTrace.get('workdir'),
+                                       task.previousTrace)
     return (previousTimeout ? 2 * previous : previous).ms
 }
 
@@ -110,7 +123,8 @@ def retryErrorStrategy(task) {
     def memoryAtCeiling = memoryCeiling && task.memory && task.memory >= memoryCeiling
     def timeAtCeiling = timeCeiling && task.time && task.time >= timeCeiling
     def retryMemory = wasOutOfMemory(task.exitStatus, task.workDir) && !memoryAtCeiling
-    def retryTime = wasOutOfTime(task.exitStatus, task.workDir) && !timeAtCeiling
+    // In errorStrategy, previousTrace is the attempt that just failed.
+    def retryTime = wasOutOfTime(task.exitStatus, task.workDir, task.previousTrace) && !timeAtCeiling
     def terminated = wasTerminatedExternally(task.exitStatus, task.workDir)
     retryMemory || retryTime || terminated ? 'retry' : 'terminate'
 }

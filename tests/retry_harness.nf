@@ -2,8 +2,9 @@
 // it reports each function's result on the task logs under --logs (one folder per case); with
 // --mode oom or --mode other, a task fails its first attempt with exit 1, after Slurm's oom_kill
 // message (oom) or without it (other), and with --mode timeout with exit 140 after Slurm's time
-// limit message; it succeeds on any retry.
-include { slurmReportedOutOfMemory ; slurmReportedTimeLimit ; wasOutOfMemory ; wasOutOfTime ; wasTerminatedExternally ; oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../modules/common/retry'
+// limit message; it succeeds on any retry. With --mode local-timeout, the local executor stops
+// the first attempt at its 3 s time limit; it succeeds on any retry.
+include { slurmReportedOutOfMemory ; slurmReportedTimeLimit ; ranToTimeLimit ; wasOutOfMemory ; wasOutOfTime ; wasTerminatedExternally ; oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../modules/common/retry'
 
 process ATTEMPT {
     memory { oomMemoryOf(task, 100.MB) }
@@ -29,13 +30,30 @@ process ATTEMPT {
     """
 }
 
+process OVERRUN {
+    time { retryTimeOf(task, 3.s) }
+    errorStrategy { retryErrorStrategy(task) }
+    maxRetries 2
+    output:
+    stdout
+    script:
+    """
+    echo "attempt ${task.attempt} seconds ${task.time.toSeconds()}"
+    if [ ${task.attempt} = 1 ]; then
+        sleep 60
+    fi
+    """
+}
+
 def report(label, got, want) {
     println "${got == want ? 'ok' : 'WRONG'} ${label}: ${got} (want ${want})"
     return got == want
 }
 
 workflow {
-    if (params.mode != 'functions') {
+    if (params.mode == 'local-timeout') {
+        OVERRUN().view()
+    } else if (params.mode != 'functions') {
         ATTEMPT(channel.of(params.mode)).view()
     } else {
         checkFunctions(params.logs)
@@ -54,7 +72,7 @@ def checkFunctions(logs) {
     }
     results << report('slurmReportedTimeLimit(null)', slurmReportedTimeLimit(null), false)
     [[1, 'oom', true], [1, 'other', false], [137, 'other', true], [135, 'other', true],
-     [140, 'oom', true], [140, 'other', false], [143, 'oom', false], [143, 'other', false],
+     [140, 'oom', true], [140, 'other', false], [143, 'oom', true], [143, 'other', false],
      [0, 'oom', false]].each { status, dir, want ->
         results << report("wasOutOfMemory(${status}, ${dir})", wasOutOfMemory(status, "${logs}/${dir}"), want)
     }
@@ -64,6 +82,19 @@ def checkFunctions(logs) {
      [unknown, 'other', false], [1, 'other', false], [137, 'timeout', false],
      [0, 'other', false]].each { status, dir, want ->
         results << report("wasOutOfTime(${status}, ${dir})", wasOutOfTime(status, "${logs}/${dir}"), want)
+    }
+    // The local executor's SIGTERM at the time limit (143), told from a cancellation by how long
+    // the attempt ran.
+    def atLimit = [realtime: 3_050L, time: 3_000L]
+    def nearLimit = [realtime: 2_900L, time: 3_000L]
+    def early = [realtime: 1_000L, time: 3_000L]
+    [[atLimit, true], [nearLimit, true], [early, false], [[realtime: null, time: 3_000L], false],
+     [[realtime: 3_050L, time: null], false], [null, false]].each { trace, want ->
+        results << report("ranToTimeLimit(${trace})", ranToTimeLimit(trace), want)
+    }
+    [[143, 'other', atLimit, true], [143, 'other', early, false], [143, 'other', null, false],
+     [143, 'oom', atLimit, false], [1, 'other', atLimit, false], [140, 'other', early, true]].each { status, dir, trace, want ->
+        results << report("wasOutOfTime(${status}, ${dir}, ${trace})", wasOutOfTime(status, "${logs}/${dir}", trace), want)
     }
     [[unknown, 'other', true], [unknown, 'missing', true], [unknown, 'timeout', false],
      [137, 'other', false], [1, 'other', false], [0, 'other', false]].each { status, dir, want ->
@@ -95,6 +126,13 @@ def checkFunctions(logs) {
     def afterCancel = [previousTrace: [time: 3.h.toMillis(), memory: 8.GB.toBytes(), workdir: "${logs}/missing"], exitStatus: unknown]
     results << report('memory after a system termination', oomMemoryOf(afterCancel, 17.GB), 8.GB)
     results << report('time after a system termination', retryTimeOf(afterCancel, 5.h), 3.h)
+    def stoppedLocally = [exitStatus: 143, workDir: "${logs}/missing", time: 3.s, resourceLimits: [:],
+                          previousTrace: atLimit]
+    results << report('retry a local time limit', retryErrorStrategy(stoppedLocally), 'retry')
+    results << report('retry a cancellation', retryErrorStrategy(stoppedLocally + [previousTrace: early]), 'terminate')
+    def afterLocal = [previousTrace: atLimit + [workdir: "${logs}/missing"], exitStatus: 143]
+    results << report('time after a local time limit', retryTimeOf(afterLocal, 5.h), 6.s)
+    results << report('time after a cancellation', retryTimeOf(afterLocal + [previousTrace: early + [workdir: "${logs}/missing"]], 5.h), 3.s)
     def unknownTimeout = timedOut + [exitStatus: unknown, time: 48.h]
     results << report('timeout without exit status at the time ceiling', retryErrorStrategy(unknownTimeout), 'terminate')
     println "RESULT ${results.count { r -> !r }} wrong of ${results.size()}"

@@ -322,8 +322,9 @@ def check_retry_policy(work: Path) -> None:
 
     Slurm reports out-of-memory kills in the job's .command.log; a script that handles the killed
     command then exits 1, or one that waits for killed workers reaches the time limit (140), and
-    either is retried with twice the memory only with that report. Otherwise a 140, or Slurm's
-    time limit report, is retried with twice the time.
+    either is retried with twice the memory only with that report. Otherwise a 140, Slurm's
+    time limit report, or a 143 from an attempt that ran to its time limit (the local executor's
+    SIGTERM), is retried with twice the time.
     """
     logs = work / "logs"
     oom = "[2026-11-08T04:24:28.700] error: Detected 1 oom_kill event in StepId=1.batch.\n"
@@ -363,6 +364,10 @@ def check_retry_policy(work: Path) -> None:
     timed_out = harness("timeout")
     assert timed_out.returncode == 0, timed_out.stdout + timed_out.stderr
     assert "attempt 2 memory 100 time 20" in timed_out.stdout, timed_out.stdout
+    # The local executor stops an attempt at its time limit with SIGTERM (143): twice the time.
+    overran = harness("local-timeout")
+    assert overran.returncode == 0, overran.stdout + overran.stderr
+    assert "attempt 2 seconds 6" in overran.stdout, overran.stdout
     stopped = harness("other")
     assert stopped.returncode != 0, stopped.stdout
     statuses = (work / "other" / "trace.tsv").read_text().splitlines()[1:]
