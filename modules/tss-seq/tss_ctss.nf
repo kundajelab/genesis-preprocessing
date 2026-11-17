@@ -1,10 +1,24 @@
 include { dotenv } from 'plugin/nf-dotenv'
 include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry'
 
+// The uniquely aligned reads STAR's Log.final.out reports: the reads TSS_CTSS turns into tags.
+// Read in the workflow: a directive cannot read a staged input's contents.
+def starUniqueReads(log) {
+    def match = log.text =~ /Uniquely mapped reads number \|\s*(\d+)/
+    if (!match.find()) {
+        error("${log}: no 'Uniquely mapped reads number'")
+    }
+    return match.group(1) as long
+}
+
 process TSS_CTSS {
     cpus 2
+    // sort -S 1G below: on Perlmutter, 24 Arabidopsis BAMs (0.3-7.2 GB) all peaked at 1.0 GB.
     memory { oomMemoryOf(task, 4.GB) }
-    time { retryTimeOf(task, 1.h * (1 + bam.size() / 1e9)) }
+    // Time follows the uniquely aligned reads, not the BAM's size: those BAMs took 0.07-0.11
+    // minutes per million (10 minutes for 124 million, in 1.9 GB), but 0.01-0.09 hours per GB.
+    // Allow 10 minutes plus 0.25 minutes per million.
+    time { retryTimeOf(task, 10.min + 1.min * (0.25 * unique_reads / 1e6)) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
@@ -13,7 +27,8 @@ process TSS_CTSS {
     publishDir { "${params.publish_base}/output/${meta.species}/${meta.id}" }, mode: 'copy',
         pattern: '{*.ctss.tsv.gz,*.bw}'
     input:
-    tuple val(meta), path(bam), path(bai), path(chrom_sizes)
+    // unique_reads: starUniqueReads of TSS_ALIGN's log, which sizes the task's time.
+    tuple val(meta), path(bam), path(bai), val(unique_reads), path(chrom_sizes)
     output:
     tuple val(meta), path("${meta.id}.ctss.tsv.gz"), emit: ctss
     tuple val(meta), path("${meta.id}.*.bw"), emit: tracks

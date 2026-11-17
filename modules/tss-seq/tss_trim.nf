@@ -3,8 +3,10 @@ include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry
 
 process TSS_TRIM {
     cpus 4
+    // On Perlmutter, 24 Arabidopsis libraries (0.5-9.6 GB) peaked at 0.24 GB and took at most
+    // 0.019 hours per GB (5.5 minutes for the largest). Allow 10 minutes plus 0.05 hours per GB.
     memory { oomMemoryOf(task, 2.GB) }
-    time { retryTimeOf(task, 1.h * (1 + reads.size() / 1e9)) }
+    time { retryTimeOf(task, 10.min + 1.h * (0.05 * reads.size() / 1e9)) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2

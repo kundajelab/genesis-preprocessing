@@ -4,8 +4,11 @@ include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry
 process TSS_ALIGN {
     cpus 8
     // As RNA_ALIGN: the loaded index is ~10 bytes per reference base, then samtools sorts.
+    // On Perlmutter, 24 Arabidopsis libraries peaked at 92% of this: samtools sort takes 3/4 of it.
     memory { oomMemoryOf(task, 4.GB + 11.B * meta.genome_size) }
-    time { retryTimeOf(task, 1.h * (1 + reads.size() / 1e9)) }
+    // On Perlmutter, those trimmed reads (0.4-10.3 GB) took at most 0.06 hours per GB above 1 GB
+    // (24 minutes for the largest) and 1-5 minutes below. As RNA_ALIGN: 15 minutes plus 0.12 per GB.
+    time { retryTimeOf(task, 15.min + 1.h * (0.12 * reads.size() / 1e9)) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2
@@ -39,6 +42,7 @@ process TSS_ALIGN {
     stub:
     """
     touch '${meta.id}.bam' '${meta.id}.bam.bai'
-    printf 'stub\\n' > '${meta.id}.star.Log.final.out'
+    # TSS_CTSS's time is sized from this count.
+    printf 'Uniquely mapped reads number |\\t1000\\n' > '${meta.id}.star.Log.final.out'
     """
 }
