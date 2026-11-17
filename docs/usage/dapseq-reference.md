@@ -309,11 +309,11 @@ four CPUs (1.7 times as fast as two), 2.0 GB, and time from the genome size and 
 of the BAMs they cover. bamCoverage writes its temporary files in the task's folder,
 since a compute node's `/tmp` may be held in memory. It waits for
 workers killed for memory until the time limit, so a task that times out after Slurm
-logged an out-of-memory kill retries with twice the memory, not the time. `--cpus`, `--memory` and `--time`
-do not apply to DAP-seq. Other modules declare their own resources. The `local` profile caps
-requests at the machine's CPUs and memory.
+logged an out-of-memory kill retries with twice the memory, not the time. Every module
+declares its own resources. The `local` profile caps requests at the machine's CPUs and
+memory.
 
-The `test` profile caps every task at two CPUs, 2 GB, and five minutes; it does
+The `test` profile caps every task at one CPU, 2 GB, and five minutes; it does
 not select a sample subset or replace tools. On clusters, run computation on
 allocated compute nodes within your site's resource limits.
 

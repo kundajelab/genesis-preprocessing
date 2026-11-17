@@ -58,13 +58,11 @@ workflow {
         log.info(report.join('\n'))
     }
 
-    // assets/scatac-seq.params.schema.json checks the sheet, paths and resources.
+    // assets/scatac-seq.params.schema.json checks the sheet, paths and options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)
     def referencesDir = file(params.references).toAbsolutePath()
-    // Parameters given on the command line arrive as strings.
-    def resources = [cpus: params.cpus.toInteger(), memory: params.memory, time: params.time]
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
     def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/scatac-seq.samples.schema.json")
         .collect { row -> row[0] }
@@ -83,7 +81,7 @@ workflow {
     GET_REFERENCES(references, referencesDir)
     sizes_ch = GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) }
     SCATAC_DOWNLOAD(samples)
-    SCATAC_PSEUDOBULKS(SCATAC_DOWNLOAD.out.downloads, sizes_ch, referencesDir, resources)
+    SCATAC_PSEUDOBULKS(SCATAC_DOWNLOAD.out.downloads, sizes_ch, referencesDir)
     // Collect channels, not publishDir contents: wait for every library's reports.
     multiqcFiles = SCATAC_PSEUDOBULKS.out.multiqc
         .flatten().collect().map { paths -> paths.sort { path -> path.name } }

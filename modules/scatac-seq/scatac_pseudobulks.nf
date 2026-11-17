@@ -11,7 +11,6 @@ workflow SCATAC_PSEUDOBULKS {
     libraries      // tuple(meta, fragments, cells): gzipped 10x-style fragments and barcode<TAB>group
     sizes          // tuple(ref_id, chrom.sizes)
     referencesDir  // folder holding the gene annotations
-    resources      // [cpus, memory, time] limits for the largest tasks
 
     main:
     // MACS3's genome size counts nuclear contigs only, as in bulk ATAC.
@@ -35,7 +34,7 @@ workflow SCATAC_PSEUDOBULKS {
     SCATAC_PEAKS(groups)
     SCATAC_TRACKS(groups.map { meta, bed -> tuple(meta.ref_id, meta, bed) }
         .combine(sizes, by: 0)
-        .map { _refId, meta, bed, path -> tuple(meta, bed, path) }, resources)
+        .map { _refId, meta, bed, path -> tuple(meta, bed, path) })
     qcInputs = groups.map { meta, bed -> tuple(meta.id, meta, bed) }
         .join(SCATAC_TRACKS.out.bam.map { meta, bam, bai -> tuple(meta.id, bam, bai) },
               failOnDuplicate: true, failOnMismatch: true)
@@ -47,7 +46,7 @@ workflow SCATAC_PSEUDOBULKS {
             def genes = meta.reference_genes == '-' ? [] : file("${referencesDir}/${meta.reference_genes}")
             tuple(meta, bed, bam, bai, peaks, cuts, genes)
         }
-    SCATAC_QC(qcInputs, resources)
+    SCATAC_QC(qcInputs)
 
     emit:
     // MultiQC inputs: each library's summary and each pseudobulk's QC and TSS profile.

@@ -45,26 +45,8 @@
     "resource_options": {
       "title": "Resource options",
       "type": "object",
-      "description": "Task resources and SLURM queue.",
+      "description": "SLURM queue and downloads.",
       "properties": {
-        "cpus": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 2,
-          "description": "CPUs for the QC and track steps that do not size their own."
-        },
-        "memory": {
-          "type": "string",
-          "pattern": "^\\d+(\\.\\d+)?\\s*(K|M|G|T)?B$",
-          "default": "8 GB",
-          "description": "Memory for the QC and track steps that do not size their own."
-        },
-        "time": {
-          "type": "string",
-          "pattern": "^(\\d+(\\.\\d+)?\\s*(ms|s|m|h|d)\\s*)+$",
-          "default": "4h",
-          "description": "Walltime for the QC and track steps that do not size their own."
-        },
         "queue": {
           "type": "string",
           "description": "Slurm queue: the partition with the slurm (default regular) and sherlock (default normal) profiles, the QOS with nersc (default shared)."

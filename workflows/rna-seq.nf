@@ -65,7 +65,7 @@ workflow {
     }
 
 
-    // assets/rna-seq.params.schema.json checks the sheet, paths and resources.
+    // assets/rna-seq.params.schema.json checks the sheet, paths and options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
     def sheet = file(params.input)

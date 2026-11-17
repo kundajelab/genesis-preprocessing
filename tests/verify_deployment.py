@@ -521,6 +521,9 @@ def main() -> None:
             ("pbspro,apptainer", "pbspro", "apptainer"),
             ("lsf,apptainer", "lsf", "apptainer"),
             ("sge,apptainer", "sge", "apptainer"),
+            # test comes after the others in nextflow.config, so its caps replace theirs.
+            ("local,docker,test", "local", "docker"),
+            ("nersc,test", "slurm", "podman"),
         ]:
             output = subprocess.check_output(
                 [
@@ -552,6 +555,11 @@ def main() -> None:
                 assert "process.resourceLimits.cpus = 128" in output
                 assert "process.resourceLimits.memory = '247 GB'" in output
                 assert "process.resourceLimits.time = '2d'" in output
+            if "test" in profile.split(","):
+                # Every process, whatever it requests.
+                assert "process.resourceLimits.cpus = 1\n" in output, output
+                assert "process.resourceLimits.memory = '2 GB'" in output, output
+                assert "process.resourceLimits.time = '5m'" in output, output
         # On NERSC, `podman` is the shim, which hands every argument to podman-hpc unchanged,
         # with PATH minus its own folder: podman-hpc runs podman by name itself.
         fake = folder / "podman-hpc"
@@ -568,7 +576,7 @@ def main() -> None:
         assert str(shim) not in path.split(":") and str(folder) in path.split(":"), path
         check_shim_descriptors(folder / "descriptors", shim)
     print(
-        "PASS: default profile and references per host, pipeline submission, seven parsed"
+        "PASS: default profile and references per host, pipeline submission, ten parsed"
         " profiles, podman-hpc shim, resource summary"
     )
 

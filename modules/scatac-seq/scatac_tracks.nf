@@ -1,9 +1,9 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
 process SCATAC_TRACKS {
-    cpus { resources.cpus }
-    memory { resources.memory }
-    time { resources.time }
+    cpus 2
+    memory 8.GB
+    time 4.h
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
@@ -13,7 +13,6 @@ process SCATAC_TRACKS {
         mode: 'copy', pattern: '*.bw'
     input:
     tuple val(meta), path(fragments), path(chrom_sizes)
-    val resources
     output:
     tuple val(meta), path("${meta.id}.cuts.counts.bw"), emit: cuts
     tuple val(meta), path("${meta.id}.cuts.bam"), path("${meta.id}.cuts.bam.bai"), emit: bam

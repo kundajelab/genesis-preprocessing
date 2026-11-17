@@ -1,9 +1,9 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
 process SCATAC_QC {
-    cpus { resources.cpus }
-    memory { resources.memory }
-    time { resources.time }
+    cpus 2
+    memory 8.GB
+    time 4.h
     conda "${moduleDir}/../../environments/GENESIS_DEEPTOOLS.yaml"
     container "${dotenv('GENESIS_DEEPTOOLS_IMAGE')}"
     tag "${meta.id}"
@@ -14,7 +14,6 @@ process SCATAC_QC {
     input:
     // genes is an empty list when the sheet gives no gene annotation.
     tuple val(meta), path(fragments), path(cuts_bam), path(cuts_bai), path(peaks), path(cuts), path(genes)
-    val resources
     output:
     tuple val(meta), path("${meta.id}.scatac_qc_mqc.tsv"), emit: summary
     tuple val(meta), path("${meta.id}.tss.*"), optional: true, emit: tss
