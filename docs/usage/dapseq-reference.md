@@ -9,11 +9,12 @@ calls MACS3 peaks against each treatment's assigned control, and quantifies peak
 
 [Diagram source and interpretation](../../docs/diagrams/README.md)
 
-The DAP sheets curated so far, O'Malley 2016 (GSE60141, A. thaliana, SE) and multiDAP
-(PRJNA1177479, PRJNA1177481 and PRJNA1177471: A. lyrata, A. thaliana and Sorghum, PE), are in the
+The curated DAP sheets, one per species (`curated-sample-sheets/<Species>/dap-seq-curated.tsv`),
+are in the
 [Stanford-Genesis Hugging Face bucket](https://huggingface.co/buckets/Stanford-Genesis/genesis-curation).
-[`samplesheets/dap-seq-test.tsv`](../../samplesheets/dap-seq-test.tsv) has 8 of their libraries
-for testing. Use one sheet per analysis; [samplesheets/README.md](../../samplesheets/README.md)
+[`samplesheets/dap-seq-test.tsv`](../../samplesheets/dap-seq-test.tsv) has 24 of their libraries
+for testing: 12 Sorghum and A. thaliana treatments from 10 studies, each with its control, SE
+and PE. Use one sheet per analysis; [samplesheets/README.md](../../samplesheets/README.md)
 describes the references each needs.
 
 ## Install and run
@@ -54,7 +55,7 @@ pixi run submit-pipeline --workflow dap-seq -R /path/references /path/dap.tsv
 # Continue a previous run using Nextflow's task cache.
 pixi run submit-pipeline --workflow dap-seq -R /path/references /path/dap.tsv -resume
 
-# Debug locally with Docker on the small test sheet.
+# Debug locally with Docker on the test sheet (24 libraries, 70 GB of FASTQ).
 pixi run pipeline --workflow dap-seq samplesheets/dap-seq-test.tsv
 ```
 

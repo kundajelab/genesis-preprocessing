@@ -1,22 +1,27 @@
 # Test sample sheets
 
-One small sheet per workflow, of real public libraries at typical depth. They check that a
-change or a new site runs end to end, and give realistic resource use for tuning task limits and
-retries. Each mixes A. thaliana and Sorghum, single- and paired-end libraries and, where the
-workflow has them, methods, so one run exercises most code paths. Read URLs point to ENA over
-HTTPS, or to GSA (China) for CRA studies.
+One sheet per workflow, of real public libraries. They check that a change or a new site runs
+end to end, and give enough measured tasks, across each source's range of sizes and library
+types, to fit task limits and retries. Their rows are copied unchanged from the curated sheets
+in the [Stanford-Genesis Hugging Face
+bucket](https://huggingface.co/buckets/Stanford-Genesis/genesis-curation)
+(`curated-sample-sheets/<Species>/<modality>-curated.tsv`), which list every public library
+found for each workflow and the reasons others were left out. Sorghum comes first; where it has
+few libraries, A. thaliana fills the rest. Read URLs point to ENA over HTTPS, or to GSA (China)
+for CRA studies; the scATAC sheet lists SRA runs.
 
 | Sheet | Libraries | FASTQ | What it covers |
 | --- | ---: | ---: | --- |
-| `dap-seq-test.tsv` | 8 | 28 GB | A. thaliana SE treatment and control (GSE60141, O'Malley 2016); Sorghum PE multiDAP (PRJNA1177471): 5 treatments, from 5M to 64M pairs, sharing one control |
-| `atac-seq-test.tsv` | 4 | 9 GB | A. thaliana seedling and leaf, Sorghum leaf; one library downloads from GSA |
-| `rna-seq-test.tsv` | 6 | 6 GB | Both species; SE and PE; `reverse`, `forward` and `unstranded` libraries |
-| `tss-seq-test.tsv` | 6 | 21 GB | A. thaliana CAGE, nAnT-iCAGE, TSS-seq and csRNA-seq (SE); Sorghum RAMPAGE (SE, the TSS mate) and Smar2C2 (PE, 126M pairs, the largest library) |
-| `scatac-reads-test.tsv` | 3 | 30 GB | A. thaliana 10x ATAC v1, root nuclei (GSE155304, 2 runs each); Sorghum 10x multiome ATAC, 0 h de-etiolation (SRP474955, 4 lane runs) |
+| `dap-seq-test.tsv` | 24 | 70 GB | 8 Sorghum and 16 A. thaliana libraries from 10 studies: 12 treatments, each with its control; SE and PE, 0.05-9.7 GB per library |
+| `atac-seq-test.tsv` | 24 | 123 GB | 6 Sorghum (leaf, 3 studies) and 18 A. thaliana (one per study, several tissues); spans size, TSS enrichment and organelle fraction; 5 libraries download from GSA; 0.05-38 GB |
+| `rna-seq-test.tsv` | 20 | 208 GB | Sorghum, 16 projects; SE and PE; `reverse`, `forward` and `unstranded`; 0.21-72 GB |
+| `tss-seq-test.tsv` | 24 | 36 GB | A. thaliana (Sorghum has no curated TSS libraries), all SE: 9 CAGE and 5 each of nAnT-iCAGE, TSS-seq and csRNA-seq; 0.39-7.8 GB |
+| `scatac-reads-test.tsv` | 24 | 780 GB | Every curated library: 6 Sorghum (multiome ATAC) and 18 A. thaliana (ATAC v1 and multiome ATAC); 1-9 runs per library, 1-4 files per run; 7-139 GB, up to 1.8 billion reads |
 
-The full curated sheets, with every public library found for each workflow and the reasons
-others were left out, are in the [Stanford-Genesis Hugging Face
-bucket](https://huggingface.co/buckets/Stanford-Genesis/genesis-curation). Each sheet uses its
+The scatac-seq workflow starts from fragment files, which no curated sheet provides, so it has
+no test sheet.
+
+Each sheet uses its
 workflow's exact header (see the [DAP-seq](../docs/usage/dapseq-reference.md),
 [bulk ATAC](../docs/usage/bulk-atac.md), [RNA-seq](../docs/usage/rna-seq.md),
 [TSS mapping](../docs/usage/tss-seq.md) and [scATAC](../docs/usage/scatac-seq.md) guides).
@@ -59,8 +64,10 @@ protein-coding genes only and no rRNA features, so the RNA-seq `rRNA` metric rea
 ## Sorghum reference
 
 The Sorghum rows use Phytozome genome 730 (BTx623 v5.0 assembly, v5.1 genes), the latest
-Phytozome release, with the organelles handled as agreed with Alex Borowsky and Gabriel
-Ferreras Garrucho:
+Phytozome release. All Sorghum libraries are aligned to this BTx623 reference, including those
+from other cultivars; there is no cultivar-specific assembly, so reads from regions that differ
+from BTx623 may map less well. The organelles are handled as agreed with Alex Borowsky and
+Gabriel Ferreras Garrucho:
 
 - **Mitochondrion:** 47 of v5's 55 unplaced scaffolds (2.5 Mb, 291 genes) are pieces of the
   mitochondrial genome, about 5 copies' worth: at least 90% of each matches RefSeq NC_008360 at
@@ -73,8 +80,7 @@ Ferreras Garrucho:
   mitochondrial genes. Trans-spliced genes (mitochondrial nad1, nad2, nad5; chloroplast
   rps12) become one transcript per piece under one gene, so no annotated intron joins pieces
   that are far apart or on opposite strands. The longest annotated intron stays 43 kb.
-- The other 8 scaffolds are kept. The DAP plants are RTx430, and the RAMPAGE cultivars RTx436
-  and Tx2783, all aligned to the BTx623 assembly.
+- The other 8 scaffolds are kept.
 
 [`Sorghum_bicolor/reference/`](Sorghum_bicolor/reference/) builds it. Phytozome needs a JGI
 login (ORCID works): download `Sbicolor_730_v5.0.fa.gz` and
@@ -100,6 +106,7 @@ version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 
 
 The 10x ATAC barcode list (`737K-cratac-v1.txt`) is downloaded into the references folder when
 it is missing. 10x does not allow redistributing it, so it is not in this repository. The
-Sorghum library is multiome ATAC, whose list (`737K-arc-v1.txt`) only ships inside Cell Ranger
-ARC, so its row uses `-`: barcodes are not corrected, and reads with a barcode error are dropped.
-With Cell Ranger ARC's list in the references folder, set `barcode_whitelist` to its name.
+multiome ATAC libraries (all 6 Sorghum and 8 A. thaliana) need the multiome list
+(`737K-arc-v1.txt`), which only ships inside Cell Ranger ARC, so their rows use `-`: barcodes
+are not corrected, and reads with a barcode error are dropped. With Cell Ranger ARC's list in
+the references folder, set `barcode_whitelist` to its name.

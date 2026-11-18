@@ -141,8 +141,10 @@ def check_sheets(work: Path) -> None:
             reader = csv.DictReader(stream, delimiter="\t")
             assert reader.fieldnames == schema["items"]["required"], sheet.name
             rows = list(reader)
+        assert rows, sheet.name
         assert len({row["sample_id"] for row in rows}) == len(rows), sheet.name
-        assert {row["species"] for row in rows} == TEST_SPECIES, sheet.name
+        # A sheet may hold one species: where Sorghum has no or few libraries, A. thaliana fills in.
+        assert {row["species"] for row in rows} <= TEST_SPECIES, sheet.name
         for row in rows:
             for column, rule in schema["items"]["properties"].items():
                 assert schema_accepts(row[column], rule), (sheet.name, row["sample_id"], column)
@@ -153,7 +155,10 @@ def check_sheets(work: Path) -> None:
             (references / row["reference_fasta"]).touch()
     samples = load_samples(sheets["dap-seq"], references)
     assert {row["read2_url"] == "-" for row in samples} == {True, False}
-    assert sum(row["control_sample"] != "-" for row in samples) == 6
+    # At least one treatment, and every control it names is in the sheet.
+    controls = {row["control_sample"] for row in samples} - {"-"}
+    assert controls, sheets["dap-seq"].name
+    assert controls <= {row["sample_id"] for row in samples}, sheets["dap-seq"].name
     # Exercise control validation independently of the real sheets.
     good = {
         "sample_id": "sample",
