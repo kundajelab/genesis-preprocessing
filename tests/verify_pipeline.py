@@ -30,26 +30,8 @@ from genesis_tools.metadata import chromosome_sizes, infer_metadata, inspect_rea
 from genesis_tools.samples import SAMPLE_HEADER, load_samples
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED = {
-    "Arabidopsis_thaliana/dap-seq-GSE60141": (936, 934, "SE"),
-    "Arabidopsis_lyrata/dap-seq-PRJNA1177479": (405, 378, "PE"),
-    "Arabidopsis_thaliana/dap-seq-PRJNA1177481": (800, 748, "PE"),
-    "Sorghum_bicolor/dap-seq-PRJNA1177471": (142, 134, "PE"),
-}
-SHEET_DIGESTS = {
-    "Arabidopsis_thaliana/dap-seq-GSE60141": (
-        "24b5929ae27606d655cf1f190e6cb8703e1db89cf3442e8b2413e0d615ae20d5"
-    ),
-    "Arabidopsis_lyrata/dap-seq-PRJNA1177479": (
-        "ee3323ecfbf0010dd727291da44699065c17e017b4ad155b6391f9289098ab9f"
-    ),
-    "Arabidopsis_thaliana/dap-seq-PRJNA1177481": (
-        "4ceb6b00bb6393ce8702293a0d38dbc9c64c27b30bce5b842fa0bc9dc850cf6f"
-    ),
-    "Sorghum_bicolor/dap-seq-PRJNA1177471": (
-        "3cde1f1b8a95a9dcb09c71fb749537b3a1afc0347b469570f70bd910523d7cd9"
-    ),
-}
+TEST_SHEETS = ("dap-seq", "atac-seq", "rna-seq", "tss-seq", "scatac-reads")
+TEST_SPECIES = {"Arabidopsis_thaliana", "Sorghum_bicolor"}
 SAMPLES = {
     "se_treatment": "SE",
     "se_second": "SE",
@@ -132,36 +114,51 @@ def write_reads(path: Path, sequences: list[str]) -> None:
             stream.write(f"@read{index}\n{sequence}\n+\n{'I' * len(sequence)}\n")
 
 
+def schema_accepts(value: str, rule: dict) -> bool:
+    """Check one cell against the schema keywords the sample-sheet schemas use."""
+    if "anyOf" in rule:
+        return any(schema_accepts(value, option) for option in rule["anyOf"])
+    if "const" in rule:
+        return value == rule["const"]
+    if rule.get("type") == "integer":
+        return value.isdigit() and rule.get("minimum", 0) <= int(value) <= rule.get(
+            "maximum", math.inf
+        )
+    if "enum" in rule:
+        return value in rule["enum"]
+    return re.search(rule.get("pattern", ""), value) is not None
+
+
 def check_sheets(work: Path) -> None:
-    """Check all four migrated datasets without requiring real reference downloads."""
+    """Check the in-repo test sheets without requiring real reference downloads."""
+    sheets = {
+        path.name.removesuffix("-test.tsv"): path for path in (ROOT / "samplesheets").glob("*.tsv")
+    }
+    assert sorted(sheets) == sorted(TEST_SHEETS), sorted(sheets)
+    for workflow, sheet in sheets.items():
+        schema = json.loads((ROOT / "assets" / f"{workflow}.samples.schema.json").read_text())
+        with sheet.open() as stream:
+            reader = csv.DictReader(stream, delimiter="\t")
+            assert reader.fieldnames == schema["items"]["required"], sheet.name
+            rows = list(reader)
+        assert rows, sheet.name
+        assert len({row["sample_id"] for row in rows}) == len(rows), sheet.name
+        # A sheet may hold one species: where Sorghum has no or few libraries, A. thaliana fills in.
+        assert {row["species"] for row in rows} <= TEST_SPECIES, sheet.name
+        for row in rows:
+            for column, rule in schema["items"]["properties"].items():
+                assert schema_accepts(row[column], rule), (sheet.name, row["sample_id"], column)
     references = work / "sheet-references"
     references.mkdir()
-    for dataset, (count, treatments, layout) in EXPECTED.items():
-        sheet = ROOT / "samplesheets" / f"{dataset}.tsv"
-        with sheet.open() as stream:
-            rows = list(csv.DictReader(stream, delimiter="\t"))
-        for row in rows:
+    with sheets["dap-seq"].open() as stream:
+        for row in csv.DictReader(stream, delimiter="\t"):
             (references / row["reference_fasta"]).touch()
-        samples = load_samples(sheet, references)
-        conserved = [
-            [
-                row[key]
-                for key in (
-                    "sample_id",
-                    "read1_url",
-                    "read2_url",
-                    "control_sample",
-                    "reference_fasta",
-                )
-            ]
-            for row in samples
-        ]
-        digest = hashlib.sha256(json.dumps(conserved, separators=(",", ":")).encode()).hexdigest()
-        assert digest == SHEET_DIGESTS[dataset], f"Changed sample identity or assignment: {dataset}"
-        assert len(samples) == count
-        assert sum(row["control_sample"] != "-" for row in samples) == treatments
-        assert {row["species"] for row in samples} == {dataset.split("/")[0]}
-        assert all((row["read2_url"] == "-") == (layout == "SE") for row in samples)
+    samples = load_samples(sheets["dap-seq"], references)
+    assert {row["read2_url"] == "-" for row in samples} == {True, False}
+    # At least one treatment, and every control it names is in the sheet.
+    controls = {row["control_sample"] for row in samples} - {"-"}
+    assert controls, sheets["dap-seq"].name
+    assert controls <= {row["sample_id"] for row in samples}, sheets["dap-seq"].name
     # Exercise control validation independently of the real sheets.
     good = {
         "sample_id": "sample",

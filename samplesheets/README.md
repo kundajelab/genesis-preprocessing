@@ -1,36 +1,41 @@
-# Sample sheets
+# Test sample sheets
 
-One folder per species, one sheet per study and modality:
-`samplesheets/<Species>/<modality>-<study>.tsv`. Each sheet uses its workflow's exact header
-(see the [DAP-seq](../docs/usage/dapseq-reference.md), [TSS mapping](../docs/usage/tss-seq.md), [bulk ATAC](../docs/usage/bulk-atac.md),
-[scATAC, including from raw 10x reads](../docs/usage/scatac-seq.md) and [RNA-seq](../docs/usage/rna-seq.md) guides). Read URLs
-point to ENA over HTTPS, or to GSA (China) for CRA studies. Reference files are named in the sheet and looked up in the
-folder given by `-R`/`--references`; they are not downloaded automatically.
+One sheet per workflow, of real public libraries. They check that a change or a new site runs
+end to end, and give enough measured tasks, across each source's range of sizes and library
+types, to fit task limits and retries. Their rows are copied unchanged from the curated sheets
+in the [Stanford-Genesis Hugging Face
+bucket](https://huggingface.co/buckets/Stanford-Genesis/genesis-curation)
+(`curated-sample-sheets/<Species>/<modality>-curated.tsv`), which list every public library
+found for each workflow and the reasons others were left out. Sorghum comes first; where it has
+few libraries, A. thaliana fills the rest. Read URLs point to ENA over HTTPS, or to GSA (China)
+for CRA studies; the scATAC sheet lists SRA runs.
 
-| Sheet | Workflow | Libraries | Source |
-| --- | --- | ---: | --- |
-| `Arabidopsis_thaliana/dap-seq-GSE60141.tsv` | dap-seq | 936 (SE) | O'Malley 2016 |
-| `Arabidopsis_thaliana/dap-seq-PRJNA1177481.tsv` | dap-seq | 800 (PE) | multiDAP |
-| `Arabidopsis_thaliana/atac-seq-curated.tsv` | atac-seq | 439 (PE), 62 studies | Genesis "Bulk ATAC Fable Curated" tab: wild-type Col-0, untreated (below) |
-| `Arabidopsis_thaliana/scatac-reads-GSE155304.tsv` | scatac-reads | 2 (10x ATAC v1) | GSE155304 (Farmer 2021), root nuclei, rep1 and rep2, 2 runs each |
-| `Arabidopsis_thaliana/tss-seq-GSE136356.tsv` | tss-seq | 9 (SE CAGE) | GSE136356 (Thieffry 2020), Col-0 seedlings: wild type, hen2-4 and rrp4-2, 3 replicates each; reads start with a 3-base barcode and `CAGCAG` (`trim_5p` 9) |
-| `Arabidopsis_thaliana/rna-seq-GSE206323.tsv` | rna-seq | 16 (PE) | GSE206323, Col-0 inflorescence stem, the 8 wild-type samples, 2 runs each; TruSeq stranded mRNA (`reverse`) |
-| `Arabidopsis_lyrata/dap-seq-PRJNA1177479.tsv` | dap-seq | 405 (PE) | multiDAP |
-| `Sorghum_bicolor/dap-seq-PRJNA1177471.tsv` | dap-seq | 142 (PE) | multiDAP, RTx430 plants; Genesis DAP-seq set 24 |
-| `Sorghum_bicolor/dap-seq-PRJNA1177471-test.tsv` | dap-seq | 6 (PE) | Subset of the sheet above, for a quick test |
-| `Sorghum_bicolor/atac-seq-curated.tsv` | atac-seq | 24 (PE) | Genesis "Bulk ATAC Fable Curated" tab: CRA002789, SRP110225, SRP188687, SRP308654, SRP674033 |
-| `Sorghum_bicolor/scatac-reads-SRP474955.tsv` | scatac-reads | 11 (10x multiome ATAC) | Swift 2023 (GSE248919), BTx623 seedlings during de-etiolation, 0 h (6 libraries) and 12 h (5) |
-| `Sorghum_bicolor/tss-seq-ERP126061.tsv` | tss-seq | 4 (RAMPAGE) | ERP126061, cultivars RTx436 and Tx2783, 2 runs each, on the BTx623 reference; `read1_url` is the TSS read, the library's read 2 |
-| `Sorghum_bicolor/tss-seq-SRP360924.tsv` | tss-seq | 4 (PE Smar2C2) | GSE197144 (Murray 2022), shoot and root, 2 replicates each; TSS reads in either mate, 12-base UMI |
-| `Sorghum_bicolor/rna-seq-GSE184725.tsv` | rna-seq | 6 (SE) | GSE184725, BTx623 shoot, control and sulfur-deficient, 3 each; NEBNext Ultra II Directional (`reverse`) |
+| Sheet | Libraries | FASTQ | What it covers |
+| --- | ---: | ---: | --- |
+| `dap-seq-test.tsv` | 24 | 70 GB | 8 Sorghum and 16 A. thaliana libraries from 10 studies: 12 treatments, each with its control; SE and PE, 0.05-9.7 GB per library |
+| `atac-seq-test.tsv` | 24 | 123 GB | 6 Sorghum (leaf, 3 studies) and 18 A. thaliana (one per study, several tissues); spans size, TSS enrichment and organelle fraction; 5 libraries download from GSA; 0.05-38 GB |
+| `rna-seq-test.tsv` | 20 | 208 GB | Sorghum, 16 projects; SE and PE; `reverse`, `forward` and `unstranded`; 0.21-72 GB |
+| `tss-seq-test.tsv` | 24 | 36 GB | A. thaliana (Sorghum has no curated TSS libraries), all SE: 9 CAGE and 5 each of nAnT-iCAGE, TSS-seq and csRNA-seq; 0.39-7.8 GB |
+| `scatac-reads-test.tsv` | 24 | 780 GB | Every curated library: 6 Sorghum (multiome ATAC) and 18 A. thaliana (ATAC v1 and multiome ATAC); 1-9 runs per library, 1-4 files per run; 7-139 GB, up to 1.8 billion reads |
 
-Sample IDs in the curated Sorghum ATAC sheet are `<study>_<tissue>_<replicate>`. The Genesis
-metadata sheet lists 25 Sorghum ATAC runs; SRR8742452 (SRP188687) is left out because it is the
-study's genomic input control, not an ATAC library.
+The scatac-seq workflow starts from fragment files, which no curated sheet provides, so it has
+no test sheet.
+
+Each sheet uses its
+workflow's exact header (see the [DAP-seq](../docs/usage/dapseq-reference.md),
+[bulk ATAC](../docs/usage/bulk-atac.md), [RNA-seq](../docs/usage/rna-seq.md),
+[TSS mapping](../docs/usage/tss-seq.md) and [scATAC](../docs/usage/scatac-seq.md) guides).
+Reference files are named in the sheet and looked up in the folder given by
+`-R`/`--references`; they are not downloaded automatically. On Perlmutter, point it at the
+project's shared references folder.
+
+```bash
+pixi run submit-pipeline --workflow rna-seq -R /path/to/references samplesheets/rna-seq-test.tsv
+```
 
 ## Arabidopsis thaliana
 
-The A. thaliana sheets use Phytozome genome 447: `Athaliana_447_TAIR10.fa.gz` with the
+The A. thaliana rows use Phytozome genome 447: `Athaliana_447_TAIR10.fa.gz` with the
 Araport11 gene models `Athaliana_447_Araport11.gene_exons.gff3.gz`. TAIR10 already contains the
 chloroplast (`ChrC`) and mitochondrion (`ChrM`), so nothing is appended, and
 `organelle_contigs` is `ChrC,ChrM`. Phytozome downloads need a JGI login (ORCID works): get both
@@ -56,23 +61,13 @@ The FASTA has 7 contigs (`Chr1`–`Chr5`, `ChrC` 154,478 bp, `ChrM` 366,924 bp);
 27,655 genes, 88 on `ChrC` and 122 on `ChrM`. Phytozome's Araport11 gene_exons file has
 protein-coding genes only and no rRNA features, so the RNA-seq `rRNA` metric reads `NA`.
 
-The curated ATAC sheet takes the tab's A. thaliana runs that are paired-end, with a wild-type
-or Col-0 genotype and no treatment (or a control or mock), one row per run, named
-`<study>_<tissue>_<run>`. ERP138859 (Srikant 2022) is left out: its "wildtype" runs are about
-20 natural accessions, not Col-0, mixed with genomic DNA controls.
-
-Runs whose reads are not public as a pair are left out (63): CRA015871 (26) and CRA015872 (20)
-and one CRA024818 run have no files on the GSA download server; SRP606657 (12) and SRP548013
-(1) have no FASTQ in ENA; and SRP098594 (3) has a single unsplit FASTQ per run.
-
-The RNA-seq sheet lists each run separately because the workflow takes one pair of FASTQs per
-row; sum the two runs of a sample for sample-level counts.
-
 ## Sorghum reference
 
-All Sorghum sheets use Phytozome genome 730 (BTx623 v5.0 assembly, v5.1 genes), the latest
-Phytozome release, with the organelles handled as agreed with Alex Borowsky and Gabriel
-Ferreras Garrucho:
+The Sorghum rows use Phytozome genome 730 (BTx623 v5.0 assembly, v5.1 genes), the latest
+Phytozome release. All Sorghum libraries are aligned to this BTx623 reference, including those
+from other cultivars; there is no cultivar-specific assembly, so reads from regions that differ
+from BTx623 may map less well. The organelles are handled as agreed with Alex Borowsky and
+Gabriel Ferreras Garrucho:
 
 - **Mitochondrion:** 47 of v5's 55 unplaced scaffolds (2.5 Mb, 291 genes) are pieces of the
   mitochondrial genome, about 5 copies' worth: at least 90% of each matches RefSeq NC_008360 at
@@ -85,7 +80,7 @@ Ferreras Garrucho:
   mitochondrial genes. Trans-spliced genes (mitochondrial nad1, nad2, nad5; chloroplast
   rps12) become one transcript per piece under one gene, so no annotated intron joins pieces
   that are far apart or on opposite strands. The longest annotated intron stays 43 kb.
-- The other 8 scaffolds are kept. The DAP plants are RTx430, aligned to the BTx623 assembly.
+- The other 8 scaffolds are kept.
 
 [`Sorghum_bicolor/reference/`](Sorghum_bicolor/reference/) builds it. Phytozome needs a JGI
 login (ORCID works): download `Sbicolor_730_v5.0.fa.gz` and
@@ -107,22 +102,11 @@ version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 
 32,062 genes, 193 of them on `Mt` and `Pt`. Gene IDs carry a suffix, as in
 `Sobic.001G000100.v5.1`. The BED lists each piece of a trans-spliced gene separately.
 
-## scATAC
+## scATAC barcode lists
 
-The scATAC sheets start from raw 10x reads on NCBI SRA (`pixi run pipeline-scatac-reads`), as
-no curated study publishes usable fragment files. The 10x ATAC barcode list
-(`737K-cratac-v1.txt`) is downloaded into the references folder when it is missing. 10x does not
-allow redistributing it, so it is not in this repository.
-
-- GSE155304 uses `737K-cratac-v1.txt`. Its fragments from these reads were checked against
-  the authors' Cell Ranger output (see the PR that added `workflows/scatac-reads.nf`).
-- SRP474955 is multiome ATAC, whose barcode list (`737K-arc-v1.txt`) only ships inside Cell
-  Ranger ARC, so the sheet uses `-`: barcodes are not corrected, and reads with a barcode
-  error are dropped. With Cell Ranger ARC's list in the references folder, set
-  `barcode_whitelist` to its name. The study's 2025 runs (mixed rice and Sorghum nuclei, and
-  numbered "technical replicates") are left out; only the 10x Multiome ATAC libraries are
-  listed.
-- Plate-based studies (sci-ATAC-seq, such as Sorghum Mendieta 2024) have no 10x barcode read
-  and are not supported. Other A. thaliana 10x studies in the curated tab (Marand 2021, Dorrity
-  2021, Nobori 2025 and others) can be added the same way.
-
+The 10x ATAC barcode list (`737K-cratac-v1.txt`) is downloaded into the references folder when
+it is missing. 10x does not allow redistributing it, so it is not in this repository. The
+multiome ATAC libraries (all 6 Sorghum and 8 A. thaliana) need the multiome list
+(`737K-arc-v1.txt`), which only ships inside Cell Ranger ARC, so their rows use `-`: barcodes
+are not corrected, and reads with a barcode error are dropped. With Cell Ranger ARC's list in
+the references folder, set `barcode_whitelist` to its name.
