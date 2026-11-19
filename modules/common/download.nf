@@ -58,7 +58,7 @@ def sraRun(meta) {
 process DOWNLOAD {
     // Each task holds a sample's uncompressed reads while it converts them, and a sample falls
     // back to ENA, which caps each connection and refuses (HTTP 403) clients with too many.
-    maxForks 8
+    maxForks 24
     // A transfer can end early or arrive corrupt (the checks below catch it); fetch the batch
     // again rather than stop the whole run.
     errorStrategy 'retry'
