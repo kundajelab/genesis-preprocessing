@@ -171,8 +171,6 @@ def run_atac(
         str(work / "limits.config"),
         "-with-trace",
         str(work / f"trace-{suffix}.tsv"),
-        "--download_batch_size",
-        "2",
         "-ansi-log",
         "false",
     ]
@@ -213,7 +211,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 2,
         "GET_REFERENCES:BWA_MEM3_INDEX": 2,
-        "DOWNLOAD:DOWNLOAD_URLS": 2,
+        "DOWNLOAD:DOWNLOAD_URLS": 3,
         "FASTQC": 6,
         "ATAC_TRIM": 3,
         "ATAC_ALIGN": 3,

@@ -27,26 +27,22 @@ def fastqBytes(meta) {
     return sizes.any { size -> size < 0 } ? -1L : sizes.sum() as long
 }
 
-// Time to fetch and convert a batch's SRA runs: 15 minutes plus 3 per GB of the run's FASTQs. It
+// Time to fetch and convert a sample's SRA run: 15 minutes plus 3 per GB of the run's FASTQs. It
 // took 3.5 per GB with 4 CPUs and pigz's default level 6, mostly compressing; 8 CPUs at level 4
 // should take about 1. Where a server reports no size, 2 hours. Doubled on each retry after an
 // attempt ran out of time (retryTimeOf).
-def sraTime(samples) {
-    def seconds = samples.collect { meta ->
-        def bytes = fastqBytes(meta)
-        bytes < 0 ? 2L * 3600 : 900L + ((bytes / 1e9 * 180) as long)
-    }.sum() as long
+def sraTime(meta) {
+    def bytes = fastqBytes(meta)
+    def seconds = bytes < 0 ? 2L * 3600 : 900L + ((bytes / 1e9 * 180) as long)
     return (seconds * 1000L).ms
 }
 
-// Time to fetch a batch's FASTQs from their URLs: 30 minutes plus the FASTQs at 0.5 MB/s, below
+// Time to fetch a sample's FASTQs from their URLs: 30 minutes plus the FASTQs at 0.5 MB/s, below
 // the slowest rate seen from ENA (0.67 MB/s for a whole file), times the attempt. Where a server
 // reports no size, a generous 15 hours.
-def urlTime(samples, attempt) {
-    def seconds = samples.collect { meta ->
-        def bytes = fastqBytes(meta)
-        bytes < 0 ? 15L * 3600 : 1800L + ((bytes / 0.5e6) as long)
-    }.sum() as long
+def urlTime(meta, attempt) {
+    def bytes = fastqBytes(meta)
+    def seconds = bytes < 0 ? 15L * 3600 : 1800L + ((bytes / 0.5e6) as long)
     return "${seconds * attempt}s"
 }
 
@@ -64,15 +60,4 @@ def sraRun(meta) {
         return first.group(3) && second ? run : null
     }
     return first.group(3) ? null : run
-}
-
-// A batch's tag: its sample, or its first sample and how many more.
-def batchTag(samples) {
-    samples.size() == 1 ? samples[0].id : "${samples[0].id} +${samples.size() - 1} more"
-}
-
-// Where a sample's read counts are published: <species>/<id>/<id>.fastq.lines.
-def countsPath(samples, name) {
-    def meta = samples.find { sample -> "${sample.id}.fastq.lines" == name }
-    return "${meta.species}/${meta.id}/${name}"
 }
