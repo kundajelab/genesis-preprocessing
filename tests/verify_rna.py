@@ -285,7 +285,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
         "GET_REFERENCES:BWA_MEM3_INDEX": 2,
         "RNA_ANNOTATION": 2,
         "GET_STAR_INDEX:RNA_INDEX": 2,
-        "DOWNLOAD": 2,
+        "DOWNLOAD:DOWNLOAD_URLS": 2,
         "FASTQC": 5,
         "RNA_ALIGN": 3,
         "RNA_COUNTS": 3,
@@ -365,7 +365,7 @@ def check_resume(work: Path, sheet: Path | str, *, docker: bool) -> None:
     """Resumed runs reuse the downloads, and then every task."""
     assert run_rna(work, sheet, docker=docker, resume=True).returncode == 0
     rows = trace_rows(work, "resume")
-    tasks = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD"]
+    tasks = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD:DOWNLOAD_URLS"]
     assert tasks and all(row["status"] == "CACHED" for row in tasks), tasks
     indexes = [row for row in rows if row["name"].split(" ")[0] == "GET_STAR_INDEX:RNA_INDEX"]
     if docker:

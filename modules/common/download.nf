@@ -1,175 +1,62 @@
-include { dotenv } from 'plugin/nf-dotenv'
+include { DOWNLOAD_SRA } from './download_sra'
+include { DOWNLOAD_URLS } from './download_urls'
+include { sraRun } from './download_support'
 
-// The size in bytes the server reports for a URL (HTTP HEAD), or -1 if it reports none.
-def contentLength(url) {
-    try {
-        def connection = URI.create(url).toURL().openConnection() as java.net.HttpURLConnection
-        connection.requestMethod = 'HEAD'
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
-        def length = connection.responseCode == 200 ? connection.contentLengthLong : -1L
-        connection.disconnect()
-        return length
-    } catch (Exception _error) {
-        return -1L
+// One sample's downloaded mates, from a batch's FASTQs, in mate order; each sample must have
+// exactly its layout's mates.
+def matesOf(meta, reads) {
+    def names = ['read1', 'read2'].collect { mate -> "${meta.id}.${mate}.fastq.gz".toString() }
+    def mates = reads.findAll { read -> read.name in names }.sort { read -> read.name }
+    if (mates.size() != (meta.layout == 'PE' ? 2 : 1)) {
+        error("${meta.id}: downloaded ${mates*.name}, expected its ${meta.layout} mates")
     }
+    return mates
 }
 
-// Time for a DOWNLOAD task, from its FASTQs' sizes as their servers report them (looked up here,
-// on the manager, rather than passed in, so they do not change any task's cache key):
-// - An SRA run on a first attempt: 15 minutes plus 3 per GB. It took 3.5 per GB with 4 CPUs and
-//   pigz's default level 6, mostly compressing; 8 CPUs at level 4 should take about 1.
-// - Otherwise, as when a first attempt fell back to ENA and ran out of time: 30 minutes plus the
-//   FASTQs at 0.5 MB/s, below the slowest rate seen from ENA (0.67 MB/s for a whole file), times the
-//   attempt. Where a server reports no size, a generous 15 hours.
-def downloadTime(samples, attempt) {
-    def seconds = samples.collect { meta ->
-        def urls = meta.layout == 'PE' ? [meta.read1_url, meta.read2_url] : [meta.read1_url]
-        def sizes = urls.collect { url -> contentLength(url) }
-        def fromSra = attempt == 1 && sraRun(meta) != null
-        if (sizes.any { size -> size < 0 }) {
-            return fromSra ? 2L * 3600 : 15L * 3600 * attempt
-        }
-        def bytes = sizes.sum() as long
-        if (fromSra) {
-            return 900L + ((bytes / 1e9 * 180) as long)
-        }
-        return (1800L + ((bytes / 0.5e6) as long)) * attempt
-    }.sum() as long
-    return "${seconds}s"
-}
+// Each sample's raw reads, in batches of --download_batch_size samples per task: from its SRA run
+// when its URLs are ENA's FASTQs of one whole run (DOWNLOAD_SRA), otherwise, or when that run is
+// unavailable, from its URLs (DOWNLOAD_URLS). Each fallback is logged with its reason.
+workflow DOWNLOAD {
+    take:
+    samples  // one sample's meta map per item
 
-// The SRA run whose reads a sample's URLs are, when they are ENA's FASTQs of one whole run:
-// .../RUN/RUN.fastq.gz for single-end, .../RUN/RUN_1.fastq.gz and .../RUN/RUN_2.fastq.gz for
-// paired-end. Otherwise null, and the sample is fetched from its URLs as given.
-def sraRun(meta) {
-    def first = meta.read1_url =~ /\/([SED]RR[0-9]+)\/([SED]RR[0-9]+)(_1)?\.fastq\.gz$/
-    if (!first.find() || first.group(1) != first.group(2)) {
-        return null
+    main:
+    def batchSize = params.download_batch_size.toInteger()
+    def sources = samples.branch { meta ->
+        sra: sraRun(meta) != null
+        urls: true
     }
-    def run = first.group(1)
-    if (meta.layout == 'PE') {
-        def second = meta.read2_url.endsWith("/${run}/${run}_2.fastq.gz")
-        return first.group(3) && second ? run : null
-    }
-    return first.group(3) ? null : run
-}
-
-process DOWNLOAD {
-    // Each task holds a sample's uncompressed reads while it converts them, and a sample falls
-    // back to ENA, which caps each connection and refuses (HTTP 403) clients with too many.
-    maxForks 24
-    // A transfer can end early or arrive corrupt (the checks below catch it); fetch the batch
-    // again rather than stop the whole run.
-    errorStrategy 'retry'
-    maxRetries 2
-    // fasterq-dump and pigz use them all.
-    cpus 8
-    memory '2 GB'
-    time { downloadTime(samples, task.attempt) }
-    container "${dotenv('GENESIS_SRA_IMAGE')}"
-    tag "${samples.size() == 1 ? samples[0].id : "${samples[0].id} +${samples.size() - 1} more"}"
-    publishDir "${params.publish_base}/output", mode: 'copy', pattern: '*.fastq.lines',
-        saveAs: { name ->
-            def meta = samples.find { sample -> "${sample.id}.fastq.lines" == name }
-            "${meta.species}/${meta.id}/${name}"
+    DOWNLOAD_SRA(sources.sra.collate(batchSize))
+    def outcomes = DOWNLOAD_SRA.out.downloads
+        .flatMap { batch, status, reads ->
+            def recorded = status.readLines().collectEntries { line ->
+                def fields = line.split('\t', -1) as List
+                [(fields[0]): fields.drop(1)]
+            }
+            batch.collect { meta ->
+                def outcome = recorded[meta.id]
+                if (outcome == null || !(outcome[0] in ['ok', 'fallback'])) {
+                    error("${meta.id}: DOWNLOAD_SRA recorded no outcome")
+                }
+                outcome[0] == 'ok' ? tuple(meta, matesOf(meta, reads), null) : tuple(meta, null, outcome[1])
+            }
         }
-    input:
-    val samples
-    output:
-    tuple val(samples), path('*.read*.fastq.gz'), path('*.fastq.lines'), emit: downloads
-    script:
-    // One line per sample: ID, SRA run (or -), number of mates, then its URLs.
-    def plan = samples.collect { meta ->
-        def urls = meta.layout == 'PE' ? [meta.read1_url, meta.read2_url] : [meta.read1_url]
-        ([meta.id, sraRun(meta) ?: '-', urls.size()] + urls).join('\t')
-    }.join('\n')
-    """
-    set -o pipefail
-    # sra-tools keeps its settings outside the home folder.
-    export NCBI_SETTINGS="\$PWD/ncbi-settings.mkfg"
-    retrying_curl() {
-        curl --fail --silent --show-error --location --retry 20 --retry-all-errors \\
-            --retry-delay 30 --connect-timeout 60 "\$@"
+        .branch { _meta, _mates, reason ->
+            converted: reason == null
+            fallback: true
+        }
+    def fallbacks = outcomes.fallback.map { meta, _mates, reason ->
+        log.warn("${meta.id}: SRA run ${sraRun(meta)} unavailable (${reason}); downloading its FASTQs from their URLs")
+        meta
+    }
+    // Fallbacks are batched apart, so the sheet's own URL samples batch the same on every run.
+    DOWNLOAD_URLS(sources.urls.collate(batchSize).mix(fallbacks.collate(batchSize)))
+    def fetched = DOWNLOAD_URLS.out.downloads.flatMap { batch, reads ->
+        def files = reads instanceof List ? reads : [reads]
+        batch.collect { meta -> tuple(meta, matesOf(meta, files)) }
     }
 
-    # An SRA run's .sra file from AWS, checked against NCBI's MD5, and converted to FASTQs named and
-    # formatted as ENA's (header "@RUN.N NAME/MATE", bare "+"): the same bytes, decompressed.
-    # Fails, for the caller to fall back to the URLs, if any step does.
-    fetch_sra() {
-        local id=\$1 run=\$2 mates=\$3 located link md5 mate expected file
-        located=\$(retrying_curl --retry 3 --retry-delay 10 '${params.sra_locate_url}'"\$run") || return 1
-        # The first file of type sra: its MD5, then its first location's link.
-        located=\$(grep -o '"type": *"sra".*' <<< "\$located") || return 1
-        md5=\$(grep -o '"md5": *"[0-9a-f]\\{32\\}"' <<< "\$located" | head -n 1 | grep -o '[0-9a-f]\\{32\\}')
-        link=\$(grep -o '"link": *"[^"]*"' <<< "\$located" | head -n 1 | sed 's/^"link": *"//; s/"\$//')
-        [[ -n \$md5 && -n \$link ]] || return 1
-        retrying_curl --continue-at - --output "\$run.sra" "\$link" || return 1
-        [[ \$(md5sum < "\$run.sra" | cut -d ' ' -f 1) == "\$md5" ]] || {
-            echo "\$run.sra: MD5 differs from NCBI's \$md5" >&2
-            return 1
-        }
-        fasterq-dump --split-3 --threads ${task.cpus} --temp "tmp-\$run" --outdir "sra-\$run" \\
-            --seq-defline '@\$ac.\$si \$sn/\$ri' --qual-defline '+' "\$run.sra" >&2 || return 1
-        rm "\$run.sra"
-        # Exactly the files ENA serves for this layout: RUN.fastq, or RUN_1 and RUN_2.
-        if (( mates == 1 )); then expected="\$run.fastq"; else expected="\${run}_1.fastq \${run}_2.fastq"; fi
-        [[ \$(cd "sra-\$run" && ls | sort | tr '\\n' ' ') == "\$expected " ]] || {
-            echo "\$run: fasterq-dump wrote \$(ls "sra-\$run"), not \$expected" >&2
-            return 1
-        }
-        for mate in \$(seq 1 "\$mates"); do
-            if (( mates == 1 )); then file="sra-\$run/\$run.fastq"; else file="sra-\$run/\${run}_\$mate.fastq"; fi
-            wc -l < "\$file" | tr -d ' ' > "\$id.read\$mate.lines" || return 1
-            # Level 4 compresses 5.5 times as fast as the default (6), into files 10% larger.
-            pigz -p ${task.cpus} -4 -c "\$file" > "\$id.read\$mate.fastq.gz" || return 1
-            rm "\$file"
-        done
-        rm -r "sra-\$run" "tmp-\$run"
-    }
-
-    # FASTQs from their URLs as given; decompressing them all also checks their gzip integrity.
-    fetch_urls() {
-        local id=\$1 mates=\$2 mate
-        shift 2
-        for mate in \$(seq 1 "\$mates"); do
-            retrying_curl --continue-at - --output "\$id.read\$mate.fastq.gz" "\$1"
-            pigz -dc "\$id.read\$mate.fastq.gz" | wc -l | tr -d ' ' > "\$id.read\$mate.lines"
-            shift
-        done
-    }
-
-    cat > plan.tsv << 'END_OF_PLAN'
-${plan}
-END_OF_PLAN
-    # On its own descriptor, so that no command in the loop can read the plan as its input.
-    while IFS=\$'\\t' read -r -u 4 id run mates urls; do
-        read -r -a urls <<< "\$urls"
-        if [[ \$run != - ]]; then
-            if ! fetch_sra "\$id" "\$run" "\$mates"; then
-                echo "WARNING: \$id: SRA run \$run failed; downloading its FASTQs instead" >&2
-                rm -rf "\$run.sra" "sra-\$run" "tmp-\$run" "\$id".read*
-                run=-
-            fi
-        fi
-        if [[ \$run == - ]]; then
-            fetch_urls "\$id" "\$mates" "\${urls[@]}"
-        fi
-        # Whole FASTQ records, at least one, and as many in each mate.
-        awk '{if (\$1 == 0 || \$1 % 4) exit 1; print \$1}' "\$id.read1.lines" > "\$id.fastq.lines"
-        if (( mates == 2 )); then
-            cmp -s "\$id.read1.lines" "\$id.read2.lines"
-        fi
-        rm "\$id".read*.lines
-    done 4< plan.tsv
-    """
-    stub:
-    def fakes = samples.collect { meta ->
-        def second = meta.layout == 'PE' ? "\ncp '${meta.id}.read1.fastq.gz' '${meta.id}.read2.fastq.gz'" : ''
-        "printf '@read1\\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\n+\\nIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\\n' | gzip > '${meta.id}.read1.fastq.gz'\n" +
-            "printf '4\\n' > '${meta.id}.fastq.lines'" + second
-    }.join('\n')
-    """
-${fakes}
-    """
+    emit:
+    // tuple(meta, mates): the sample's FASTQs, read1 then read2 for paired-end.
+    downloads = outcomes.converted.map { meta, mates, _reason -> tuple(meta, mates) }.mix(fetched)
 }

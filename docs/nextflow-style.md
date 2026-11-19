@@ -67,8 +67,9 @@ inputs, so container tasks do not depend on undeclared host source paths.
 The four sample sheets use the six-column schema. The [DAP reference guide](usage/dapseq-reference.md)
 describes the workflow and analysis policies. tests/verify_pipeline.py exercises actual Nextflow wiring,
 reference generation and reuse, resume, sheet and reference failures, and publication boundaries.
-DOWNLOAD fetches remote HTTP(S) FASTQs in batches with aria2c (maxForks 1); the
-regression tests serve their fixtures from a local HTTP server.
+The DOWNLOAD subworkflow converts SRA runs from NCBI's AWS copy (DOWNLOAD_SRA, maxForks 32)
+and fetches other HTTP(S) FASTQs, and runs DOWNLOAD_SRA could not use, from their URLs
+(DOWNLOAD_URLS, maxForks 8); the regression tests serve their fixtures from a local HTTP server.
 
 Style verification uses pixi run checks: ShellCheck, Ruff lint/format, ty,
 quantification cases, and mocked Docker builds. The mock build checks cover both

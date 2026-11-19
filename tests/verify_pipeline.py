@@ -527,7 +527,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 2,
         "GET_REFERENCES:BWA_MEM3_INDEX": 2,
-        "DOWNLOAD": 3,
+        "DOWNLOAD:DOWNLOAD_URLS": 3,
         "FASTQC": 7,
         "MULTIQC": 1,
         "METADATA": 5,
@@ -760,7 +760,7 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
     assert len(fastqc_tasks) == 7 and all(row["status"] == "CACHED" for row in fastqc_tasks)
     # Newly published references change staged input paths on the first resume.
     # A second resume must cache all downstream computation at those stable paths.
-    downloads = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD"]
+    downloads = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD:DOWNLOAD_URLS"]
     assert len(downloads) == 3 and all(row["status"] == "CACHED" for row in downloads)
     multiqc_before = {
         str(path.relative_to(work / "published")): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -770,7 +770,7 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
     assert run_pipeline(work, sheet, docker=docker, resume=True, suffix="stable").returncode == 0
     rows = trace_rows(work, "stable")
     for process in (
-        "DOWNLOAD",
+        "DOWNLOAD:DOWNLOAD_URLS",
         "FASTQC",
         "MULTIQC",
         "BWA_MEM3_ALIGN",
@@ -883,7 +883,8 @@ def check_download_failures(work: Path, base_url: str) -> None:
         assert run_pipeline(case, sheet, docker=True, expect_failure=True).returncode != 0
         rows = trace_rows(case)
         assert any(
-            row["name"].startswith("DOWNLOAD ") and row["status"] == "FAILED" for row in rows
+            row["name"].startswith("DOWNLOAD:DOWNLOAD_URLS ") and row["status"] == "FAILED"
+            for row in rows
         ), rows
         assert not any(row["name"].split(" ")[0] in {"FASTQC", "BWA_MEM3_ALIGN"} for row in rows), (
             rows

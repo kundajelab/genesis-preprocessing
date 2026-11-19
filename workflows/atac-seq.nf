@@ -93,14 +93,9 @@ workflow {
     sizes_ch = GET_REFERENCES.out.sizes
     indexes = GET_REFERENCES.out.indexes
     // Parameters given on the command line arrive as strings.
-    DOWNLOAD(samples.collate(params.download_batch_size.toInteger()))
-    // Split each batch back into one tuple per sample, with both mates.
-    downloaded = DOWNLOAD.out.downloads.flatMap { batch, reads, _counts ->
-        batch.collect { meta ->
-            def names = ['read1', 'read2'].collect { mate -> "${meta.id}.${mate}.fastq.gz".toString() }
-            tuple(meta, reads.findAll { read -> read.name in names }.sort { read -> read.name })
-        }
-    }
+    DOWNLOAD(samples)
+    // One tuple per sample, with both mates.
+    downloaded = DOWNLOAD.out.downloads
     // Observe each raw mate independently; trimming continues from the original reads.
     FASTQC(downloaded.flatMap { meta, reads ->
         reads.collect { read ->
