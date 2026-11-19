@@ -396,9 +396,6 @@ def run_pipeline(
         str(work / "limits.config"),
         "-with-trace",
         str(work / f"trace-{suffix}.tsv"),
-        # Small batches exercise several DOWNLOAD tasks, including a partial final batch.
-        "--download_batch_size",
-        "2",
         "-ansi-log",
         "false",
     ]
@@ -527,7 +524,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 2,
         "GET_REFERENCES:BWA_MEM3_INDEX": 2,
-        "DOWNLOAD:DOWNLOAD_URLS": 3,
+        "DOWNLOAD:DOWNLOAD_URLS": 5,
         "FASTQC": 7,
         "MULTIQC": 1,
         "METADATA": 5,
@@ -761,7 +758,7 @@ def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
     # Newly published references change staged input paths on the first resume.
     # A second resume must cache all downstream computation at those stable paths.
     downloads = [row for row in rows if row["name"].split(" ")[0] == "DOWNLOAD:DOWNLOAD_URLS"]
-    assert len(downloads) == 3 and all(row["status"] == "CACHED" for row in downloads)
+    assert len(downloads) == 5 and all(row["status"] == "CACHED" for row in downloads)
     multiqc_before = {
         str(path.relative_to(work / "published")): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in (work / "published/samples/output/multiqc").rglob("*")

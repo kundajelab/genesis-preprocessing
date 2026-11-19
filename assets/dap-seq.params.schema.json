@@ -51,12 +51,6 @@
           "type": "string",
           "description": "Slurm queue: the partition with the slurm (default regular) and sherlock (default normal) profiles, the QOS with nersc (default shared)."
         },
-        "download_batch_size": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1,
-          "description": "Samples fetched by each DOWNLOAD task; up to eight tasks run at once."
-        },
         "sra_locate_url": {
           "type": "string",
           "format": "uri",

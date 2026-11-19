@@ -1,7 +1,7 @@
 // Runs DOWNLOAD on the samples in --input (sample_id, layout, read1_url, read2_url), so
 // tests/verify_download.py can check its SRA and URL paths offline with stand-in fasterq-dump and
-// pigz on PATH. --download_batch_size sets the batches, as in the workflows. Each sample's
-// downloaded mates are listed in --run_dir/downloads.tsv: ID, then the mates' file names.
+// pigz on PATH. Each sample's downloaded mates are listed in --run_dir/downloads.tsv: ID, then
+// the mates' file names.
 nextflow.enable.dsl = 2
 
 include { DOWNLOAD } from '../modules/common/download'

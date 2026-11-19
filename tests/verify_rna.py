@@ -244,8 +244,6 @@ def run_rna(
         str(work / "limits.config"),
         "-with-trace",
         str(work / f"trace-{suffix}.tsv"),
-        "--download_batch_size",
-        "2",
         "-ansi-log",
         "false",
     ]
@@ -285,7 +283,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
         "GET_REFERENCES:BWA_MEM3_INDEX": 2,
         "RNA_ANNOTATION": 2,
         "GET_STAR_INDEX:RNA_INDEX": 2,
-        "DOWNLOAD:DOWNLOAD_URLS": 2,
+        "DOWNLOAD:DOWNLOAD_URLS": 3,
         "FASTQC": 5,
         "RNA_ALIGN": 3,
         "RNA_COUNTS": 3,

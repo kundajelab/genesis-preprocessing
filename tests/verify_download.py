@@ -146,9 +146,7 @@ def add_sra_run(
     publish(root, base, f"{base}/sdl/{run}", json.dumps(located).encode())
 
 
-def run_harness(
-    folder: Path, tools: Path, base: str, samples: list[dict[str, str]], *, batch_size: int = 10
-) -> int:
+def run_harness(folder: Path, tools: Path, base: str, samples: list[dict[str, str]]) -> int:
     folder.mkdir()
     sheet = folder / "samples.tsv"
     columns = ["sample_id", "layout", "read1_url", "read2_url"]
@@ -178,8 +176,6 @@ def run_harness(
         str(folder / "published"),
         "--sra_locate_url",
         f"{base}/sdl/",
-        "--download_batch_size",
-        str(batch_size),
         "-with-trace",
         str(folder / "trace.tsv"),
         "-work-dir",
@@ -205,15 +201,17 @@ def run_harness(
     return result.returncode
 
 
-def task_folders(folder: Path) -> dict[str, list[Path]]:
-    """Each process's task folders, from the harness's trace: DOWNLOAD_SRA or DOWNLOAD_URLS."""
+def task_folders(folder: Path) -> dict[tuple[str, str], list[Path]]:
+    """Each attempt's task folder, from the harness's trace, by process and sample: the process
+    is DOWNLOAD_SRA or DOWNLOAD_URLS, and the sample its task's tag."""
     with (folder / "trace.tsv").open() as stream:
         rows = list(csv.DictReader(stream, delimiter="\t"))
-    tasks: dict[str, list[Path]] = {}
+    tasks: dict[tuple[str, str], list[Path]] = {}
     for row in rows:
-        process = row["name"].split(" ")[0].removeprefix("DOWNLOAD:")
+        process, tag = row["name"].split(" ", 1)
         (path,) = (folder / "work").glob(f"{row['hash']}*")
-        tasks.setdefault(process, []).append(path)
+        key = (process.removeprefix("DOWNLOAD:"), tag.strip("()"))
+        tasks.setdefault(key, []).append(path)
     return tasks
 
 
@@ -254,7 +252,7 @@ def sample(sample_id: str, layout: str, urls: list[str]) -> dict[str, str]:
 
 
 def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
-    """SRA runs converted, and samples whose SRA run fails fetched from their URLs, in batches."""
+    """SRA runs converted, and samples whose SRA run fails fetched from their URLs."""
     expected: dict[str, list[bytes]] = {}
     samples = []
     # Converted from SRA. Their ENA FASTQs are not served: using them would fail.
@@ -298,37 +296,34 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
     folder = work / "downloads"
     assert run_harness(folder, tools, base, samples) == 0, folder
     tasks = task_folders(folder)
-    # One batch of SRA runs; the sheet's URL sample and the fallbacks are batched apart.
-    assert sorted(tasks) == ["DOWNLOAD_SRA", "DOWNLOAD_URLS"], tasks
-    (sra_task,) = tasks["DOWNLOAD_SRA"]
-    assert len(tasks["DOWNLOAD_URLS"]) == 2, tasks
-    assert "plain" not in (sra_task / "plan.tsv").read_text()
-    status = {
-        line.split("\t")[0]: line.split("\t")[1:]
-        for line in (sra_task / "status.tsv").read_text().splitlines()
-    }
-    assert status == {
-        "pe_sra": ["ok", ""],
-        "se_sra": ["ok", ""],
-        **{sample_id: ["fallback", reason] for sample_id, (_, _, reason) in fallbacks.items()},
-    }, status
-    errors = (sra_task / ".command.err").read_text()
-    assert "MD5 differs from NCBI's" in errors
+    # One task per sample in DOWNLOAD_SRA, with the plain URL never asked of NCBI, and one per
+    # sample fetched from its URLs: the plain one and each fallback.
+    sra_ids = sorted(sample_id for sample_id in expected if sample_id != "plain")
+    assert sorted(tasks) == sorted(
+        [("DOWNLOAD_SRA", sample_id) for sample_id in sra_ids]
+        + [("DOWNLOAD_URLS", sample_id) for sample_id in [*fallbacks, "plain"]]
+    ), sorted(tasks)
+    assert all(len(attempts) == 1 for attempts in tasks.values()), tasks
+    task = {key: attempts[0] for key, attempts in tasks.items()}
     assert (
-        "fasterq-dump wrote SRR0000005.fastq, not SRR0000005_1.fastq SRR0000005_2.fastq" in errors
+        "MD5 differs from NCBI's" in (task["DOWNLOAD_SRA", "bad_md5"] / ".command.err").read_text()
     )
-    # A fallback leaves nothing of its sample in the SRA task.
-    leftovers = [
-        path.name
-        for path in sra_task.iterdir()
-        if path.name.endswith(".sra")
-        or path.name.startswith(("sra-", "tmp-"))
-        or any(path.name.startswith(f"{sample_id}.") for sample_id in fallbacks)
-    ]
-    assert not leftovers, leftovers
+    assert (
+        "fasterq-dump wrote SRR0000005.fastq, not SRR0000005_1.fastq SRR0000005_2.fastq"
+        in (task["DOWNLOAD_SRA", "wrong_layout"] / ".command.err").read_text()
+    )
+    # A fallback leaves nothing of its run or sample in its SRA task.
+    for sample_id in fallbacks:
+        leftovers = [
+            path.name
+            for path in task["DOWNLOAD_SRA", sample_id].iterdir()
+            if path.name.endswith(".sra") or path.name.startswith(("sra-", "tmp-", f"{sample_id}."))
+        ]
+        assert not leftovers, (sample_id, leftovers)
     log = (folder / "nextflow.log").read_text()
     for sample_id, (run, _, reason) in fallbacks.items():
         assert f"{sample_id}: SRA run {run} unavailable ({reason})" in log, sample_id
+    assert log.count("unavailable (") == len(fallbacks), log[-3000:]
     downloads = {
         line.split("\t")[0]: line.split("\t")[1:]
         for line in (folder / "published" / "downloads.tsv").read_text().splitlines()
@@ -338,22 +333,16 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
         for sample_id, mates in expected.items()
     }, downloads
     for sample_id, mates in expected.items():
-        source = sra_task if sample_id.endswith("_sra") else None
+        source = "DOWNLOAD_SRA" if sample_id.endswith("_sra") else "DOWNLOAD_URLS"
         for mate, contents in enumerate(mates, 1):
-            name = f"{sample_id}.read{mate}.fastq.gz"
-            (path,) = [
-                task / name
-                for task in tasks["DOWNLOAD_URLS"] + [sra_task]
-                if (task / name).exists()
-            ]
-            assert source is None or path.parent == source, (sample_id, path)
-            output = path.read_bytes()
-            if sample_id.endswith("_sra"):
+            output = (task[source, sample_id] / f"{sample_id}.read{mate}.fastq.gz").read_bytes()
+            if source == "DOWNLOAD_SRA":
                 # Converted and compressed here: the decompressed bytes are ENA's.
                 assert gzip.decompress(output) == contents, (sample_id, mate)
             else:
                 # Fetched: the server's bytes, unchanged.
                 assert output == contents, (sample_id, mate)
+    sra_task = task["DOWNLOAD_SRA", "pe_sra"]
     # Converted reads are compressed fast (level 4) with the task's CPUs (1 in the test profile).
     calls = [json.loads(line) for line in (sra_task / "pigz.args").read_text().splitlines()]
     assert ["-p", "1", "-4", "-c"] in calls, calls
@@ -378,10 +367,10 @@ def check_failure(work: Path, tools: Path, root: Path, base: str) -> None:
     folder = work / "failure"
     assert run_harness(folder, tools, base, [sample("broken", "SE", [url])]) != 0, folder
     tasks = task_folders(folder)
-    (sra_task,) = tasks["DOWNLOAD_SRA"]
+    (sra_task,) = tasks["DOWNLOAD_SRA", "broken"]
     assert "MD5 differs from NCBI's" in (sra_task / ".command.err").read_text()
     # The first attempt and its two retries.
-    assert len(tasks["DOWNLOAD_URLS"]) == 3, tasks
+    assert len(tasks["DOWNLOAD_URLS", "broken"]) == 3, tasks
     errors = failed_task_errors(folder / "work")
     assert "broken.read1.fastq.gz" in errors, errors[-3000:]
 
@@ -395,7 +384,7 @@ def check_crash(work: Path, tools: Path, root: Path, base: str) -> None:
     folder = work / "crash"
     assert run_harness(folder, tools, base, [sample("crash", "SE", [url])]) != 0, folder
     tasks = task_folders(folder)
-    assert sorted(tasks) == ["DOWNLOAD_SRA"], tasks
+    assert sorted(tasks) == [("DOWNLOAD_SRA", "crash")], tasks
     errors = failed_task_errors(folder / "work")
     assert "fasterq-dump failed" in errors, errors[-3000:]
 
