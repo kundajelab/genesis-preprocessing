@@ -568,7 +568,7 @@ def main() -> None:
             assert f"process.executor = '{executor}'" in output
             assert f"{runtime}.enabled = true" in output
             if profile == "nersc":
-                assert "executor.queueSize = 50" in output
+                assert "executor.queueSize = 300" in output
                 assert "executor.pollInterval = '5 min'" in output
                 assert "--constraint=cpu --qos=${params.queue ?: 'shared'}" in output
                 assert "toMega() + 512}M" in output

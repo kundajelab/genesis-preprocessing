@@ -139,13 +139,18 @@ Reference names are gzipped FASTA basenames ending in `.fa.gz`, `.fasta.gz`, or
 `.fna.gz`. Identifiers and filenames may contain letters, digits, underscores,
 periods, and hyphens, with a letter, digit, or underscore first. Read URLs must
 be HTTP or HTTPS. Reads are downloaded in batches of `--download_batch_size`
-samples (default 1), up to eight batches at once. When a sample's URLs are ENA's
-FASTQs of one whole SRA run (`.../RUN/RUN.fastq.gz`, or `RUN_1` and `RUN_2`), the
-run's `.sra` file is fetched from NCBI's AWS copy instead, checked against NCBI's
-MD5, and converted with `fasterq-dump` into FASTQs whose decompressed bytes are
-ENA's, read names included. If that fails, the sample is fetched from its URLs,
-with a warning in the task's log. Other URLs are fetched as given; mates with
-matching basenames are fine. `--sra_locate_url` sets NCBI's locator.
+samples (default 1). When a sample's URLs are ENA's FASTQs of one whole SRA run
+(`.../RUN/RUN.fastq.gz`, or `RUN_1` and `RUN_2`), `DOWNLOAD_SRA` fetches the run's
+`.sra` file from NCBI's AWS copy instead, up to 32 batches at once, checks it
+against NCBI's MD5, and converts it with `fasterq-dump` into FASTQs whose
+decompressed bytes are ENA's, read names included. A transfer that stays under
+2 MB/s for 5 minutes is abandoned. If the run is unavailable (an HTTP failure, a
+stalled transfer, an MD5 mismatch) or converts to another layout, the sample is
+fetched from its URLs instead, with a warning and the reason in the run's log;
+any other conversion failure stops the run. `DOWNLOAD_URLS` fetches those samples,
+and all others, from their URLs as given, up to eight batches at once, since ENA
+refuses clients with too many connections; mates with matching basenames are fine.
+`--sra_locate_url` sets NCBI's locator.
 
 ## Analysis choices
 

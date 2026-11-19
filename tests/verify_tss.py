@@ -261,7 +261,7 @@ def check_trace(work: Path, libraries: int) -> None:
         "RNA_ANNOTATION": 1,
         "GET_STAR_INDEX:RNA_INDEX": 1,
         # One download task per library (download_batch_size defaults to 1).
-        "DOWNLOAD": libraries,
+        "DOWNLOAD:DOWNLOAD_URLS": libraries,
         # Smar2C2 reads both mates and extracts its TSS reads first.
         "FASTQC": libraries + 1,
         "TSS_EXTRACT": 1,

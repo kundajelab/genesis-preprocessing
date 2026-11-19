@@ -105,15 +105,10 @@ workflow {
         .join(annotations, failOnDuplicate: true, failOnMismatch: true)
         .map { _id, ref, fasta, _ref, gtf, _rrna, _maxIntron -> tuple(ref, fasta, gtf) }, referencesDir)
     // Parameters given on the command line arrive as strings.
-    DOWNLOAD(samples.collate(params.download_batch_size.toInteger()))
-    // Split each batch back into one tuple per sample: a single read path for SE, a list for PE.
-    downloaded = DOWNLOAD.out.downloads.flatMap { batch, reads, _counts ->
-        def files = reads instanceof List ? reads : [reads]
-        batch.collect { meta ->
-            def names = ['read1', 'read2'].collect { mate -> "${meta.id}.${mate}.fastq.gz".toString() }
-            def mates = files.findAll { read -> read.name in names }.sort { read -> read.name }
-            tuple(meta, mates.size() == 1 ? mates[0] : mates)
-        }
+    DOWNLOAD(samples)
+    // A single read path for SE, a list for PE.
+    downloaded = DOWNLOAD.out.downloads.map { meta, mates ->
+        tuple(meta, mates.size() == 1 ? mates[0] : mates)
     }
     // Observe each raw mate independently; STAR aligns the original reads.
     FASTQC(downloaded.flatMap { meta, reads ->
