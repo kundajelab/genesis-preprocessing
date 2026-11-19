@@ -284,6 +284,21 @@ def serve(folder: Path, *, docker: bool) -> Iterator[str]:
         server.server_close()
 
 
+def served_sheet(sheet: Path, folder: Path, base_url: str) -> str:
+    """Serve a copy of sheet from folder, which serve() serves at base_url; return its URL.
+
+    Nextflow reads the sheet itself, on the host, so the URL names the host's loopback even when
+    tasks reach the server through Docker's host.docker.internal.
+    """
+    shutil.copyfile(sheet, folder / sheet.name)
+    return f"{base_url.replace('host.docker.internal', '127.0.0.1')}/{sheet.name}"
+
+
+def saved_sheets(work: Path) -> list[Path]:
+    """The copies of the sample sheet that the runs launched in work saved beside their traces."""
+    return sorted((work / "published").glob("*/trace/samplesheet_*.tsv"))
+
+
 def create_fixture(work: Path, base_url: str, *, docker: bool) -> Path:
     """Make deterministic full-length SE/PE libraries with enrichment and multimappers."""
     generator = random.Random(60141)
