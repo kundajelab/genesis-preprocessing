@@ -1,10 +1,12 @@
 # Genesis: plant sequencing data preprocessing
 
 Genesis turns public plant sequencing data into model-ready outputs: DAP-seq and bulk and
-single-cell ATAC-seq into peaks, signal tracks and QC; RNA-seq into gene counts and tracks; and
-TSS mapping (CAGE, TSS-seq, csRNA-seq, RAMPAGE, Smar2C2) into TSS tags and clusters. It is built to
-run on NERSC Perlmutter: `pixi run submit-pipeline` submits the Nextflow manager as a Slurm job,
-which then submits each task as its own job. Local runs are for quick debugging.
+single-cell ATAC-seq into peaks, signal tracks and QC; RNA-seq into gene counts and tracks; and TSS
+mapping (CAGE, TSS-seq, csRNA-seq, RAMPAGE, Smar2C2) into TSS tags and clusters. It runs on Slurm
+clusters: `pixi run submit-pipeline` submits the Nextflow manager as a Slurm job, which then submits
+each task as its own job. Production runs use NERSC Perlmutter; Stanford Sherlock is supported for
+when more compute is needed, and `-p slurm` works on other Slurm clusters (see the [cluster
+guide](docs/usage/clusters.md)). Runs on one machine with Docker are for debugging and tests.
 
 Metadata discovery and curation are in
 [genesis-curation](https://github.com/kundajelab/genesis-curation). Curated sample sheets for
@@ -52,7 +54,8 @@ From raw 10x reads on NCBI SRA, the same steps follow download, chromap and cell
 
 ## Install and check your environment
 
-On a Perlmutter login node, install [Pixi](https://pixi.sh/), then:
+On a cluster login node (or your own machine, for local runs), install [Pixi](https://pixi.sh/),
+then:
 
 ```bash
 git clone https://github.com/kundajelab/genesis-preprocessing.git
@@ -60,14 +63,15 @@ cd genesis-preprocessing
 pixi run install-all
 ```
 
-Runs use the pinned container images in `conf/genesis-images.lock`. On Perlmutter they run with
-podman-hpc and on Sherlock with Apptainer; elsewhere Docker must be available to your user.
+Runs use the pinned container images in `conf/genesis-images.lock`, with podman-hpc on
+Perlmutter, Apptainer on Sherlock and Docker on your own machine.
 
-## Run on Perlmutter
+## Run on a Slurm cluster
 
 Each workflow takes one tab-separated sample sheet (examples below) and an explicitly chosen
-reference genome: put the FASTA and annotation named in the sheet in your references folder,
-`$CFS/PROJECT/$USER/references` by default. Then submit the run from the checkout:
+reference genome: put the FASTA and annotation named in the sheet in your references folder (each
+profile's default is in the [cluster guide](docs/usage/clusters.md); `-R` sets it). Then submit the
+run from the checkout:
 
 ```bash
 pixi run submit-pipeline --workflow atac-seq -n atac-A /path/atac.tsv
@@ -76,12 +80,12 @@ pixi run submit-pipeline --workflow atac-seq -n atac-A /path/atac.tsv -resume
 ```
 
 The command returns once the manager job is queued; its log goes to `~/logs/genesis/`. `--workflow`
-is `dap-seq` (the default), `atac-seq`, `scatac-seq`, `scatac-reads`, `rna-seq` or `tss-seq`.
-Each run works in `$SCRATCH/workspace/RUN_NAME/` and keeps its outputs and traces in
-`$CFS/PROJECT/$USER/runs/RUN_NAME/`, where a resource summary (`resources.tsv`) is written when it
-finishes. `pixi run submit-pipeline --help` lists the manager's options (walltime, QOS, log
-folder); [running on Perlmutter and Sherlock](docs/usage/clusters.md) covers references, images,
-accounts and QOS. The pipeline checks the whole sheet before starting any task.
+is `dap-seq` (the default), `atac-seq`, `scatac-seq`, `scatac-reads`, `rna-seq` or `tss-seq`. Each
+run works in `WORKSPACE/RUN_NAME/` and keeps its outputs and traces in `PERSIST_DIR/RUN_NAME/` (on
+Perlmutter, `$SCRATCH/workspace` and `$CFS/PROJECT/$USER/runs`), where a resource summary
+(`resources.tsv`) is written when it finishes. `pixi run submit-pipeline --help` lists the manager's
+options (walltime, QOS, log folder); the [cluster guide](docs/usage/clusters.md) covers references,
+images, accounts and QOS. The pipeline checks the whole sheet before starting any task.
 
 Small test sheets for every workflow are in [samplesheets/](samplesheets/README.md).
 
@@ -157,12 +161,13 @@ Each library gets per-base TSS tags on each strand, paraclu TSS clusters and QC.
 [TSS mapping guide](docs/usage/tss-seq.md) explains the methods, trimming, paired-end layouts and
 metrics.
 
-## Debug locally
+## Run on one machine
 
-Local runs use Docker and the same images, on one machine. Use them to try a sheet or a change on
-a small input before submitting; `pixi run pipeline` runs DAP-seq, and `pipeline-atac`,
-`pipeline-scatac`, `pipeline-scatac-reads`, `pipeline-rna` and `pipeline-tss` the others. Pixi runs
-from the checkout folder, so give absolute paths:
+Without Slurm, the `local` profile runs every task on the machine itself, with Docker and the same
+images, capping each task's CPU and memory requests at what the machine has. Use it to try a sheet
+or a change on a small input before submitting; `pixi run pipeline` runs DAP-seq, and
+`pipeline-atac`, `pipeline-scatac`, `pipeline-scatac-reads`, `pipeline-rna` and `pipeline-tss` the
+others. Pixi runs from the checkout folder, so give absolute paths:
 
 ```bash
 # Check a sheet and the whole task graph without running the tools.
@@ -171,8 +176,8 @@ pixi run pipeline-atac -p local,test -w /tmp/genesis -R /data/references /data/a
 pixi run pipeline-atac -w /tmp/genesis -n atac-A -R /data/references /data/atac.tsv
 ```
 
-On Perlmutter, `-p nersc,test` does the same stub check through Slurm. Keep a run's `work/`
-folder to allow `-resume`.
+On a cluster, `-p nersc,test` (or your cluster's profile) does the same stub check through Slurm.
+Keep a run's `work/` folder to allow `-resume`.
 
 ## Find and interpret your results
 
@@ -201,7 +206,7 @@ between tools or studies.
 
 | I want to… | Start here |
 | --- | --- |
-| Configure runs on Perlmutter or Sherlock | [Cluster guide](docs/usage/clusters.md) |
+| Configure runs on Perlmutter, Sherlock or another Slurm cluster | [Cluster guide](docs/usage/clusters.md) |
 | Run DAP-seq or understand its scientific settings | [DAP-seq guide](docs/usage/dapseq-reference.md) |
 | Run paired-end bulk ATAC | [Bulk ATAC guide](docs/usage/bulk-atac.md) |
 | Make pseudobulks from single-cell ATAC fragments | [scATAC guide](docs/usage/scatac-seq.md) |
