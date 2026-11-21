@@ -40,7 +40,7 @@ process SRA_FASTQ {
     cat reads.tsv >&2
     barcode=\$(awk -F '\\t' '\$2 == ${meta.barcode_length} {print \$1}' reads.tsv)
     if [ "\$(printf '%s' "\$barcode" | grep -c .)" != 1 ]; then
-        printf '%s has no single %s-base barcode read; is it a 10x scATAC run?\\n' '${run}' \\
+        printf '%s has no single %s-base barcode read; is the chemistry right?\\n' '${run}' \\
             '${meta.barcode_length}' >&2
         exit 1
     fi

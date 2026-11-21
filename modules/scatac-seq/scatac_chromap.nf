@@ -33,9 +33,9 @@ process SCATAC_CHROMAP {
     tuple val(meta), path("${meta.id}.chromap.log"), emit: log
     script:
     def corrected = meta.barcode_whitelist != '-'
-    // The cell barcode is the last 16 bases of the barcode read: all of a 10x ATAC barcode read,
-    // and after the 8-base spacer in a multiome ATAC one.
-    def start = meta.barcode_length - 16
+    // The cell barcode runs from meta.barcode_start to the end of the barcode read: all of a 10x
+    // ATAC or sci-ATAC barcode read, and after the 8-base spacer in a multiome ATAC one.
+    def start = meta.barcode_start
     """
     gzip -dc '${fasta}' > genome.fa
     orientation=+

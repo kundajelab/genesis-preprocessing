@@ -361,6 +361,7 @@ def check_failures(work: Path, sheet: Path) -> None:
         ("chemistry", [{**rows[0], "chemistry": "10x-rna-v3"}], "chemistry must be"),
         ("run-format", [{**rows[0], "sra_runs": "SRR1;SRR2"}], "sra_runs must be"),
         ("whitelist", [{**rows[0], "barcode_whitelist": "absent.txt"}], "whitelist missing"),
+        ("sci-list", [{**rows[0], "chemistry": "sci-atac"}], "set barcode_whitelist to -"),
         ("cells", [{**rows[0], "cells_url": "cells.tsv"}], "cells_url must be"),
         ("shared-run", [rows[0], {**rows[1], "sra_runs": "SRR0000002"}], "is listed for both"),
         ("organelles", [rows[0], {**rows[1], "organelle_contigs": "-"}], "disagree on"),
@@ -389,7 +390,7 @@ def fastq(path: Path, reads: list[str]) -> None:
 
 
 def simulate(work: Path, generator: random.Random) -> dict[str, Counter]:
-    """10x reads for two libraries; returns each library's expected chromap fragments."""
+    """10x and sci-ATAC reads for three libraries; returns each library's expected fragments."""
     genome = {
         "chr1": "".join(generator.choices("ACGT", k=1000000)),
         "ChrM": "".join(generator.choices("ACGT", k=20000)),
@@ -401,11 +402,14 @@ def simulate(work: Path, generator: random.Random) -> dict[str, Counter]:
     expected: dict[str, Counter] = {}
     # 10x ATAC v1: a 16-base barcode read as is. Multiome: an 8-base spacer, then the barcode,
     # read on the other strand.
-    for library, multiome in (("v1", False), ("arc", True)):
+    # sci-ATAC: a fixed 6-base sample index, then a combinatorial cell index; the 28-base read is
+    # the barcode as is, with no list to correct it against.
+    sci = ["ATCACG" + "".join(generator.choices("ACGT", k=22)) for _ in range(9)]
+    for library, multiome in (("v1", False), ("arc", True), ("sci", False)):
         r1, r2, codes = [], [], []
         fragments: Counter = Counter()
-        cells = whitelist[:6] if not multiome else whitelist[10:16]
-        noise = whitelist[30:33] if not multiome else whitelist[40:43]
+        cells = {"v1": whitelist[:6], "arc": whitelist[10:16], "sci": sci[:6]}[library]
+        noise = {"v1": whitelist[30:33], "arc": whitelist[40:43], "sci": sci[6:]}[library]
         for barcode, count in [(b, 40) for b in cells] + [(b, 2) for b in noise]:
             chosen = []
             for _ in range(count):
@@ -415,7 +419,7 @@ def simulate(work: Path, generator: random.Random) -> dict[str, Counter]:
             # Some fragments are read twice: PCR duplicates, kept once.
             for contig, start, end in chosen + chosen[:5]:
                 code = barcode
-                if generator.random() < 0.2:
+                if library != "sci" and generator.random() < 0.2:
                     # One sequencing error, corrected against the whitelist.
                     position = generator.randrange(16)
                     base = generator.choice([b for b in "ACGT" if b != code[position]])
@@ -460,7 +464,7 @@ def check_real_tools(work: Path) -> None:
                     "--references",
                     str(work),
                     "--libraries",
-                    "v1:16:whitelist.txt,arc:24:whitelist.txt",
+                    "v1:16:0:whitelist.txt,arc:24:8:whitelist.txt,sci:28:0:-",
                     "--run_dir",
                     str(work / f"published-{suffix}"),
                     "--scatac_min_fragments",
@@ -493,7 +497,8 @@ def check_real_tools(work: Path) -> None:
             for line in stream:
                 contig, start, end, barcode, count = line.rstrip("\n").split("\t")
                 observed[(contig, int(start), int(end), barcode)] = int(count)
-        # Exact 10x fragments: Tn5 offsets applied, duplicates merged, barcodes corrected.
+        # Exact 10x fragments: Tn5 offsets applied, duplicates merged, barcodes corrected (sci-ATAC
+        # barcodes kept whole).
         assert observed == fragments, (library, len(observed), len(fragments))
         cells = sorted(work.glob(f"work/*/*/{library}.source.cells.tsv"))
         rows = [line.split("\t") for line in cells[0].read_text().splitlines()[1:]]
