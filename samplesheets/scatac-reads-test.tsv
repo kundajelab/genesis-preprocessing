@@ -5,6 +5,8 @@ SRP474955_seedling_0h_rep3	Sorghum_bicolor	SRR26989943	10x-multiome-atac	-	Sbico
 SRP474955_seedling_0h_rep4	Sorghum_bicolor	SRR26989942	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
 SRP474955_seedling_0h_rep5	Sorghum_bicolor	SRR26989941	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
 SRP474955_seedling_0h_rep6	Sorghum_bicolor	SRR26989940	10x-multiome-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP483298_leaf_rep1	Sorghum_bicolor	SRR27704581	sci-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
+SRP483298_leaf_rep2	Sorghum_bicolor	SRR27704580	sci-atac	-	Sbicolor_730_v5.0_PtMt.fa.gz	Sbicolor_730_v5.1_PtMt.genes.bed	Pt,Mt	-
 SRP273727_root_rep1	Arabidopsis_thaliana	SRR12712405	10x-atac-v1	-	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.genes.bed	ChrC,ChrM	737K-cratac-v1.txt
 SRP273727_root_rep2	Arabidopsis_thaliana	SRR12712406	10x-atac-v1	-	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.genes.bed	ChrC,ChrM	737K-cratac-v1.txt
 SRP273996_root_rep1	Arabidopsis_thaliana	SRR12340627,SRR12340628	10x-atac-v1	-	Athaliana_447_TAIR10.fa.gz	Athaliana_447_Araport11.genes.bed	ChrC,ChrM	737K-cratac-v1.txt

@@ -16,7 +16,7 @@ for CRA studies; the scATAC sheet lists SRA runs.
 | `atac-seq-test.tsv` | 24 | 123 GB | 6 Sorghum (leaf, 3 studies) and 18 A. thaliana (one per study, several tissues); spans size, TSS enrichment and organelle fraction; 5 libraries download from GSA; 0.05-38 GB |
 | `rna-seq-test.tsv` | 20 | 208 GB | Sorghum, 16 projects; SE and PE; `reverse`, `forward` and `unstranded`; 0.21-72 GB |
 | `tss-seq-test.tsv` | 24 | 36 GB | A. thaliana (Sorghum has no curated TSS libraries), all SE: 9 CAGE and 5 each of nAnT-iCAGE, TSS-seq and csRNA-seq; 0.39-7.8 GB |
-| `scatac-reads-test.tsv` | 24 | 780 GB | Every curated library: 6 Sorghum (multiome ATAC) and 18 A. thaliana (ATAC v1 and multiome ATAC); 1-9 runs per library, 1-4 files per run; 7-139 GB, up to 1.8 billion reads |
+| `scatac-reads-test.tsv` | 26 | 804 GB | Every curated library: 8 Sorghum (6 multiome ATAC, 2 sci-ATAC) and 18 A. thaliana (ATAC v1 and multiome ATAC); 1-9 runs per library, 1-4 files per run; 7-139 GB, up to 1.8 billion reads |
 
 The scatac-seq workflow starts from fragment files, which no curated sheet provides, so it has
 no test sheet.
@@ -106,7 +106,9 @@ version. The FASTA has 20 contigs (`Chr01`–`Chr10`, 8 scaffolds, `Mt` 468,628 
 
 The 10x ATAC barcode list (`737K-cratac-v1.txt`) is downloaded into the references folder when
 it is missing. 10x does not allow redistributing it, so it is not in this repository. The
-multiome ATAC libraries (all 6 Sorghum and 8 A. thaliana) need the multiome list
+multiome ATAC libraries (6 Sorghum and 8 A. thaliana) need the multiome list
 (`737K-arc-v1.txt`), which only ships inside Cell Ranger ARC, so their rows use `-`: barcodes
 are not corrected, and reads with a barcode error are dropped. With Cell Ranger ARC's list in
-the references folder, set `barcode_whitelist` to its name.
+the references folder, set `barcode_whitelist` to its name. The 2 sci-ATAC libraries (Sorghum)
+have no barcode list: their combinatorial barcodes are used whole, uncorrected, so their rows
+must use `-`.
