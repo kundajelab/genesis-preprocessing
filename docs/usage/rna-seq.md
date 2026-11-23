@@ -123,4 +123,4 @@ Under `WORKSPACE/RUN_NAME/output/<species>/<sample_id>/`:
 
 `output/multiqc/` has the run's MultiQC report. As for DAP-seq, `output/` also holds
 `genesis-images.lock` and `git-status.txt`, and `trace/` the Nextflow trace, report,
-timeline and DAG.
+timeline and DAG, and the sample sheet the run read.

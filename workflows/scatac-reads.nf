@@ -1,6 +1,7 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
+include { savedSampleSheet } from '../modules/common/sample_sheet'
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { GET_CHROMAP_INDEX } from '../modules/scatac-seq/get_chromap_index'
@@ -37,39 +38,39 @@ def checkSamples(sheet, rows, references) {
                   'reference_genes', 'organelle_contigs', 'barcode_whitelist']
     def columns = sheet.withReader { reader -> reader.readLine() }?.split('\t')?.toList()
     if (columns != header) {
-        error("${sheet}: expected header ${header.join(' ')}")
+        error("${params.input}: expected header ${header.join(' ')}")
     }
     def referenceIds = [:]
     def annotations = [:]
     def runs = [:]
     rows.each { row ->
         if (!references.resolve(row.reference_fasta).isFile()) {
-            error("${sheet}: reference missing: ${row.reference_fasta}")
+            error("${params.input}: reference missing: ${row.reference_fasta}")
         }
         if (row.reference_genes != '-' && !references.resolve(row.reference_genes).isFile()) {
-            error("${sheet}: gene annotation missing: ${row.reference_genes}")
+            error("${params.input}: gene annotation missing: ${row.reference_genes}")
         }
         if (row.barcode_whitelist != '-' && !references.resolve(row.barcode_whitelist).isFile() &&
             !knownWhitelists().containsKey(row.barcode_whitelist)) {
-            error("${sheet}: barcode whitelist missing: ${row.barcode_whitelist} (the workflow " +
+            error("${params.input}: barcode whitelist missing: ${row.barcode_whitelist} (the workflow " +
                   "downloads only ${knownWhitelists().keySet().join(', ')})")
         }
         row.sra_runs.tokenize(',').each { run ->
             def owner = runs.putIfAbsent(run, row.id)
             if (owner != null) {
-                error("${sheet}: run ${run} is listed for both ${owner} and ${row.id}")
+                error("${params.input}: run ${run} is listed for both ${owner} and ${row.id}")
             }
         }
         def referenceId = row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, '')
         def previous = referenceIds.putIfAbsent(referenceId, row.reference_fasta)
         if (previous != null && previous != row.reference_fasta) {
-            error("${sheet}: reference ID collision: ${previous} and ${row.reference_fasta} " +
+            error("${params.input}: reference ID collision: ${previous} and ${row.reference_fasta} " +
                   "both use ${referenceId}; use distinct reference basenames")
         }
         def annotation = [row.reference_genes, row.organelle_contigs]
         def recorded = annotations.putIfAbsent(row.reference_fasta, annotation)
         if (recorded != null && recorded != annotation) {
-            error("${sheet}: rows using ${row.reference_fasta} disagree on reference_genes or " +
+            error("${params.input}: rows using ${row.reference_fasta} disagree on reference_genes or " +
                   "organelle_contigs")
         }
     }
@@ -97,7 +98,7 @@ workflow {
     // assets/scatac-reads.params.schema.json checks the sheet, paths and options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
-    def sheet = file(params.input)
+    def sheet = savedSampleSheet()
     def referencesDir = file(params.references).toAbsolutePath()
     // Validate the whole sheet before any task starts, so a bad sheet downloads nothing.
     def sheetRows = samplesheetToList(sheet, "${repoDir}/assets/scatac-reads.samples.schema.json")

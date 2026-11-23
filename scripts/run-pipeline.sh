@@ -14,7 +14,8 @@ function usage {
     cat << EOF
 Usage: $0 [ARGS] [--] INPUT.tsv [NEXTFLOW_ARGS]
 
-Run a pipeline on exactly one sample sheet.
+Run a pipeline on exactly one sample sheet: a file, or an http(s) URL ending in .tsv, which
+Nextflow reads directly. Each run saves the sheet it used beside its trace files.
 * Work and the Nextflow log go in WORKSPACE/RUN_NAME/; published output and trace files go
   in PERSIST_DIR/RUN_NAME/, or with the rest when there is no persist folder.
 * Nextflow is launched from WORKSPACE/RUN_NAME, so -resume picks up that run's history.
@@ -34,7 +35,8 @@ ARGS:
         workspace may be purged; created if missing. Default from get-default-persist-dir.sh, by
         profile: \$CFS/PROJECT/\$USER/runs with nersc, \$OAK/\$USER/genesis/runs with sherlock,
         otherwise none
-    -n|--run-name: Name of the run folder in the workspace. Default: INPUT.tsv basename without .tsv
+    -n|--run-name: Name of the run folder in the workspace. Default: INPUT.tsv basename (of the
+        file or URL) without .tsv
     --workflow: Workflow in workflows/ to run: dap-seq, atac-seq, scatac-seq, scatac-reads, rna-seq or tss-seq. Default: $workflow
 EOF
 }
@@ -90,31 +92,37 @@ if (($# < 1)); then
 fi
 sheet=$1
 shift
-if [[ ! -f $sheet ]]; then printf 'Missing input TSV: %s\n' "$sheet" >&2; exit 2; fi
-if [[ ! -f $repo_dir/workflows/$workflow.nf || ! -f $repo_dir/conf/$workflow.config ]]; then
+# A sheet at an http(s) URL goes to Nextflow as is; its schema checks that it exists.
+remote_sheet=false
+if [[ "$sheet" == http://* || "$sheet" == https://* ]]; then remote_sheet=true; fi
+if ! $remote_sheet && [[ ! -f "$sheet" ]]; then
+    printf 'Missing input TSV: %s\n' "$sheet" >&2
+    exit 2
+fi
+if [[ ! -f "$repo_dir/workflows/$workflow.nf" || ! -f "$repo_dir/conf/$workflow.config" ]]; then
     printf 'Unknown workflow: %s\n' "$workflow" >&2
     exit 2
 fi
-if [[ $sheet != /* ]]; then sheet="$PWD/$sheet"; fi
+if ! $remote_sheet && [[ "$sheet" != /* ]]; then sheet="$PWD/$sheet"; fi
 # Make the workspace absolute: nextflow is launched from inside the run folder.
-if [[ $workspace != /* ]]; then workspace="$PWD/$workspace"; fi
+if [[ "$workspace" != /* ]]; then workspace="$PWD/$workspace"; fi
 # The default is looked up only when needed, so -R works where there is none (e.g. no $OAK).
-if [[ -z $references ]]; then
+if [[ -z "$references" ]]; then
     references=$("$script_dir/get-default-references.sh" "$profile")
 fi
-if [[ $references != /* ]]; then references="$PWD/$references"; fi
+if [[ "$references" != /* ]]; then references="$PWD/$references"; fi
 # Runs publish reference products such as indexes into this folder, so it must exist.
 mkdir -p -- "$references"
 # Without -P, use the default; where it cannot be found, outputs stay in the workspace.
-if [[ -z $persist_dir ]] &&
+if [[ -z "$persist_dir" ]] &&
     ! persist_dir=$("$script_dir/get-default-persist-dir.sh" "$profile"); then
     printf 'Output and trace files stay in the workspace, which may be purged; pass %s\n' \
         -P/--persist-dir >&2
     persist_dir=""
 fi
 persist_args=()
-if [[ -n $persist_dir ]]; then
-    if [[ $persist_dir != /* ]]; then persist_dir="$PWD/$persist_dir"; fi
+if [[ -n "$persist_dir" ]]; then
+    if [[ "$persist_dir" != /* ]]; then persist_dir="$PWD/$persist_dir"; fi
     mkdir -p -- "$persist_dir"
     persist_args=(--persist_dir "$persist_dir")
 fi

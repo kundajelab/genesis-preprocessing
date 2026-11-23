@@ -26,7 +26,9 @@ from verify_pipeline import (
     launch_folder,
     reference_record,
     run_logged,
+    saved_sheets,
     serve,
+    served_sheet,
     trace_rows,
     write_reads,
 )
@@ -211,7 +213,7 @@ def create_fixture(work: Path, base_url: str, *, docker: bool) -> Path:
 
 def run_rna(
     work: Path,
-    sheet: Path,
+    sheet: Path | str,
     *,
     docker: bool = False,
     resume: bool = False,
@@ -359,7 +361,7 @@ def check_results(published: Path) -> None:
         assert qc["max_intron"] == "3000", qc
 
 
-def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
+def check_resume(work: Path, sheet: Path | str, *, docker: bool) -> None:
     """Resumed runs reuse the downloads, and then every task."""
     assert run_rna(work, sheet, docker=docker, resume=True).returncode == 0
     rows = trace_rows(work, "resume")
@@ -631,11 +633,16 @@ def main() -> None:
         (work / "inputs").mkdir()
         with serve(work / "inputs", docker=docker) as base_url:
             sheet = create_fixture(work, base_url, docker=docker)
-            assert run_rna(work, sheet, docker=docker).returncode == 0
+            # The main run and its resumes read the sheet from a URL, as runs from the curation
+            # bucket do; the other runs read local sheets. Each run saves what it read.
+            url = served_sheet(sheet, work / "inputs", base_url)
+            assert run_rna(work, url, docker=docker).returncode == 0
+            (saved,) = saved_sheets(work)
+            assert saved.read_bytes() == sheet.read_bytes(), saved
             check_outputs(work, docker=docker)
             # Independent of each other, each in its own launch folder, so they run at once.
             phases: list[Callable[[], object]] = [
-                functools.partial(check_resume, work, sheet, docker=docker),
+                functools.partial(check_resume, work, url, docker=docker),
                 functools.partial(check_star_rebuild, work, sheet, docker=docker),
             ]
             if not docker:

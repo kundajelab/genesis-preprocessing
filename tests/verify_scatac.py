@@ -23,7 +23,9 @@ from verify_pipeline import (
     in_parallel,
     launch_folder,
     run_logged,
+    saved_sheets,
     serve,
+    served_sheet,
     trace_rows,
 )
 
@@ -129,7 +131,7 @@ def create_fixture(work: Path, base_url: str) -> Path:
 
 def run_scatac(
     work: Path,
-    sheet: Path,
+    sheet: Path | str,
     *,
     docker: bool = False,
     resume: bool = False,
@@ -331,7 +333,7 @@ def check_cut_sites(work: Path) -> None:
         assert cuts == expected, row["name"]
 
 
-def check_resume(work: Path, sheet: Path, *, docker: bool) -> None:
+def check_resume(work: Path, sheet: Path | str, *, docker: bool) -> None:
     """Resumed runs reuse the downloads, and then every task."""
     assert run_scatac(work, sheet, docker=docker, resume=True).returncode == 0
     rows = trace_rows(work, "resume")
@@ -428,13 +430,18 @@ def main() -> None:
         (work / "inputs").mkdir()
         with serve(work / "inputs", docker=docker) as base_url:
             sheet = create_fixture(work, base_url)
-            assert run_scatac(work, sheet, docker=docker).returncode == 0
+            # The main run and its resumes read the sheet from a URL, as runs from the curation
+            # bucket do; the other runs read local sheets. Each run saves what it read.
+            url = served_sheet(sheet, work / "inputs", base_url)
+            assert run_scatac(work, url, docker=docker).returncode == 0
+            (saved,) = saved_sheets(work)
+            assert saved.read_bytes() == sheet.read_bytes(), saved
             check_outputs(work, docker=docker)
             if docker:
                 check_cut_sites(work)
             # Independent of each other, each in its own launch folder, so they run at once.
             phases: list[Callable[[], object]] = [
-                functools.partial(check_resume, work, sheet, docker=docker)
+                functools.partial(check_resume, work, url, docker=docker)
             ]
             if docker:
                 phases += [

@@ -1,6 +1,7 @@
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsSummaryLog; samplesheetToList } from 'plugin/nf-schema'
+include { savedSampleSheet } from '../modules/common/sample_sheet'
 include { GET_REFERENCES } from '../modules/common/get_references'
 include { DOWNLOAD } from '../modules/common/download'
 include { FASTQC } from '../modules/common/fastqc'
@@ -19,27 +20,27 @@ def checkSamples(sheet, rows, references) {
                   'reference_genes', 'organelle_contigs']
     def columns = sheet.withReader { reader -> reader.readLine() }?.split('\t')?.toList()
     if (columns != header) {
-        error("${sheet}: expected header ${header.join(' ')}")
+        error("${params.input}: expected header ${header.join(' ')}")
     }
     def referenceIds = [:]
     def annotations = [:]
     rows.each { row ->
         if (!references.resolve(row.reference_fasta).isFile()) {
-            error("${sheet}: reference missing: ${row.reference_fasta}")
+            error("${params.input}: reference missing: ${row.reference_fasta}")
         }
         if (row.reference_genes != '-' && !references.resolve(row.reference_genes).isFile()) {
-            error("${sheet}: gene annotation missing: ${row.reference_genes}")
+            error("${params.input}: gene annotation missing: ${row.reference_genes}")
         }
         def referenceId = row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, '')
         def previous = referenceIds.putIfAbsent(referenceId, row.reference_fasta)
         if (previous != null && previous != row.reference_fasta) {
-            error("${sheet}: reference ID collision: ${previous} and ${row.reference_fasta} " +
+            error("${params.input}: reference ID collision: ${previous} and ${row.reference_fasta} " +
                   "both use ${referenceId}; use distinct reference basenames")
         }
         def annotation = [row.reference_genes, row.organelle_contigs]
         def recorded = annotations.putIfAbsent(row.reference_fasta, annotation)
         if (recorded != null && recorded != annotation) {
-            error("${sheet}: rows using ${row.reference_fasta} disagree on reference_genes or " +
+            error("${params.input}: rows using ${row.reference_fasta} disagree on reference_genes or " +
                   "organelle_contigs")
         }
     }
@@ -64,10 +65,10 @@ workflow {
         log.info(report.join('\n'))
     }
 
-    // assets/atac-seq.params.schema.json checks the sheet, paths, resources and analysis options.
+    // assets/atac-seq.params.schema.json checks the sheet, paths and analysis options.
     validateParameters()
     log.info(paramsSummaryLog(workflow))
-    def sheet = file(params.input)
+    def sheet = savedSampleSheet()
     def referencesDir = file(params.references).toAbsolutePath()
     def bwaOptions = [
         batch_size: params.bwa_batch_size, seed_length: params.bwa_seed_length,
