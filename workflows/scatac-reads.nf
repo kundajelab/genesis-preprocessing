@@ -11,10 +11,17 @@ include { SCATAC_CHROMAP } from '../modules/scatac-seq/scatac_chromap'
 include { SCATAC_CELLS } from '../modules/scatac-seq/scatac_cells'
 include { SCATAC_PSEUDOBULKS } from '../modules/scatac-seq/scatac_pseudobulks'
 
-// The barcode read's length for each chemistry: the 16-base cell barcode alone, or after an
-// 8-base spacer in multiome ATAC.
-def barcodeLength(chemistry) {
-    return ['10x-atac-v1': 16, '10x-atac-v2': 16, '10x-multiome-atac': 24][chemistry]
+// The barcode read of each chemistry: its length, and where the cell barcode starts in it. 10x
+// ATAC reads the 16-base barcode alone, multiome ATAC after an 8-base spacer. sci-ATAC's 28-base
+// index read (a fixed sample index, then the combinatorial cell index) is the barcode as a whole;
+// there is no list to correct it against.
+def barcodeRead(chemistry) {
+    return [
+        '10x-atac-v1': [length: 16, start: 0],
+        '10x-atac-v2': [length: 16, start: 0],
+        '10x-multiome-atac': [length: 24, start: 8],
+        'sci-atac': [length: 28, start: 0],
+    ][chemistry]
 }
 
 // 10x barcode lists the workflow downloads into the references folder when they are missing:
@@ -49,6 +56,10 @@ def checkSamples(sheet, rows, references) {
         }
         if (row.reference_genes != '-' && !references.resolve(row.reference_genes).isFile()) {
             error("${params.input}: gene annotation missing: ${row.reference_genes}")
+        }
+        if (row.chemistry == 'sci-atac' && row.barcode_whitelist != '-') {
+            error("${params.input}: ${row.sample_id}: sci-atac barcodes are combinatorial; set " +
+                  "barcode_whitelist to -")
         }
         if (row.barcode_whitelist != '-' && !references.resolve(row.barcode_whitelist).isFile() &&
             !knownWhitelists().containsKey(row.barcode_whitelist)) {
@@ -107,7 +118,8 @@ workflow {
     samples = channel.fromList(sheetRows.collect { row ->
         row + [ref_id: row.reference_fasta.replaceFirst(/\.(fa|fasta|fna)\.gz$/, ''),
                organelles: row.organelle_contigs == '-' ? [] : row.organelle_contigs.tokenize(','),
-               runs: row.sra_runs.tokenize(','), barcode_length: barcodeLength(row.chemistry)]
+               runs: row.sra_runs.tokenize(','), barcode_length: barcodeRead(row.chemistry).length,
+               barcode_start: barcodeRead(row.chemistry).start]
     })
     // The shared reference step gives chromosome sizes, reusing existing products, and builds the
     // bwa-mem3 index for other modalities; the chromap index is reused the same way.

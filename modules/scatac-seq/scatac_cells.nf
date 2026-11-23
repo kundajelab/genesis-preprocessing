@@ -44,6 +44,22 @@ process SCATAC_CELLS {
         # The authors' barcodes may carry Cell Ranger's -1 suffix; chromap writes none.
         awk -F '\\t' -v OFS='\\t' 'NR == 1 {print; next} {sub(/-1\$/, "", \$1); print}' authors.tsv \\
             > '${meta.id}.source.cells.tsv'
+        # Compare listed barcodes to the this library's fragment counts:
+        # - At least one barcode must be in an observed fragment
+        # - The majority of found barcodes must be in cell fragments, not background (above
+        #   scatac_min_fragments counts)
+        # We would expect a barcode list in the other orientation or format to match no fragments.
+        # We would expect another library's barcodes to mostly match background.
+        awk -F '\\t' -v min=${params.scatac_min_fragments} '
+            NR == FNR {nuclear[\$1] = \$2; next}
+            FNR == 1 || seen[\$1]++ {next}
+            {listed++}
+            \$1 in nuclear {found++; cells += nuclear[\$1] >= min}
+            END {
+                printf "%d of %d listed barcodes found, %d of them with at least %d nuclear fragments\\n", found, listed, cells, min > "/dev/stderr"
+                if (!found) {print "No listed barcode is in the fragments: wrong orientation, format or library?" > "/dev/stderr"; exit 1}
+                if (cells * 2 < found) {print "Most listed barcodes found have too few fragments for cells: wrong library?" > "/dev/stderr"; exit 1}
+            }' counts.tsv '${meta.id}.source.cells.tsv'
     fi
     cells=\$(( \$(wc -l < '${meta.id}.source.cells.tsv') - 1 ))
     if [ "\$cells" -lt 1 ]; then

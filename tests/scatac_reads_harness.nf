@@ -15,10 +15,14 @@ workflow {
                sha256: sha256(fasta), length: 1020000L]
     GET_CHROMAP_INDEX(channel.of(tuple(ref, fasta)), file(params.references))
     def libraries = params.libraries.tokenize(',').collect { spec ->
-        // id:barcode_length:whitelist (whitelist '-' for none)
-        def (id, length, whitelist) = spec.tokenize(':')
+        // id:barcode_length:barcode_start:whitelist[:cells_url] (whitelist '-' for none; no
+        // cells_url, or '-', to call cells). The URL is the rest of the spec, colons and all.
+        def fields = spec.split(':', 5) as List
+        def (id, length, start, whitelist) = fields
+        def cellsUrl = fields.size() == 5 ? fields[4] : '-'
         def meta = [id: id, ref_id: ref.id, species: 'Plant_synthetic',
-                    barcode_length: length.toInteger(), barcode_whitelist: whitelist, cells_url: '-',
+                    barcode_length: length.toInteger(), barcode_start: start.toInteger(),
+                    barcode_whitelist: whitelist, cells_url: cellsUrl,
                     organelles: ['ChrM'], genome_length: 1020000L]
         tuple(ref.id, meta, inputs.resolve("${id}.R1.fastq.gz"), inputs.resolve("${id}.R2.fastq.gz"),
               inputs.resolve("${id}.barcode.fastq.gz"),

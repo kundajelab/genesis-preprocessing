@@ -135,14 +135,14 @@ root_rep1	Arabidopsis_thaliana	SRR12340627,SRR12340628	10x-atac-v1	-	Athaliana_4
 | Column | Meaning |
 | --- | --- |
 | `sra_runs` | The library's SRA runs (its lanes), comma-separated; they are mapped together |
-| `chemistry` | `10x-atac-v1` or `10x-atac-v2` (16-base barcode read), or `10x-multiome-atac` (24 bases: an 8-base spacer, then the barcode) |
+| `chemistry` | `10x-atac-v1` or `10x-atac-v2` (16-base barcode read), `10x-multiome-atac` (24 bases: an 8-base spacer, then the barcode), or `sci-atac` (28-base index read: a fixed sample index, then the combinatorial cell index; used whole) |
 | `cells_url` | The authors' `barcode<TAB>group` cell list, or `-` to call cells |
-| `barcode_whitelist` | The 10x barcode list's name in the references folder (`737K-cratac-v1.txt` is downloaded there when missing), or `-` for no barcode correction |
+| `barcode_whitelist` | The 10x barcode list's name in the references folder (`737K-cratac-v1.txt` is downloaded there when missing), or `-` for no barcode correction (always `-` for `sci-atac`, whose barcodes are combinatorial) |
 
 The other columns are as above. A run may be listed for one library only.
 
 1. **Download.** `prefetch` and `fasterq-dump --include-technical` from NCBI SRA, which keeps
-   the 10x barcode read; ENA's FASTQs drop it. Submitters order the reads differently, so the
+   the barcode read (SRA marks it technical); ENA's FASTQs drop it. Submitters order the reads differently, so the
    barcode read is the one of the chemistry's length and the genomic reads are the two
    longest. A run without such a barcode read stops the library. Downloading and converting
    are separate tasks, so a failed conversion, or `-resume` after one, reuses the download;

@@ -20,14 +20,17 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 from verify_pipeline import (
+    available_resources,
     executor_limits,
     failed_task_errors,
     in_parallel,
     launch_folder,
     run_logged,
+    serve,
     trace_rows,
 )
 
@@ -361,6 +364,7 @@ def check_failures(work: Path, sheet: Path) -> None:
         ("chemistry", [{**rows[0], "chemistry": "10x-rna-v3"}], "chemistry must be"),
         ("run-format", [{**rows[0], "sra_runs": "SRR1;SRR2"}], "sra_runs must be"),
         ("whitelist", [{**rows[0], "barcode_whitelist": "absent.txt"}], "whitelist missing"),
+        ("sci-list", [{**rows[0], "chemistry": "sci-atac"}], "set barcode_whitelist to -"),
         ("cells", [{**rows[0], "cells_url": "cells.tsv"}], "cells_url must be"),
         ("shared-run", [rows[0], {**rows[1], "sra_runs": "SRR0000002"}], "is listed for both"),
         ("organelles", [rows[0], {**rows[1], "organelle_contigs": "-"}], "disagree on"),
@@ -389,7 +393,7 @@ def fastq(path: Path, reads: list[str]) -> None:
 
 
 def simulate(work: Path, generator: random.Random) -> dict[str, Counter]:
-    """10x reads for two libraries; returns each library's expected chromap fragments."""
+    """10x and sci-ATAC reads for three libraries; returns each library's expected fragments."""
     genome = {
         "chr1": "".join(generator.choices("ACGT", k=1000000)),
         "ChrM": "".join(generator.choices("ACGT", k=20000)),
@@ -401,11 +405,14 @@ def simulate(work: Path, generator: random.Random) -> dict[str, Counter]:
     expected: dict[str, Counter] = {}
     # 10x ATAC v1: a 16-base barcode read as is. Multiome: an 8-base spacer, then the barcode,
     # read on the other strand.
-    for library, multiome in (("v1", False), ("arc", True)):
+    # sci-ATAC: a fixed 6-base sample index, then a combinatorial cell index; the 28-base read is
+    # the barcode as is, with no list to correct it against.
+    sci = ["ATCACG" + "".join(generator.choices("ACGT", k=22)) for _ in range(9)]
+    for library, multiome in (("v1", False), ("arc", True), ("sci", False)):
         r1, r2, codes = [], [], []
         fragments: Counter = Counter()
-        cells = whitelist[:6] if not multiome else whitelist[10:16]
-        noise = whitelist[30:33] if not multiome else whitelist[40:43]
+        cells = {"v1": whitelist[:6], "arc": whitelist[10:16], "sci": sci[:6]}[library]
+        noise = {"v1": whitelist[30:33], "arc": whitelist[40:43], "sci": sci[6:]}[library]
         for barcode, count in [(b, 40) for b in cells] + [(b, 2) for b in noise]:
             chosen = []
             for _ in range(count):
@@ -415,7 +422,7 @@ def simulate(work: Path, generator: random.Random) -> dict[str, Counter]:
             # Some fragments are read twice: PCR duplicates, kept once.
             for contig, start, end in chosen + chosen[:5]:
                 code = barcode
-                if generator.random() < 0.2:
+                if library != "sci" and generator.random() < 0.2:
                     # One sequencing error, corrected against the whitelist.
                     position = generator.randrange(16)
                     base = generator.choice([b for b in "ACGT" if b != code[position]])
@@ -437,43 +444,66 @@ def check_real_tools(work: Path) -> None:
     (work / "inputs").mkdir()
     expected = simulate(work, random.Random(1555))
     limits = work / "limits.config"
-    limits.write_text(executor_limits(docker=True))
+    # chromap's --low-mem mode (part of --preset atac) allocates over 10 GB to merge its temporary
+    # files, however few reads there are: a fixed 10 GiB buffer for BED output (chromap 0.3.2,
+    # src/mapping_writer.h). So SCATAC_CHROMAP gets 12 GB, above the test profile's 2 GB cap,
+    # and the executor at least as much, so that it can run.
+    chromap = 12 * 2**30
+    _cpus, memory = available_resources(docker=True)
+    assert memory > chromap, f"chromap needs 12 GB; Docker has {memory / 2**30:.1f} GB"
+    limits.write_text(
+        executor_limits(docker=True)
+        + f"executor.memory = '{max(chromap, memory // 2) // 2**20} MB'\n"
+        + "process {\n"
+        + "    withName: 'SCATAC_CHROMAP' {\n"
+        + "        resourceLimits = [cpus: 1, memory: 12.GB, time: 5.m]\n"
+        + "    }\n"
+        + "}\n"
+        # Linux Docker only resolves host.docker.internal, where the cell lists are served, with
+        # an explicit host-gateway mapping.
+        + "docker.runOptions = '-u $(id -u):$(id -g) "
+        "--add-host=host.docker.internal:host-gateway'\n"
+    )
 
-    def harness(suffix: str) -> list[str]:
+    def harness(
+        suffix: str,
+        libraries: str = "v1:16:0:whitelist.txt,arc:24:8:whitelist.txt,sci:28:0:-",
+        *,
+        expect_failure: bool = False,
+    ) -> list[str]:
         # The FASTA's folder is the references folder, where the chromap index is published.
-        assert (
-            nextflow(
-                work,
-                [
-                    "run",
-                    str(ROOT / "tests/scatac_reads_harness.nf"),
-                    "-c",
-                    str(ROOT / "conf/scatac-reads.config"),
-                    "-profile",
-                    "local,test,docker",
-                    "-c",
-                    str(limits),
-                    "--inputs",
-                    str(work / "inputs"),
-                    "--fasta",
-                    str(work / "sc.fa.gz"),
-                    "--references",
-                    str(work),
-                    "--libraries",
-                    "v1:16:whitelist.txt,arc:24:whitelist.txt",
-                    "--run_dir",
-                    str(work / f"published-{suffix}"),
-                    "--scatac_min_fragments",
-                    "30",
-                    "-work-dir",
-                    str(work / ("work" if suffix == "real" else f"work-{suffix}")),
-                    "-with-trace",
-                    str(work / f"trace-{suffix}.tsv"),
-                ],
-                suffix,
-            ).returncode
-            == 0
+        result = nextflow(
+            work,
+            [
+                "run",
+                str(ROOT / "tests/scatac_reads_harness.nf"),
+                "-c",
+                str(ROOT / "conf/scatac-reads.config"),
+                "-profile",
+                "local,test,docker",
+                "-c",
+                str(limits),
+                "--inputs",
+                str(work / "inputs"),
+                "--fasta",
+                str(work / "sc.fa.gz"),
+                "--references",
+                str(work),
+                "--libraries",
+                libraries,
+                "--run_dir",
+                str(work / f"published-{suffix}"),
+                "--scatac_min_fragments",
+                "30",
+                "-work-dir",
+                str(work / ("work" if suffix == "real" else f"work-{suffix}")),
+                "-with-trace",
+                str(work / f"trace-{suffix}.tsv"),
+            ],
+            suffix,
+            expect_failure=expect_failure,
         )
+        assert (result.returncode != 0) == expect_failure, (suffix, result.returncode)
         return [row["name"] for row in trace_rows(work, suffix)]
 
     assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in harness("real")
@@ -493,7 +523,8 @@ def check_real_tools(work: Path) -> None:
             for line in stream:
                 contig, start, end, barcode, count = line.rstrip("\n").split("\t")
                 observed[(contig, int(start), int(end), barcode)] = int(count)
-        # Exact 10x fragments: Tn5 offsets applied, duplicates merged, barcodes corrected.
+        # Exact 10x fragments: Tn5 offsets applied, duplicates merged, barcodes corrected (sci-ATAC
+        # barcodes kept whole).
         assert observed == fragments, (library, len(observed), len(fragments))
         cells = sorted(work.glob(f"work/*/*/{library}.source.cells.tsv"))
         rows = [line.split("\t") for line in cells[0].read_text().splitlines()[1:]]
@@ -506,6 +537,55 @@ def check_real_tools(work: Path) -> None:
     record.write_text(record.read_text().replace(f"{CHROMAP_VERSION}  chromap", "0.0.0  chromap"))
     assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in harness("rebuild")
     assert record.read_text() == chromap_record(work, "sc")
+    check_cell_lists(work, expected["v1"], harness)
+
+
+def check_cell_lists(work: Path, fragments: Counter, harness: Callable[..., list[str]]) -> None:
+    """Authors' cell lists for the v1 library: its cells pass; another orientation or library's
+    list stops the library."""
+    nuclear = Counter(b for (contig, _s, _e, b) in fragments if contig != "ChrM")
+    cells = sorted(b for b, n in nuclear.items() if n >= 30)
+    background = sorted(b for b, n in nuclear.items() if n < 30)
+    assert len(cells) > len(background) > 1, (cells, background)
+    lists = work / "lists"
+    lists.mkdir()
+    cases = {
+        # Cell Ranger's -1 suffix is dropped; a barcode of another library is not found.
+        "listed": ([f"{b}-1" for b in cells] + ["ATCACG" + "A" * 22], None),
+        "flipped": (
+            [reverse_complement(b) for b in cells],
+            "No listed barcode is in the fragments",
+        ),
+        "other": (background + cells[:1], "Most listed barcodes found have too few fragments"),
+    }
+    for name in cases:
+        for suffix in ("R1", "R2", "barcode"):
+            shutil.copyfile(
+                work / "inputs" / f"v1.{suffix}.fastq.gz",
+                work / "inputs" / f"{name}.{suffix}.fastq.gz",
+            )
+    with serve(lists, docker=True) as base_url:
+        for name, (listed, diagnostic) in cases.items():
+            (lists / f"{name}.tsv").write_text(
+                "barcode\tgroup\n" + "".join(f"{b}\tg\n" for b in listed)
+            )
+            harness(
+                f"cells-{name}",
+                f"{name}:16:0:whitelist.txt:{base_url}/{name}.tsv",
+                expect_failure=diagnostic is not None,
+            )
+            folder = work / f"work-cells-{name}"
+            if diagnostic is not None:
+                assert diagnostic in failed_task_errors(folder), name
+                continue
+            [published] = [
+                p for p in folder.glob(f"*/*/{name}.source.cells.tsv") if not p.is_symlink()
+            ]
+            rows = [line.split("\t") for line in published.read_text().splitlines()[1:]]
+            assert sorted(b for b, _group in rows) == sorted(b.removesuffix("-1") for b in listed)
+            log = (published.parent / ".command.err").read_text()
+            found = f"{len(cells)} of {len(listed)} listed barcodes found, {len(cells)} of them"
+            assert found in log, log
 
 
 def main() -> None:
