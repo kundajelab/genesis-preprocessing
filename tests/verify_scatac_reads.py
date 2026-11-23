@@ -20,14 +20,17 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 from verify_pipeline import (
+    available_resources,
     executor_limits,
     failed_task_errors,
     in_parallel,
     launch_folder,
     run_logged,
+    serve,
     trace_rows,
 )
 
@@ -441,43 +444,66 @@ def check_real_tools(work: Path) -> None:
     (work / "inputs").mkdir()
     expected = simulate(work, random.Random(1555))
     limits = work / "limits.config"
-    limits.write_text(executor_limits(docker=True))
+    # chromap's --low-mem mode (part of --preset atac) allocates over 10 GB to merge its temporary
+    # files, however few reads there are: a fixed 10 GiB buffer for BED output (chromap 0.3.2,
+    # src/mapping_writer.h). So SCATAC_CHROMAP gets 12 GB, above the test profile's 2 GB cap,
+    # and the executor at least as much, so that it can run.
+    chromap = 12 * 2**30
+    _cpus, memory = available_resources(docker=True)
+    assert memory > chromap, f"chromap needs 12 GB; Docker has {memory / 2**30:.1f} GB"
+    limits.write_text(
+        executor_limits(docker=True)
+        + f"executor.memory = '{max(chromap, memory // 2) // 2**20} MB'\n"
+        + "process {\n"
+        + "    withName: 'SCATAC_CHROMAP' {\n"
+        + "        resourceLimits = [cpus: 1, memory: 12.GB, time: 5.m]\n"
+        + "    }\n"
+        + "}\n"
+        # Linux Docker only resolves host.docker.internal, where the cell lists are served, with
+        # an explicit host-gateway mapping.
+        + "docker.runOptions = '-u $(id -u):$(id -g) "
+        "--add-host=host.docker.internal:host-gateway'\n"
+    )
 
-    def harness(suffix: str) -> list[str]:
+    def harness(
+        suffix: str,
+        libraries: str = "v1:16:0:whitelist.txt,arc:24:8:whitelist.txt,sci:28:0:-",
+        *,
+        expect_failure: bool = False,
+    ) -> list[str]:
         # The FASTA's folder is the references folder, where the chromap index is published.
-        assert (
-            nextflow(
-                work,
-                [
-                    "run",
-                    str(ROOT / "tests/scatac_reads_harness.nf"),
-                    "-c",
-                    str(ROOT / "conf/scatac-reads.config"),
-                    "-profile",
-                    "local,test,docker",
-                    "-c",
-                    str(limits),
-                    "--inputs",
-                    str(work / "inputs"),
-                    "--fasta",
-                    str(work / "sc.fa.gz"),
-                    "--references",
-                    str(work),
-                    "--libraries",
-                    "v1:16:0:whitelist.txt,arc:24:8:whitelist.txt,sci:28:0:-",
-                    "--run_dir",
-                    str(work / f"published-{suffix}"),
-                    "--scatac_min_fragments",
-                    "30",
-                    "-work-dir",
-                    str(work / ("work" if suffix == "real" else f"work-{suffix}")),
-                    "-with-trace",
-                    str(work / f"trace-{suffix}.tsv"),
-                ],
-                suffix,
-            ).returncode
-            == 0
+        result = nextflow(
+            work,
+            [
+                "run",
+                str(ROOT / "tests/scatac_reads_harness.nf"),
+                "-c",
+                str(ROOT / "conf/scatac-reads.config"),
+                "-profile",
+                "local,test,docker",
+                "-c",
+                str(limits),
+                "--inputs",
+                str(work / "inputs"),
+                "--fasta",
+                str(work / "sc.fa.gz"),
+                "--references",
+                str(work),
+                "--libraries",
+                libraries,
+                "--run_dir",
+                str(work / f"published-{suffix}"),
+                "--scatac_min_fragments",
+                "30",
+                "-work-dir",
+                str(work / ("work" if suffix == "real" else f"work-{suffix}")),
+                "-with-trace",
+                str(work / f"trace-{suffix}.tsv"),
+            ],
+            suffix,
+            expect_failure=expect_failure,
         )
+        assert (result.returncode != 0) == expect_failure, (suffix, result.returncode)
         return [row["name"] for row in trace_rows(work, suffix)]
 
     assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in harness("real")
@@ -511,6 +537,55 @@ def check_real_tools(work: Path) -> None:
     record.write_text(record.read_text().replace(f"{CHROMAP_VERSION}  chromap", "0.0.0  chromap"))
     assert "GET_CHROMAP_INDEX:CHROMAP_INDEX (sc)" in harness("rebuild")
     assert record.read_text() == chromap_record(work, "sc")
+    check_cell_lists(work, expected["v1"], harness)
+
+
+def check_cell_lists(work: Path, fragments: Counter, harness: Callable[..., list[str]]) -> None:
+    """Authors' cell lists for the v1 library: its cells pass; another orientation or library's
+    list stops the library."""
+    nuclear = Counter(b for (contig, _s, _e, b) in fragments if contig != "ChrM")
+    cells = sorted(b for b, n in nuclear.items() if n >= 30)
+    background = sorted(b for b, n in nuclear.items() if n < 30)
+    assert len(cells) > len(background) > 1, (cells, background)
+    lists = work / "lists"
+    lists.mkdir()
+    cases = {
+        # Cell Ranger's -1 suffix is dropped; a barcode of another library is not found.
+        "listed": ([f"{b}-1" for b in cells] + ["ATCACG" + "A" * 22], None),
+        "flipped": (
+            [reverse_complement(b) for b in cells],
+            "No listed barcode is in the fragments",
+        ),
+        "other": (background + cells[:1], "Most listed barcodes found have too few fragments"),
+    }
+    for name in cases:
+        for suffix in ("R1", "R2", "barcode"):
+            shutil.copyfile(
+                work / "inputs" / f"v1.{suffix}.fastq.gz",
+                work / "inputs" / f"{name}.{suffix}.fastq.gz",
+            )
+    with serve(lists, docker=True) as base_url:
+        for name, (listed, diagnostic) in cases.items():
+            (lists / f"{name}.tsv").write_text(
+                "barcode\tgroup\n" + "".join(f"{b}\tg\n" for b in listed)
+            )
+            harness(
+                f"cells-{name}",
+                f"{name}:16:0:whitelist.txt:{base_url}/{name}.tsv",
+                expect_failure=diagnostic is not None,
+            )
+            folder = work / f"work-cells-{name}"
+            if diagnostic is not None:
+                assert diagnostic in failed_task_errors(folder), name
+                continue
+            [published] = [
+                p for p in folder.glob(f"*/*/{name}.source.cells.tsv") if not p.is_symlink()
+            ]
+            rows = [line.split("\t") for line in published.read_text().splitlines()[1:]]
+            assert sorted(b for b, _group in rows) == sorted(b.removesuffix("-1") for b in listed)
+            log = (published.parent / ".command.err").read_text()
+            found = f"{len(cells)} of {len(listed)} listed barcodes found, {len(cells)} of them"
+            assert found in log, log
 
 
 def main() -> None:
