@@ -48,7 +48,7 @@ process DOWNLOAD_SCATAC_READS {
     elif (( status != 0 )); then
         exit "\$status"
     fi
-    # A run loaded from BAM stores aligned reads, and no barcode read (sra-split would refuse it).
+    # A run loaded from BAM stores aligned reads, and no barcode read.
     if vdb-dump --table_enum '${run}.sra' | grep -q '^tbl *: *PRIMARY_ALIGNMENT\$'; then
         printf '%s stores aligned reads (loaded from BAM), with no barcode read\\n' '${run}' >&2
         exit 1
