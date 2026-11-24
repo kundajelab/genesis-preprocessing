@@ -718,7 +718,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
         if "macs3 callpeak" in source:
             # MACS3 is invoked directly, bounded by the task's CPUs.
             assert "_control.primary.bam" in source
-            assert re.search(r"--threads [0-9]+\n", source), source
+            assert re.search(r"--threads [0-9]+\b", source), source
         if "Rscript" in source:
             assert "-s=-0:2:400" in source and "qc-bin/awk" in source
             assert ".spp.bam'" in source
@@ -887,6 +887,64 @@ def check_download_failures(work: Path, base_url: str) -> None:
             rows
         )
         assert raw.read_bytes() == contents
+
+
+def check_peak_model_failure(work: Path, base_url: str) -> None:
+    """An SE treatment without enrichment: MACS3 cannot build its fragment-size model, so the
+    sample gets no peaks or scores, only its failure reason, and the run still succeeds."""
+    with gzip.open(work / "references" / "se.fa.gz", "rt") as stream:
+        sequence = "".join(stream.read().splitlines()[1:])
+    generator = random.Random(88)
+    complement = str.maketrans("ACGT", "TGCA")
+    reads = []
+    for _ in range(32000):
+        start = generator.randrange(500, len(sequence) - 575)
+        read = sequence[start : start + 75]
+        reads.append(read.translate(complement)[::-1] if generator.random() < 0.5 else read)
+    folder = work / "inputs" / "se_flat"
+    folder.mkdir()
+    write_reads(folder / "reads.fastq.gz", reads)
+    case = work / "peak-model"
+    case.mkdir()
+    (case / "references").symlink_to(work / "references", target_is_directory=True)
+    shutil.copyfile(work / "limits.config", case / "limits.config")
+    sheet = case / "samples.tsv"
+    shared = {"species": "Plant_SE", "read2_url": "-", "reference_fasta": "se.fa.gz"}
+    write_sheet(
+        sheet,
+        [
+            {
+                "sample_id": "se_control",
+                "read1_url": f"{base_url}/se_control/reads.fastq.gz",
+                "control_sample": "-",
+                **shared,
+            },
+            {
+                "sample_id": "se_flat",
+                "read1_url": f"{base_url}/se_flat/reads.fastq.gz",
+                "control_sample": "se_control",
+                **shared,
+            },
+        ],
+    )
+    assert run_pipeline(case, sheet, docker=True).returncode == 0
+    rows = trace_rows(case)
+    assert [row["status"] for row in rows if row["name"] == "CALL_PEAKS (se_flat)"] == [
+        "COMPLETED"
+    ], rows
+    assert not any(row["name"].startswith("QUANTIFY") for row in rows), rows
+    published = case / "published" / "samples" / "output" / "Plant_SE" / "se_flat"
+    reason = (published / "se_flat.failure-reason.txt").read_text()
+    assert re.fullmatch(
+        r"MACS3 needs at least 100 paired peaks at \+ and - strand to build the model, "
+        r"but can only find [0-9]+!\n",
+        reason,
+    ), reason
+    assert not list(published.glob("*.macs3*")) and not list(published.glob("*.peaks.*.tsv"))
+    # Steps that do not depend on peaks publish as usual.
+    assert (published / "se_flat.metadata.tsv").is_file() and list(published.glob("*.bw"))
+    log = (case / "nextflow-run.log").read_text()
+    assert f"se_flat: no peaks called ({reason.strip()})" in log, log[-3000:]
 
 
 def check_bams(work: Path) -> None:
@@ -1221,6 +1279,7 @@ def main() -> None:
             if args.docker:
                 phases += [
                     functools.partial(check_download_failures, work, base_url),
+                    functools.partial(check_peak_model_failure, work, base_url),
                     functools.partial(
                         subprocess.run,
                         [

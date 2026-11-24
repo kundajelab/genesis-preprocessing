@@ -201,6 +201,11 @@ workflow {
             tuple(meta, bam, bai, controlBam, controlBai)
         }
     CALL_PEAKS(peakInputs)
+    // A sample MACS3 could not model has no peaks, so no quantification: only its failure reason.
+    CALL_PEAKS.out.failure.subscribe { meta, reason ->
+        log.warn("${meta.id}: no peaks called (${reason.text.trim()}); see " +
+                 "${meta.id}.failure-reason.txt")
+    }
     peaksBySample = CALL_PEAKS.out.peaks.map { meta, peaks -> tuple(meta.id, meta, peaks) }
     bamsBySample = mainBams.map { meta, bam, bai -> tuple(meta.id, bam, bai) }
     coverageBySample = TRACKS.out.rpkm.map { meta, coverage -> tuple(meta.id, coverage) }
