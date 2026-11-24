@@ -14,6 +14,11 @@ Each workflow has a script, a config and a parameter schema:
 - Modules used by more than one workflow are in `modules/common/`; the others are in
   `modules/dap-seq/`, `modules/atac-seq/`, `modules/scatac-seq/` or `modules/rna-seq/`.
   Move a module to `common/` when a second workflow needs it unchanged.
+- Shell scripts that processes share are in `workflows/bin/` (e.g. `sra-fetch`, `sra-split`):
+  Nextflow puts the main script's `bin/` on each task's PATH and mounts it into the container,
+  so the images need not have them. Say so where a process calls one. Nextflow does not hash
+  them, so editing one reruns no cached task on `-resume`. Tests that run a harness from
+  `tests/` put `workflows/bin/` on PATH themselves.
 
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 
@@ -67,8 +72,9 @@ inputs, so container tasks do not depend on undeclared host source paths.
 The four sample sheets use the six-column schema. The [DAP reference guide](usage/dapseq-reference.md)
 describes the workflow and analysis policies. tests/verify_pipeline.py exercises actual Nextflow wiring,
 reference generation and reuse, resume, sheet and reference failures, and publication boundaries.
-DOWNLOAD fetches remote HTTP(S) FASTQs in batches with aria2c (maxForks 1); the
-regression tests serve their fixtures from a local HTTP server.
+The DOWNLOAD subworkflow converts SRA runs from NCBI's AWS copy (DOWNLOAD_SRA, maxForks 32)
+and fetches other HTTP(S) FASTQs, and runs DOWNLOAD_SRA could not use, from their URLs
+(DOWNLOAD_URLS, maxForks 8); the regression tests serve their fixtures from a local HTTP server.
 
 Style verification uses pixi run checks: ShellCheck, Ruff lint/format, ty,
 quantification cases, and mocked Docker builds. The mock build checks cover both

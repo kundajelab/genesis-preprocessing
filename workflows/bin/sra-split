@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# Usage: sra-split [--skip-technical] [--complete] SRA SLICES PIGZ_THREADS READ=OUTPUT...
+#
+# Convert a .sra file into gzipped FASTQs, one per chosen read of the spot: READ=OUTPUT writes
+# every read numbered READ (1 for the first read of each spot) to OUTPUT, with ENA's header
+# ("@RUN.SPOT NAME/READ", bare "+"). Reads of other numbers, and empty reads, are dropped;
+# --skip-technical drops technical ones before numbering is checked, as ENA's FASTQs do.
+# --complete writes only the spots that have every chosen read, as ENA's RUN_1 and RUN_2 FASTQs
+# hold only complete pairs (it serves the other spots' reads as RUN.fastq.gz).
+#
+# The spots are split into SLICES ranges converted at once, each by fastq-dump streaming through
+# awk into one pigz (PIGZ_THREADS threads, level 4) per output. Nothing uncompressed reaches the
+# disk, unlike fasterq-dump, whose temporary files and FASTQs take several times the output's
+# size. The slices' gzip members are then joined in order, which is still one valid gzip file.
+#
+# A run that stores aligned reads (a PRIMARY_ALIGNMENT table; runs loaded from BAM) is converted
+# by fasterq-dump into one uncompressed FASTQ instead, routed the same way, with SLICES threads
+# and SLICES * PIGZ_THREADS per pigz. fastq-dump rebuilds those reads from the alignments with
+# memory and time that grow with each slice's offset (1.5 GB and 24 s for 100,000 spots 6 million
+# in); fasterq-dump took 2.3-3.7 GB, and temporary files and FASTQ about 8 times the gzip output.
+# A run loaded from FASTQ has only a SEQUENCE table, even when its schema is NCBI:align.
+#
+# Prints, on stdout, "spots<TAB>N"; with --complete, "complete<TAB>N", the spots written; and then
+# "READ<TAB>RECORDS" for each read number seen, written or not, for the caller to check the
+# layout. Exits 1 when a tool fails or the reads converted do not add up to the run's spots.
+#
+# Used by DOWNLOAD_SRA and DOWNLOAD_SCATAC_READS. Nextflow puts this folder,
+# workflows/bin/ beside the workflow scripts, on each task's PATH, inside the container too; the
+# images do not have it. Tests that run a module from tests/ put it on PATH themselves. Nextflow
+# does not include bin/ scripts in task hashes, so a change here reruns no cached task on -resume.
+set -euo pipefail
+
+usage='Usage: sra-split [--skip-technical] [--complete] SRA SLICES PIGZ_THREADS READ=OUTPUT...'
+skip_technical=0
+complete=0
+while [[ ${1:-} == --* ]]; do
+    case $1 in
+        --skip-technical) skip_technical=1 ;;
+        --complete) complete=1 ;;
+        *)
+            printf '%s\n' "$usage" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+if (($# < 4)); then
+    printf '%s\n' "$usage" >&2
+    exit 1
+fi
+sra=$1
+slices=$2
+threads=$3
+shift 3
+outputs=("$@")
+for pair in "${outputs[@]}"; do
+    [[ $pair =~ ^[1-9][0-9]*=[^=\'[:space:]]+$ ]] || {
+        printf 'sra-split: not READ=OUTPUT: %s\n' "$pair" >&2
+        exit 1
+    }
+done
+
+spots=$(vdb-dump --info "$sra" | awk -F ': *' '$1 ~ /^SEQ/ {gsub(/,/, "", $2); print $2}')
+[[ $spots =~ ^[0-9]+$ ]] || {
+    printf 'sra-split: vdb-dump gave no spot count for %s\n' "$sra" >&2
+    exit 1
+}
+scratch=$(mktemp -d sra-split.XXXXXX)
+
+# FASTQ on stdin to one pigz per chosen read, writing OUTPUT.partSLICE; each read's records, and
+# with complete=1 the spots written, to the counts file. A spot's reads arrive together.
+# shellcheck disable=SC2016 # Single quotes keep the awk program's $ fields.
+route='
+    BEGIN {
+        n = split(outputs, pairs, " ")
+        for (i = 1; i <= n; i++) {
+            split(pairs[i], kv, "=")
+            order[i] = kv[1]
+            command[kv[1]] = "pigz -p " threads " -4 > '\''" kv[2] ".part" slice "'\''"
+        }
+    }
+    function write(r, text) {print text | command[r]; opened[r] = 1}
+    # The held spot, if it has every chosen read.
+    function flush(  i) {
+        for (i = 1; i <= n; i++) if (!(order[i] in held)) {split("", held); return}
+        for (i = 1; i <= n; i++) write(order[i], held[order[i]])
+        kept++
+        split("", held)
+    }
+    # The header is "@RUN.SPOT NAME/READ".
+    NR % 4 == 1 {header = $0; spot = $1; read = $0; sub(/.*\//, "", read)}
+    NR % 4 == 2 {sequence = $0}
+    NR % 4 == 0 && sequence != "" {
+        records[read]++
+        if (!(read in command)) next
+        text = header "\n" sequence "\n+\n" $0
+        if (!complete) {write(read, text); next}
+        if (spot != current) {flush(); current = spot}
+        held[read] = text
+    }
+    END {
+        if (complete) {flush(); printf "complete\t%d\n", kept > counts}
+        failed = 0
+        # Only pipes opened: a read no spot has has no pigz to close.
+        for (r in opened) if (close(command[r]) != 0) failed = 1
+        for (r in records) printf "%s\t%d\n", r, records[r] > counts
+        close(counts)
+        exit failed
+    }'
+
+if vdb-dump --table_enum "$sra" | grep -q '^tbl *: *PRIMARY_ALIGNMENT$'; then
+    technical=(--include-technical)
+    ((skip_technical == 0)) || technical=()
+    mkdir "$scratch/tmp"
+    # shellcheck disable=SC2016 # fasterq-dump expands $ac, $si, $sn and $ri itself.
+    fasterq-dump ${technical[@]+"${technical[@]}"} --split-spot -e "$slices" -t "$scratch/tmp" \
+        -o "$scratch/reads.fastq" --seq-defline '@$ac.$si $sn/$ri' --qual-defline '+' \
+        "$sra" > "$scratch/0.log" 2>&1 || {
+        printf 'sra-split: fasterq-dump failed on %s:\n' "$sra" >&2
+        tail -n 5 "$scratch/0.log" >&2
+        exit 1
+    }
+    rm -r "$scratch/tmp"
+    # fasterq-dump's own count, "spots read : N".
+    read_spots=$(awk '/^spots read/ {gsub(/,/, ""); n = $NF} END {print n + 0}' "$scratch/0.log")
+    awk -v outputs="${outputs[*]}" -v slice=0 -v threads=$((slices * threads)) \
+        -v complete="$complete" -v counts="$scratch/0.counts" "$route" < "$scratch/reads.fastq" || {
+        printf 'sra-split: compressing the reads of %s failed\n' "$sra" >&2
+        exit 1
+    }
+    rm "$scratch/reads.fastq"
+    slices=1
+else
+    ((slices <= spots)) || slices=$((spots > 0 ? spots : 1))
+    technical=()
+    ((skip_technical == 0)) || technical=(--skip-technical)
+    pids=()
+    for ((k = 0; k < slices; k++)); do
+        first=$((k * spots / slices + 1))
+        last=$(((k + 1) * spots / slices))
+        ((first <= last)) || continue
+        (
+            set -o pipefail
+            # shellcheck disable=SC2016 # fastq-dump expands $ac, $si, $sn and $ri itself.
+            fastq-dump ${technical[@]+"${technical[@]}"} -N "$first" -X "$last" --split-spot -Z \
+                --defline-seq '@$ac.$si $sn/$ri' --defline-qual '+' "$sra" 2> "$scratch/$k.log" |
+                awk -v outputs="${outputs[*]}" -v slice="$k" -v threads="$threads" \
+                    -v complete="$complete" -v counts="$scratch/$k.counts" "$route"
+        ) &
+        pids+=("$!:$first-$last:$k")
+    done
+    failed=0
+    for entry in ${pids[@]+"${pids[@]}"}; do
+        IFS=: read -r pid range k <<< "$entry"
+        wait "$pid" || {
+            printf 'sra-split: spots %s of %s failed:\n' "$range" "$sra" >&2
+            tail -n 5 "$scratch/$k.log" >&2
+            failed=1
+        }
+    done
+    ((failed == 0)) || exit 1
+    # fastq-dump's own count, "Read N spots for RUN", from each slice.
+    read_spots=$(cat "$scratch"/*.log 2> /dev/null |
+        awk '/^Read [0-9]+ spots/ {n += $2} END {print n + 0}')
+fi
+if ((spots > 0 && read_spots != spots)); then
+    printf 'sra-split: read %s spots of %s in %s\n' "$read_spots" "$spots" "$sra" >&2
+    exit 1
+fi
+
+for pair in "${outputs[@]}"; do
+    output=${pair#*=}
+    : > "$output"
+    for ((k = 0; k < slices; k++)); do
+        if [[ -f $output.part$k ]]; then
+            cat "$output.part$k" >> "$output"
+            rm "$output.part$k"
+        fi
+    done
+done
+printf 'spots\t%s\n' "$spots"
+cat "$scratch"/*.counts 2> /dev/null |
+    awk -F '\t' '{n[$1] += $2} END {for (r in n) printf "%s\t%d\n", r, n[r]}' |
+    sort -k1,1n
+rm -r "$scratch"

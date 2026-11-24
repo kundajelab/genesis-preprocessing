@@ -12,6 +12,7 @@ import csv
 import functools
 import gzip
 import hashlib
+import json
 import os
 import random
 import re
@@ -23,6 +24,7 @@ from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
+from verify_download import FAKE_MD5SUM, publish
 from verify_pipeline import (
     available_resources,
     executor_limits,
@@ -79,7 +81,9 @@ def nextflow(
     environment = {
         **os.environ,
         **(extra_environment or {}),
-        "PATH": f"{first}{Path(sys.executable).parent}:{os.environ['PATH']}",
+        # Nextflow adds the main script's bin/ to PATH, and harnesses are in tests/.
+        "PATH": f"{first}{ROOT / 'workflows/bin'}:{Path(sys.executable).parent}:"
+        + os.environ["PATH"],
         "NXF_OFFLINE": "true",
         "NXF_DISABLE_CHECK_LATEST": "true",
     }
@@ -182,8 +186,7 @@ def check_stub(work: Path) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 1,
         "GET_REFERENCES:BWA_MEM3_INDEX": 1,
-        "SCATAC_SRA:SRA_PREFETCH": 4,
-        "SCATAC_SRA:SRA_FASTQ": 4,
+        "DOWNLOAD_SCATAC_READS": 4,
         "GET_CHROMAP_INDEX:CHROMAP_INDEX": 1,
         "GET_WHITELIST": 1,
         "SCATAC_CHROMAP": 3,
@@ -195,14 +198,14 @@ def check_stub(work: Path) -> None:
         "MULTIQC_REPORT": 1,
     }, counts
     # Runs are downloaded and converted one task each, then mapped per library.
-    for process in ("SCATAC_SRA:SRA_PREFETCH", "SCATAC_SRA:SRA_FASTQ"):
-        names = sorted(row["name"] for row in rows if row["name"].startswith(f"{process} "))
-        assert names == [
-            f"{process} (known:SRR0000004)",
-            f"{process} (lanes:SRR0000001)",
-            f"{process} (lanes:SRR0000002)",
-            f"{process} (multiome:SRR0000003)",
-        ], names
+    process = "DOWNLOAD_SCATAC_READS"
+    names = sorted(row["name"] for row in rows if row["name"].startswith(f"{process} "))
+    assert names == [
+        f"{process} (known:SRR0000004)",
+        f"{process} (lanes:SRR0000001)",
+        f"{process} (lanes:SRR0000002)",
+        f"{process} (multiome:SRR0000003)",
+    ], names
     # The library with the known list maps with the downloaded copy.
     (task,) = [row for row in rows if row["name"] == "SCATAC_CHROMAP (known)"]
     staged = work / "work" / task["hash"]
@@ -255,103 +258,169 @@ def check_index_reuse(work: Path, sheet: Path) -> None:
     )
 
 
-# Writes split FASTQs as fasterq-dump --split-files does, one per read of the spot, with lengths
-# from FAKE_READ_LENGTHS: one entry per file, "n" for every read n bases, or "first/rest".
-FAKE_FASTERQ_DUMP = """#!{python}
-import os, sys
+# Streams FASTQ records as fastq-dump [-N FIRST] -X LAST --split-spot -Z does from the stand-in
+# .sra file (JSON: "lengths", one entry per read of the spot, "n" for every read n bases, or
+# "first/rest"): each spot's reads in turn, skipping empty ones, and the spot count on stderr.
+# Headers are as --defline-seq gives them ($si and $ri only), or fastq-dump's default, which has
+# no read number.
+FAKE_FASTQ_DUMP = """#!{python}
+import json, sys
 from pathlib import Path
 args = sys.argv[1:]
-outdir = Path(args[args.index("--outdir") + 1])
-run = Path(args[-1]).name.removesuffix(".sra")
-outdir.mkdir()
-Path(args[args.index("--temp") + 1]).mkdir()
-spots = 6
-specs = os.environ["FAKE_READ_LENGTHS"].split()
-for number, spec in enumerate(specs, 1):
-    first, _, rest = spec.partition("/")
-    lengths = [int(first)] + [int(rest or first)] * (spots - 1)
-    with (outdir / f"{{run}}_{{number}}.fastq").open("w") as stream:
-        for spot, length in enumerate(lengths):
-            stream.write(f"@{{run}}.{{spot}}\\n{{'A' * length}}\\n+\\n{{'I' * length}}\\n")
-print(f"spots read      : {{spots:,}}")
-print(f"reads read      : {{spots * len(specs):,}}")
-print(f"reads written   : {{spots * len(specs):,}}")
+option = lambda name, default: args[args.index(name) + 1] if name in args else default
+specs = json.loads(Path(args[-1]).read_text())["lengths"]
+first, last = int(option("-N", 1)), min(int(option("-X", 0)), {spots})
+defline = option("--defline-seq", "@SRR1.$si name length=$rl")
+for spot in range(first, last + 1):
+    for number, spec in enumerate(specs, 1):
+        head, _, rest = spec.partition("/")
+        length = int(head) if spot == 1 else int(rest or head)
+        if length:
+            header = defline.replace("$si", str(spot)).replace("$ri", str(number))
+            header = header.replace("$ac", "SRR1").replace("$sn", "name")
+            header = header.replace("$rl", str(length))
+            bases, qualities = "A" * length, "I" * length
+            sys.stdout.write(f"{{header}}\\n{{bases}}\\n+\\n{{qualities}}\\n")
+print(f"Read {{last - first + 1}} spots for SRR1", file=sys.stderr)
 """
-# pigz -p N -c FILE, as SRA_FASTQ calls it.
-FAKE_PIGZ = '#!/bin/sh\nfor last; do :; done\nexec gzip -c "$last"\n'
+# vdb-dump --info FILE: the stand-in run's spot count, as SEQ. vdb-dump --table_enum FILE: its
+# tables, with PRIMARY_ALIGNMENT when the stand-in is "aligned".
+FAKE_VDB_DUMP = """#!{python}
+import json, sys
+from pathlib import Path
+if "--table_enum" in sys.argv:
+    aligned = json.loads(Path(sys.argv[-1]).read_text()).get("aligned")
+    print("tbl : PRIMARY_ALIGNMENT" if aligned else "tbl : SEQUENCE")
+else:
+    print("SEQ    : {spots}")
+"""
+# pigz -p N -4, stdin to stdout, as sra-split calls it.
+FAKE_PIGZ = "#!/bin/sh\nexec gzip -c\n"
+STAND_IN_SPOTS = 6
 
 
 def check_read_selection(work: Path) -> None:
-    """SRA_FASTQ picks the barcode and genomic reads by length, from each file's first reads."""
+    """DOWNLOAD_SCATAC_READS picks the barcode and genomic reads by length, from the first spots,
+    needs all three in every spot, and tries an unavailable run again."""
     tools = work / "read-selection" / "tools"
     tools.mkdir(parents=True)
-    for name, text in (
-        ("fasterq-dump", FAKE_FASTERQ_DUMP.format(python=sys.executable)),
-        ("pigz", FAKE_PIGZ),
-    ):
+    stand_ins = {
+        "fastq-dump": FAKE_FASTQ_DUMP.format(python=sys.executable, spots=STAND_IN_SPOTS),
+        "vdb-dump": FAKE_VDB_DUMP.format(python=sys.executable, spots=STAND_IN_SPOTS),
+        "pigz": FAKE_PIGZ,
+    }
+    if shutil.which("md5sum") is None:
+        stand_ins["md5sum"] = FAKE_MD5SUM.format(python=sys.executable)
+    for name, text in stand_ins.items():
         (tools / name).write_text(text)
         (tools / name).chmod(0o755)
+    root = work / "read-selection" / "server"
+    root.mkdir()
 
-    def case(name: str, lengths: str, expected: list[set[int]] | str) -> None:
+    def case(base: str, name: str, lengths: str, expected: list[set[int]] | str) -> None:
         folder = work / "read-selection" / name
         folder.mkdir()
-        (folder / "SRR1.sra").write_text("placeholder\n")
+        run = f"SRR{int(hashlib.md5(name.encode()).hexdigest(), 16) % 10**7:07d}"
+        contents = json.dumps({"lengths": lengths.split(), "aligned": name == "aligned"}).encode()
+        link = f"{base}/sra/{run}"
+        publish(root, base, link, contents)
+        md5 = "0" * 32 if name == "unavailable" else hashlib.md5(contents).hexdigest()
+        located = {
+            "result": [
+                {
+                    "files": [
+                        {
+                            "type": "sra",
+                            "size": len(contents),
+                            "md5": md5,
+                            "locations": [{"link": link}],
+                        }
+                    ]
+                }
+            ]
+        }
+        publish(root, base, f"{base}/sdl/{run}", json.dumps(located).encode())
         limits = folder / "limits.config"
         limits.write_text(executor_limits(docker=False))
         command = [
             "run",
-            str(ROOT / "tests/sra_fastq_harness.nf"),
+            str(ROOT / "tests/download_scatac_reads_harness.nf"),
             "-c",
             str(ROOT / "conf/scatac-reads.config"),
             "-profile",
             "local,test",
             "-c",
             str(limits),
-            "--sra",
-            str(folder / "SRR1.sra"),
             "--run",
-            "SRR1",
+            run,
             "--barcode_length",
             "16",
+            "--sra_locate_url",
+            f"{base}/sdl/",
             "--run_dir",
             str(folder / "published"),
             "-work-dir",
             str(folder / "work"),
         ]
         result = nextflow(
-            folder,
-            command,
-            "run",
-            expect_failure=isinstance(expected, str),
-            tools=tools,
-            extra_environment={"FAKE_READ_LENGTHS": lengths},
+            folder, command, "run", expect_failure=isinstance(expected, str), tools=tools
         )
+        attempts = list(folder.glob("work/*/*/.command.sh"))
         if isinstance(expected, str):
             assert result.returncode != 0, name
             errors = failed_task_errors(folder / "work")
             assert expected in errors, (name, errors[-3000:])
+            # Only an unavailable run is tried again: the first attempt and its two retries.
+            assert len(attempts) == (3 if name == "unavailable" else 1), (name, attempts)
             return
         assert result.returncode == 0, name
+        assert len(attempts) == 1, (name, attempts)
         observed = []
         for read in ("R1", "R2", "barcode"):
-            (path,) = folder.glob(f"work/*/*/SRR1.{read}.fastq.gz")
+            (path,) = folder.glob(f"work/*/*/{run}.{read}.fastq.gz")
             with gzip.open(path, "rt") as stream:
-                observed.append({len(line.rstrip("\n")) for line in list(stream)[1::4]})
+                lines = list(stream)
+            assert len(lines) == 4 * STAND_IN_SPOTS, (name, read, len(lines))
+            observed.append({len(line.rstrip("\n")) for line in lines[1::4]})
         # Read lengths in R1, R2 and the barcode FASTQ.
         assert observed == expected, (name, observed)
+        # The .sra file is deleted once converted, and nothing uncompressed is left.
+        (task,) = (path.parent for path in attempts)
+        assert not list(task.glob("*.sra")) and not list(task.glob("*.fastq")), name
 
-    # Lengths per split file, in fasterq-dump's order: index, R1, barcode, R2 as in 8/50/16/49.
-    in_parallel(
-        [
-            functools.partial(case, "untrimmed", "8 50 16 49", [{50}, {49}, {16}]),
-            # A trimmed first read no longer hides a genomic file: its longest read counts.
-            functools.partial(case, "trimmed-first-mate", "8 20/50 16 49", [{20, 50}, {49}, {16}]),
-            functools.partial(
-                case, "trimmed-barcode", "8 50 15/16 49", "has barcode reads of 15 to 16 bases"
-            ),
-            functools.partial(case, "no-barcode", "8 50 49", "has no single 16-base barcode read"),
-        ]
-    )
+    # Lengths per read of the spot, in SRA's order: index, R1, barcode, R2 as in 8/50/16/49.
+    with serve(root, docker=False) as base:
+        in_parallel(
+            [
+                functools.partial(case, base, "untrimmed", "8 50 16 49", [{50}, {49}, {16}]),
+                # A trimmed first read no longer hides a genomic read: its longest read counts.
+                functools.partial(
+                    case, base, "trimmed-first-mate", "8 20/50 16 49", [{20, 50}, {49}, {16}]
+                ),
+                functools.partial(
+                    case,
+                    base,
+                    "trimmed-barcode",
+                    "8 50 15/16 49",
+                    "has barcode reads of 15 to 16 bases",
+                ),
+                functools.partial(
+                    case, base, "no-barcode", "8 50 49", "has no single 16-base barcode read"
+                ),
+                # A barcode read only in the first spot: the others lack it.
+                functools.partial(
+                    case, base, "missing-barcode", "8 50 16/0 49", "read 3 in 1 of 6 spots"
+                ),
+                # Loaded from BAM: no barcode read to find.
+                functools.partial(
+                    case, base, "aligned", "8 50 16 49", "stores aligned reads (loaded from BAM)"
+                ),
+                # An MD5 that is never NCBI's: tried again, then the run stops.
+                functools.partial(
+                    case, base, "unavailable", "8 50 16 49", "SRA run unavailable (the .sra"
+                ),
+            ]
+        )
 
 
 def check_failures(work: Path, sheet: Path) -> None:

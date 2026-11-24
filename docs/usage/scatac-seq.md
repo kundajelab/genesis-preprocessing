@@ -141,14 +141,15 @@ root_rep1	Arabidopsis_thaliana	SRR12340627,SRR12340628	10x-atac-v1	-	Athaliana_4
 
 The other columns are as above. A run may be listed for one library only.
 
-1. **Download.** `prefetch` and `fasterq-dump --include-technical` from NCBI SRA, which keeps
-   the barcode read (SRA marks it technical); ENA's FASTQs drop it. Submitters order the reads differently, so the
-   barcode read is the one of the chemistry's length and the genomic reads are the two
-   longest. A run without such a barcode read stops the library. Downloading and converting
-   are separate tasks, so a failed conversion, or `-resume` after one, reuses the download;
-   a failed download is tried again. `fasterq-dump` needs temporary disk of about the FASTQs'
-   size, about 100 GB for a 116-million-spot run, and takes about 1.5 hours with 4 threads.
-   Intermediate FASTQS (tens of GB) are also stored in work/ until the run is cleaned up.
+1. **Download.** `DOWNLOAD_SCATAC_READS` fetches each run's `.sra` file from NCBI's AWS copy,
+   checks it against NCBI's MD5 and converts it with `fastq-dump`, which keeps the barcode read
+   (SRA marks it technical); ENA's FASTQs drop it, so there is no fallback to them. Submitters
+   order the reads differently, so the barcode read is the one of the chemistry's length and
+   the genomic reads are the two longest. A run without such a barcode read, or with a spot
+   missing one of the three reads, stops the library; an unavailable run (a failed or stalled
+   transfer, an MD5 mismatch) is tried again. Each run is one task, up to 32 at once: slices of
+   its spots are converted in parallel and streamed straight into gzip, so the task holds only
+   the `.sra` file and the compressed FASTQs, and the `.sra` file is deleted once converted.
 2. **Fragments.** chromap `--preset atac` trims adapters, maps the pairs, corrects barcodes
    against the whitelist and removes duplicates per cell. It writes 10x fragments: BED0, Tn5
    offsets applied (start + 4, end − 5). Sequencers read the barcode on either strand; the

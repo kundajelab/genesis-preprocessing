@@ -59,7 +59,7 @@ export NXF_SYNTAX_PARSER=v2
 # they barely run. Quick compilation and a serial collector cut the suite's CPU time by about 2/3.
 export NXF_OPTS="${NXF_OPTS:+$NXF_OPTS }-XX:TieredStopAtLevel=1 -XX:+UseSerialGC"
 
-shellcheck "$root"/scripts/*.sh
+shellcheck "$root"/scripts/*.sh "$root"/workflows/bin/*
 # Format the Python in place, before linting it. CI (which sets CI=true) only checks the format,
 # so unformatted code still fails there rather than passing once reformatted on the runner.
 format_options=()

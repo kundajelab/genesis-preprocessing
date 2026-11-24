@@ -6,7 +6,7 @@ include { GET_REFERENCES } from '../modules/common/get_references'
 include { MULTIQC_REPORT } from '../modules/common/multiqc_report'
 include { GET_CHROMAP_INDEX } from '../modules/scatac-seq/get_chromap_index'
 include { GET_WHITELIST } from '../modules/scatac-seq/get_whitelist'
-include { SCATAC_SRA } from '../modules/scatac-seq/scatac_sra'
+include { DOWNLOAD_SCATAC_READS } from '../modules/scatac-seq/download_scatac_reads'
 include { SCATAC_CHROMAP } from '../modules/scatac-seq/scatac_chromap'
 include { SCATAC_CELLS } from '../modules/scatac-seq/scatac_cells'
 include { SCATAC_PSEUDOBULKS } from '../modules/scatac-seq/scatac_pseudobulks'
@@ -149,9 +149,11 @@ workflow {
     whitelists = named.present.map { name -> tuple(name, referencesDir.resolve(name)) }
         .mix(GET_WHITELIST.out.whitelist)
         .mix(channel.of(tuple('-', [])))
-    // One task per run (lane); a library's runs are mapped together.
-    SCATAC_SRA(samples.flatMap { meta -> meta.runs.collect { run -> tuple(meta, run) } })
-    libraries = SCATAC_SRA.out.reads
+    // One task per run (lane), fetched and converted at once; a library's runs are mapped together.
+    DOWNLOAD_SCATAC_READS(samples.flatMap { meta ->
+        meta.runs.collect { run -> tuple(meta, run) }
+    })
+    libraries = DOWNLOAD_SCATAC_READS.out.reads
         .map { meta, run, r1, r2, barcodes ->
             tuple(groupKey(meta.id, meta.runs.size()), meta, run, r1, r2, barcodes)
         }

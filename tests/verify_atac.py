@@ -171,8 +171,6 @@ def run_atac(
         str(work / "limits.config"),
         "-with-trace",
         str(work / f"trace-{suffix}.tsv"),
-        "--download_batch_size",
-        "2",
         "-ansi-log",
         "false",
     ]
@@ -213,7 +211,7 @@ def check_outputs(work: Path, *, docker: bool) -> None:
     assert counts == {
         "GET_REFERENCES:CHROM_SIZES": 2,
         "GET_REFERENCES:BWA_MEM3_INDEX": 2,
-        "DOWNLOAD": 2,
+        "DOWNLOAD:DOWNLOAD_URLS": 3,
         "FASTQC": 6,
         "ATAC_TRIM": 3,
         "ATAC_ALIGN": 3,
@@ -311,7 +309,7 @@ def check_resume(work: Path, sheet: Path | str, *, docker: bool) -> None:
     """Resumed runs reuse the downloads, and then every task."""
     assert run_atac(work, sheet, docker=docker, resume=True).returncode == 0
     rows = trace_rows(work, "resume")
-    for process in ("DOWNLOAD", "FASTQC", "ATAC_TRIM"):
+    for process in ("DOWNLOAD:DOWNLOAD_URLS", "FASTQC", "ATAC_TRIM"):
         tasks = [row for row in rows if row["name"].split(" ")[0] == process]
         assert tasks and all(row["status"] == "CACHED" for row in tasks), tasks
     # Newly published references change staged input paths on the first resume.
