@@ -3,8 +3,10 @@ include { oomMemoryOf ; retryTimeOf ; retryErrorStrategy } from '../common/retry
 
 process TSS_QC {
     cpus 1
-    memory { oomMemoryOf(task, 4.GB) }
-    time { retryTimeOf(task, 1.h) }
+    // On Perlmutter, 24 Arabidopsis libraries peaked at up to 30 times their CTSS file's size
+    // (0.37 GB for 12 MB), in under 30 seconds. Allow 1 GB plus 64 times its size, and 15 minutes.
+    memory { oomMemoryOf(task, 1.GB + 64.B * ctss.size()) }
+    time { retryTimeOf(task, 15.min) }
     // Retry with twice the memory or time when an attempt ran out of it (modules/common/retry.nf).
     errorStrategy { retryErrorStrategy(task) }
     maxRetries 2

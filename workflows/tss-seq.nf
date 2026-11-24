@@ -11,7 +11,7 @@ include { GET_STAR_INDEX } from '../modules/rna-seq/get_star_index'
 include { TSS_EXTRACT } from '../modules/tss-seq/tss_extract'
 include { TSS_TRIM } from '../modules/tss-seq/tss_trim'
 include { TSS_ALIGN } from '../modules/tss-seq/tss_align'
-include { TSS_CTSS } from '../modules/tss-seq/tss_ctss'
+include { TSS_CTSS ; starUniqueReads } from '../modules/tss-seq/tss_ctss'
 include { TSS_CLUSTERS } from '../modules/tss-seq/tss_clusters'
 include { TSS_QC } from '../modules/tss-seq/tss_qc'
 
@@ -165,9 +165,15 @@ workflow {
         }
     TSS_ALIGN(alignmentInputs)
     sizes = GET_REFERENCES.out.sizes.map { refId, _ref, path -> tuple(refId, path) }
-    TSS_CTSS(TSS_ALIGN.out.bam.map { meta, bam, bai -> tuple(meta.ref_id, meta, bam, bai) }
+    // With STAR's count of uniquely aligned reads, which sizes the task's time.
+    TSS_CTSS(TSS_ALIGN.out.bam.map { meta, bam, bai -> tuple(meta.id, meta, bam, bai) }
+        .join(TSS_ALIGN.out.log.map { meta, log -> tuple(meta.id, log) },
+              failOnDuplicate: true, failOnMismatch: true)
+        .map { _id, meta, bam, bai, starLog ->
+            tuple(meta.ref_id, meta, bam, bai, starUniqueReads(starLog))
+        }
         .combine(sizes, by: 0)
-        .map { _refId, meta, bam, bai, path -> tuple(meta, bam, bai, path) })
+        .map { _refId, meta, bam, bai, reads, path -> tuple(meta, bam, bai, reads, path) })
     TSS_CLUSTERS(TSS_CTSS.out.ctss)
     qcInputs = TSS_CTSS.out.ctss.map { meta, ctss -> tuple(meta.id, meta, ctss) }
         .join(TSS_CLUSTERS.out.clusters.map { meta, clusters -> tuple(meta.id, clusters) },
