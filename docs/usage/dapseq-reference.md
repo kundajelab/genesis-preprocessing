@@ -142,10 +142,11 @@ be HTTP or HTTPS. Each sample is downloaded by its own task. When a sample's URL
 are ENA's FASTQs of one whole SRA run (`.../RUN/RUN.fastq.gz`, or `RUN_1` and
 `RUN_2`), `DOWNLOAD_SRA` fetches the run's `.sra` file from NCBI's AWS copy
 instead, up to 32 samples at once, checks it against NCBI's MD5, and converts it
-with `fasterq-dump` into FASTQs whose decompressed bytes are ENA's, read names
-included. A transfer that stays under
+with `fastq-dump`, slices of its spots in parallel streamed straight into gzip,
+into FASTQs whose decompressed bytes are ENA's, read names included. A transfer that stays under
 2 MB/s for 5 minutes is abandoned. If the run is unavailable (an HTTP failure, a
-stalled transfer, an MD5 mismatch) or converts to another layout, the sample is
+stalled transfer, an MD5 mismatch) or converts to another layout (including a spot
+missing a mate), the sample is
 fetched from its URLs instead, with a warning and the reason in the run's log;
 any other conversion failure stops the run. `DOWNLOAD_URLS` fetches those samples,
 and all others, from their URLs as given, up to eight samples at once, since ENA

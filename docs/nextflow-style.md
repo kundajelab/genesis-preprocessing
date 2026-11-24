@@ -14,6 +14,11 @@ Each workflow has a script, a config and a parameter schema:
 - Modules used by more than one workflow are in `modules/common/`; the others are in
   `modules/dap-seq/`, `modules/atac-seq/`, `modules/scatac-seq/` or `modules/rna-seq/`.
   Move a module to `common/` when a second workflow needs it unchanged.
+- Shell scripts that processes share are in `workflows/bin/` (e.g. `sra-fetch`, `sra-split`):
+  Nextflow puts the main script's `bin/` on each task's PATH and mounts it into the container,
+  so the images need not have them. Say so where a process calls one. Nextflow does not hash
+  them, so editing one reruns no cached task on `-resume`. Tests that run a harness from
+  `tests/` put `workflows/bin/` on PATH themselves.
 
 The DAP scaffold follows igvf_pseudobulking_pipeline:
 

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Usage: sra-fetch LOCATE_URL RUN
+#
+# Fetch an SRA run's .sra file, as RUN.sra in the current folder, from the link NCBI's locator
+# (LOCATE_URL followed by RUN) gives, and check it against NCBI's MD5. A failed transfer resumes,
+# up to 5 tries; one slower than 2 MB/s for 5 minutes gives up at once.
+#
+# Exits 0 when fetched. Exits 2 when the run is unavailable (the locator fails or lists no .sra
+# file, every try fails or stalls, the MD5 differs), printing the reason on stdout as one line,
+# and deleting any partial file. Exits 1 on a local failure (the file could not be written).
+#
+# Used by DOWNLOAD_SRA and DOWNLOAD_SCATAC_READS. Nextflow puts this folder,
+# workflows/bin/ beside the workflow scripts, on each task's PATH, inside the container too; the
+# images do not have it. Tests that run a module from tests/ put it on PATH themselves. Nextflow
+# does not include bin/ scripts in task hashes, so a change here reruns no cached task on -resume.
+set -euo pipefail
+
+if (($# != 2)); then
+    printf 'Usage: %s LOCATE_URL RUN\n' "$0" >&2
+    exit 1
+fi
+locate_url=$1
+run=$2
+output="$run.sra"
+
+unavailable() {
+    rm -f -- "$output"
+    printf '%s\n' "$1"
+    exit 2
+}
+
+located=$(curl --fail --silent --show-error --location --connect-timeout 60 \
+    --retry 3 --retry-all-errors --retry-delay 10 "$locate_url$run") ||
+    unavailable "NCBI's locator failed"
+# The first file of type sra: its MD5, then its first location's link.
+located=$(grep -o '"type": *"sra".*' <<< "$located") ||
+    unavailable "NCBI's locator lists no .sra file"
+md5=$(grep -o '"md5": *"[0-9a-f]\{32\}"' <<< "$located" | head -n 1 | grep -o '[0-9a-f]\{32\}') || true
+link=$(grep -o '"link": *"[^"]*"' <<< "$located" | head -n 1 | sed 's/^"link": *"//; s/"$//') || true
+[[ -n $md5 && -n $link ]] || unavailable "NCBI's locator gave no MD5 or link"
+
+# A run that keeps up with 2 MB/s fits its task's time on the second retry.
+for try in 1 2 3 4 5; do
+    status=0
+    curl --fail --silent --show-error --location --connect-timeout 60 \
+        --speed-limit 2000000 --speed-time 300 \
+        --continue-at - --output "$output" "$link" || status=$?
+    case $status in
+        0) break ;;
+        # Not the server's doing: the file could not be written, or curl ran out of memory.
+        23 | 27)
+            printf '%s: curl failed locally (exit %s)\n' "$output" "$status" >&2
+            exit 1
+            ;;
+        28) unavailable "the .sra transfer timed out or stayed under 2 MB/s for 5 minutes" ;;
+    esac
+    ((try < 5)) || unavailable "the .sra transfer failed (curl exit $status)"
+    sleep 30
+done
+if [[ $(md5sum < "$output" | cut -d ' ' -f 1) != "$md5" ]]; then
+    printf "%s: MD5 differs from NCBI's %s\n" "$output" "$md5" >&2
+    unavailable "the .sra file's MD5 differs from NCBI's"
+fi

@@ -211,7 +211,7 @@ SCATAC_EDGES = [
 ]
 SCATAC_READS_NODES = [
     ("samples",140,330,"Sample sheet","SRA runs + chemistry","reads"),
-    ("SCATAC_SRA",370,330,"SRA download","Barcode read kept","reads"),
+    ("DOWNLOAD_SCATAC_READS",370,330,"SRA download","Barcode read kept","reads"),
     ("SCATAC_CHROMAP",600,330,"chromap","10x fragments","reads"),
     ("SCATAC_CELLS",830,330,"Cells","Called or listed","reads"),
     ("SCATAC_FRAGMENTS",1060,330,"Fragments","Cells, nuclear","reads"),

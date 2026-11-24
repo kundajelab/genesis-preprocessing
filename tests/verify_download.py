@@ -1,9 +1,10 @@
 """Offline checks of DOWNLOAD (modules/common/download.nf), run through tests/download_harness.nf.
 
-A local server stands in for NCBI's SRA locator, AWS and ENA, and stand-in fasterq-dump and pigz
-go first on PATH. DOWNLOAD_SRA must convert SRA runs with ENA's read names, and record a sample
-for DOWNLOAD_URLS to fetch from its FASTQ URLs when its SRA run is unavailable, corrupt, or of
-another layout; a conversion that fails otherwise stops the run.
+A local server stands in for NCBI's SRA locator, AWS and ENA, and stand-in fastq-dump, vdb-dump
+and pigz go first on PATH, then workflows/bin (sra-fetch, sra-split). DOWNLOAD_SRA must convert
+SRA runs with ENA's read names, and record a sample for DOWNLOAD_URLS to fetch from its FASTQ URLs
+when its SRA run is unavailable, corrupt, or of another layout; a conversion that fails otherwise
+stops the run.
 """
 
 from __future__ import annotations
@@ -27,49 +28,56 @@ from verify_pipeline import (
     serve,
 )
 
-# Writes FASTQs as fasterq-dump --split-3 does from the stand-in .sra file (JSON: the run and
-# each mate's reads as [name, sequence, quality]), formatting headers with --seq-defline and
-# --qual-defline, and records its arguments in fasterq-dump.args. Fails, as on a corrupt file or
-# a full disk, when the file has "crash" set.
-FAKE_FASTERQ_DUMP = """#!{python}
+# Streams FASTQ records as fastq-dump -N FIRST -X LAST --split-spot -Z does from the stand-in .sra
+# file (JSON: the run and each mate's reads as [name, sequence, quality]): each spot's reads in
+# turn, headers formatted with --defline-seq and --defline-qual, and its count on stderr. Appends
+# its arguments to fastq-dump.args. Fails, as on a corrupt file, when the file has "crash" set.
+FAKE_FASTQ_DUMP = """#!{python}
 import json, sys
 from pathlib import Path
 args = sys.argv[1:]
-Path("fasterq-dump.args").write_text(json.dumps(args))
+with open("fastq-dump.args", "a") as log:
+    log.write(json.dumps(args) + "\\n")
 option = lambda name: args[args.index(name) + 1]
-outdir = Path(option("--outdir"))
-outdir.mkdir()
-Path(option("--temp")).mkdir()
 run = json.loads(Path(args[-1]).read_text())
 if run.get("crash"):
-    sys.exit("fasterq-dump stand-in: crashed")
+    sys.exit("fastq-dump stand-in: crashed")
 accession, mates = run["run"], run["mates"]
-for mate, reads in enumerate(mates, 1):
-    name = f"{{accession}}.fastq" if len(mates) == 1 else f"{{accession}}_{{mate}}.fastq"
-    with (outdir / name).open("w") as stream:
-        for spot, (read, sequence, quality) in enumerate(reads, 1):
-            fields = {{"$ac": accession, "$si": str(spot), "$sn": read, "$ri": str(mate)}}
-            lines = [option("--seq-defline"), sequence, option("--qual-defline"), quality]
-            for key, value in fields.items():
-                lines[0] = lines[0].replace(key, value)
-                lines[2] = lines[2].replace(key, value)
-            stream.write("\\n".join(lines) + "\\n")
-print(f"spots read      : {{len(mates[0]):,}}")
+first, last = int(option("-N")), int(option("-X"))
+for spot in range(first, last + 1):
+    for mate, reads in enumerate(mates, 1):
+        read, sequence, quality = reads[spot - 1]
+        fields = {{"$ac": accession, "$si": str(spot), "$sn": read, "$ri": str(mate)}}
+        lines = [option("--defline-seq"), sequence, option("--defline-qual"), quality]
+        for key, value in fields.items():
+            lines[0] = lines[0].replace(key, value)
+            lines[2] = lines[2].replace(key, value)
+        sys.stdout.write("\\n".join(lines) + "\\n")
+print(f"Read {{last - first + 1}} spots for {{accession}}", file=sys.stderr)
 """
-# pigz -p N -4 -c FILE and pigz -dc FILE, as DOWNLOAD calls it; each call's arguments are
-# appended to pigz.args.
+# vdb-dump --info FILE: the stand-in .sra file's spot count, as SEQ. vdb-dump --table_enum FILE:
+# its tables, with PRIMARY_ALIGNMENT when it has "aligned" set.
+FAKE_VDB_DUMP = """#!{python}
+import json, sys
+from pathlib import Path
+run = json.loads(Path(sys.argv[-1]).read_text())
+if "--table_enum" in sys.argv:
+    print("tbl : PRIMARY_ALIGNMENT" if run.get("aligned") else "tbl : SEQUENCE")
+else:
+    print(f"SEQ    : {{len(run['mates'][0]):,}}")
+"""
+# pigz -p N -4 (stdin to stdout, as sra-split calls it) and pigz -dc FILE (as DOWNLOAD_URLS
+# does); each call's arguments are appended to pigz.args.
 FAKE_PIGZ = """#!{python}
 import gzip, json, shutil, sys
 args = sys.argv[1:]
 with open("pigz.args", "a") as log:
-    log.write(json.dumps(args[:-1]) + "\\n")
-source = args[-1]
+    log.write(json.dumps(args) + "\\n")
 if "-dc" in args:
-    with gzip.open(source, "rb") as stream:
+    with gzip.open(args[-1], "rb") as stream:
         shutil.copyfileobj(stream, sys.stdout.buffer)
 else:
-    with open(source, "rb") as stream:
-        sys.stdout.buffer.write(gzip.compress(stream.read(), mtime=0))
+    sys.stdout.buffer.write(gzip.compress(sys.stdin.buffer.read(), mtime=0))
 """
 # md5sum < FILE, for hosts without it (macOS).
 FAKE_MD5SUM = """#!{python}
@@ -118,9 +126,10 @@ def add_sra_run(
     *,
     md5: str = "",
     crash: bool = False,
+    aligned: bool = False,
 ) -> None:
     """Serve a stand-in .sra file for run, and the locator's answer for it, with md5 if given."""
-    contents = json.dumps({"run": run, "mates": mates, "crash": crash}).encode()
+    contents = json.dumps({"run": run, "mates": mates, "crash": crash, "aligned": aligned}).encode()
     link = f"{base}/sra/{run}/{run}"
     publish(root, base, link, contents)
     located = {
@@ -185,7 +194,11 @@ def run_harness(folder: Path, tools: Path, base: str, samples: list[dict[str, st
     ]
     environment = {
         **os.environ,
-        "PATH": f"{tools}:{Path(sys.executable).parent}:{os.environ['PATH']}",
+        # Nextflow adds the main script's bin/ to PATH, and the harness is in tests/.
+        "PATH": ":".join(
+            [str(tools), str(ROOT / "workflows/bin"), str(Path(sys.executable).parent)]
+            + [os.environ["PATH"]]
+        ),
         "NXF_OFFLINE": "true",
         "NXF_DISABLE_CHECK_LATEST": "true",
     }
@@ -221,7 +234,7 @@ def main() -> None:
     work = Path(tempfile.mkdtemp(prefix="download-", dir=runs))
     tools = work / "tools"
     tools.mkdir()
-    stand_ins = {"fasterq-dump": FAKE_FASTERQ_DUMP, "pigz": FAKE_PIGZ}
+    stand_ins = {"fastq-dump": FAKE_FASTQ_DUMP, "vdb-dump": FAKE_VDB_DUMP, "pigz": FAKE_PIGZ}
     if shutil.which("md5sum") is None:
         stand_ins["md5sum"] = FAKE_MD5SUM
     for name, text in stand_ins.items():
@@ -264,12 +277,14 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
         ]
         samples.append(sample(sample_id, layout, ena_urls(base, run, layout)))
     # Fetched from their URLs, each with the reason recorded: a corrupt .sra, a run the locator
-    # does not know, a run of the other layout, and a locator that fails (HTTP 404).
+    # does not know, a run of the other layout, a locator that fails (HTTP 404), and a run that
+    # stores aligned reads.
     fallbacks = {
         "bad_md5": ("SRR0000003", "PE", "the .sra file's MD5 differs from NCBI's"),
         "unknown": ("SRR0000004", "SE", "NCBI's locator lists no .sra file"),
         "wrong_layout": ("SRR0000005", "PE", "its .sra file is not of the sample's layout"),
         "no_locator": ("SRR0000007", "SE", "NCBI's locator failed"),
+        "aligned": ("SRR0000009", "PE", "its .sra file stores aligned reads, too slow to convert"),
     }
     for sample_id, (run, layout, _reason) in fallbacks.items():
         if sample_id == "bad_md5":
@@ -280,6 +295,8 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
             )
         elif sample_id == "wrong_layout":
             add_sra_run(root, base, run, [reads("single")])
+        elif sample_id == "aligned":
+            add_sra_run(root, base, run, [reads("a1"), reads("a2")], aligned=True)
         urls = ena_urls(base, run, layout)
         expected[sample_id] = []
         for mate, url in enumerate(urls, 1):
@@ -309,7 +326,7 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
         "MD5 differs from NCBI's" in (task["DOWNLOAD_SRA", "bad_md5"] / ".command.err").read_text()
     )
     assert (
-        "fasterq-dump wrote SRR0000005.fastq, not SRR0000005_1.fastq SRR0000005_2.fastq"
+        "SRR0000005: reads per spot are not this PE sample's 2"
         in (task["DOWNLOAD_SRA", "wrong_layout"] / ".command.err").read_text()
     )
     # A fallback leaves nothing of its run or sample in its SRA task.
@@ -317,7 +334,8 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
         leftovers = [
             path.name
             for path in task["DOWNLOAD_SRA", sample_id].iterdir()
-            if path.name.endswith(".sra") or path.name.startswith(("sra-", "tmp-", f"{sample_id}."))
+            if path.name.endswith(".sra")
+            or path.name.startswith(("sra-split.", "counts.tsv", f"{sample_id}."))
         ]
         assert not leftovers, (sample_id, leftovers)
     log = (folder / "nextflow.log").read_text()
@@ -343,12 +361,16 @@ def check_downloads(work: Path, tools: Path, root: Path, base: str) -> None:
                 # Fetched: the server's bytes, unchanged.
                 assert output == contents, (sample_id, mate)
     sra_task = task["DOWNLOAD_SRA", "pe_sra"]
-    # Converted reads are compressed fast (level 4) with the task's CPUs (1 in the test profile).
+    # Converted reads are compressed fast (level 4), one pigz thread per output.
     calls = [json.loads(line) for line in (sra_task / "pigz.args").read_text().splitlines()]
-    assert ["-p", "1", "-4", "-c"] in calls, calls
-    arguments = json.loads((sra_task / "fasterq-dump.args").read_text())
-    assert arguments[:2] == ["--split-3", "--threads"], arguments
-    assert ["--seq-defline", "@$ac.$si $sn/$ri", "--qual-defline", "+"] == arguments[-5:-1], (
+    assert calls == [["-p", "1", "-4"]] * 2, calls
+    # One fastq-dump per slice of the spots (the task's 1 CPU in the test profile, so one), with
+    # technical reads skipped and ENA's read names.
+    (arguments,) = [
+        json.loads(line) for line in (sra_task / "fastq-dump.args").read_text().splitlines()
+    ]
+    assert arguments[:6] == ["--skip-technical", "-N", "1", "-X", "3", "--split-spot"], arguments
+    assert ["--defline-seq", "@$ac.$si $sn/$ri", "--defline-qual", "+"] == arguments[-5:-1], (
         arguments
     )
     published = sorted(path.name for path in (folder / "published").rglob("*.fastq.lines"))
@@ -386,7 +408,8 @@ def check_crash(work: Path, tools: Path, root: Path, base: str) -> None:
     tasks = task_folders(folder)
     assert sorted(tasks) == [("DOWNLOAD_SRA", "crash")], tasks
     errors = failed_task_errors(folder / "work")
-    assert "fasterq-dump failed" in errors, errors[-3000:]
+    assert "fastq-dump stand-in: crashed" in errors, errors[-3000:]
+    assert "sra-split failed" in errors, errors[-3000:]
 
 
 if __name__ == "__main__":

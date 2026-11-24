@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -578,6 +579,24 @@ def main() -> None:
                 assert "process.resourceLimits.cpus = 128" in output
                 assert "process.resourceLimits.memory = '247 GB'" in output
                 assert "process.resourceLimits.time = '2d'" in output
+                # Tasks get no network, except the processes whose scripts reach it. withName
+                # matches a whole name, simple or qualified: DOWNLOAD would not match
+                # DOWNLOAD:DOWNLOAD_SRA.
+                assert "process.containerOptions = '--network=none'" in output
+                selector = re.search(
+                    r"process\.'withName:([^']+)'\.containerOptions = '--network=slirp4netns'",
+                    output,
+                )
+                assert selector, output
+                online = {
+                    name
+                    for module in (ROOT / "modules").rglob("*.nf")
+                    for name, body in re.findall(
+                        r"^process (\w+) \{(.*?)^\}", module.read_text(), re.M | re.S
+                    )
+                    if re.search(r"\b(curl|aria2c|wget|sra-fetch|prefetch)\b", body)
+                }
+                assert set(selector.group(1).split("|")) == online, (selector.group(1), online)
             if "test" in profile.split(","):
                 # Every process, whatever it requests.
                 assert "process.resourceLimits.cpus = 1\n" in output, output
