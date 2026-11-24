@@ -159,7 +159,8 @@ def create_stub_fixture(work: Path) -> Path:
             "reference_fasta": "sc.fa.gz",
             "reference_genes": "genes.bed",
             "organelle_contigs": "ChrM",
-            "barcode_whitelist": "-",
+            # Known, and served gzipped under another name: stored under this one.
+            "barcode_whitelist": "737K-arc-v1.txt",
         },
         # A known 10x list missing from the references folder is downloaded (GET_WHITELIST).
         {
@@ -188,7 +189,7 @@ def check_stub(work: Path) -> None:
         "GET_REFERENCES:BWA_MEM3_INDEX": 1,
         "DOWNLOAD_SCATAC_READS": 4,
         "GET_CHROMAP_INDEX:CHROMAP_INDEX": 1,
-        "GET_WHITELIST": 1,
+        "GET_WHITELIST": 2,
         "SCATAC_CHROMAP": 3,
         "SCATAC_CELLS": 3,
         "SCATAC_PSEUDOBULKS:SCATAC_FRAGMENTS": 3,
@@ -206,12 +207,13 @@ def check_stub(work: Path) -> None:
         f"{process} (lanes:SRR0000002)",
         f"{process} (multiome:SRR0000003)",
     ], names
-    # The library with the known list maps with the downloaded copy.
-    (task,) = [row for row in rows if row["name"] == "SCATAC_CHROMAP (known)"]
-    staged = work / "work" / task["hash"]
-    assert any(
-        path.name == "737K-cratac-v1.txt" for path in staged.parent.glob(f"{staged.name}*/*")
-    )
+    # The libraries with known lists map with the downloaded copies, under the sheet's names.
+    for sample_id, whitelist in (("known", "737K-cratac-v1.txt"), ("multiome", "737K-arc-v1.txt")):
+        (task,) = [row for row in rows if row["name"] == f"SCATAC_CHROMAP ({sample_id})"]
+        staged = work / "work" / task["hash"]
+        assert any(path.name == whitelist for path in staged.parent.glob(f"{staged.name}*/*")), (
+            sample_id
+        )
     # Stub runs never publish into the references folder.
     assert sorted(p.name for p in (work / "references").iterdir()) == [
         "atac.whitelist.txt",

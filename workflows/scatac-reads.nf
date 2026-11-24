@@ -24,15 +24,19 @@ def barcodeRead(chemistry) {
     ][chemistry]
 }
 
-// 10x barcode lists the workflow downloads into the references folder when they are missing:
-// the source, pinned to a commit, and the file's SHA256. The multiome ATAC list (737K-arc-v1.txt)
-// ships only with Cell Ranger ARC, so it must be supplied.
+// 10x barcode lists the workflow downloads into the references folder when they are missing: the
+// source, pinned (to a commit, or a versioned Zenodo record), and the SHA256 of the file as served.
+// GET_WHITELIST stores each as plain text under its name here, decompressing a gzipped one.
 def knownWhitelists() {
     return [
         '737K-cratac-v1.txt': [
             url: 'https://raw.githubusercontent.com/10XGenomics/cellranger-atac/' +
                 '5753003c286de55c193f02e1d66c847cb635aa60/lib/python/barcodes/737K-cratac-v1.txt',
             sha256: '707392c93c1ee4168631958a8df61aeefc6eb2d5a3ca3e9ad54e069d8e7fd776',
+        ],
+        '737K-arc-v1.txt': [
+            url: 'https://zenodo.org/records/14973592/files/737K-arc-v1.snATAC.txt.gz',
+            sha256: '8d9aa8efdda30848e6f60a228a94e6f06eb7213d33a3558fb2ef7c8e53e4340e',
         ],
     ]
 }

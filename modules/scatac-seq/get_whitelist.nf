@@ -1,8 +1,9 @@
 include { dotenv } from 'plugin/nf-dotenv'
 
-// A 10x barcode list missing from the references folder, downloaded from 10x's public source
-// and checked against its pinned SHA256. The references folder is git-ignored and the list is
-// used only to correct barcodes, never redistributed.
+// A 10x barcode list missing from the references folder, downloaded from its pinned public source
+// and checked against its pinned SHA256, then stored as plain text under the sheet's name. The
+// references folder is git-ignored and the list is used only to correct barcodes, never
+// redistributed.
 process GET_WHITELIST {
     cpus 1
     memory '1 GB'
@@ -21,11 +22,15 @@ process GET_WHITELIST {
     script:
     """
     aria2c --max-connection-per-server=4 --retry-wait=5 --out=download.txt '${url}'
+    # The SHA256 is of the file as served.
     printf '%s  download.txt\\n' '${sha256}' | sha256sum --check --quiet || {
         printf '%s from %s does not match its pinned SHA256\\n' '${name}' '${url}' >&2
         exit 1
     }
-    mv download.txt '${name}'
+    # A list may be served gzipped (the multiome list on Zenodo); store it as plain text under
+    # the sheet's name. -f passes an uncompressed list through unchanged.
+    gzip -dcf download.txt > '${name}'
+    rm download.txt
     """
     stub:
     """
