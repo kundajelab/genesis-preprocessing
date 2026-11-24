@@ -211,6 +211,15 @@ calling. It still reads alignments carrying the BAM duplicate flag; marking a
 BAM is not the same as excluding those records. Thus retaining duplicates in the
 alignment BAM does not mean peak calling retains every duplicate observation.
 
+For an SE sample, MACS3 builds its fragment-size model from paired + and - strand
+peaks, and stops when it finds fewer than 100 (`MACS3 needs at least 100 paired
+peaks at + and - strand to build the model, but can only find 88!`), as weakly
+enriched libraries can. Such a sample gets no peaks and no quantification, but the
+run continues: `CALL_PEAKS` publishes `<sample_id>.failure-reason.txt` with MACS3's
+message, instead of its MACS3 outputs, and the run's log warns about it. PE samples
+(`BAMPE`) take fragment sizes from their pairs and build no model. Any other MACS3
+failure stops the run.
+
 Tracks and primary-weighted quantification use the retained BAM, without a
 separate duplicate filter; paired read ends count independently in quantification.
 Consequently, excluding duplicate records can change coverage and quantification
@@ -244,6 +253,8 @@ Published results live at `WORKSPACE/RUN_NAME/output/<species>/<sample_id>/`:
 - CPM and 5-prime count bigWigs, including PE first-read tracks.
 - Treatment MACS3 outputs, including gzipped narrowPeak files.
 - Treatment `.peaks.RPM.tsv` and `.peaks.mean_RPKM.tsv` scores.
+- Instead of those two, `<sample_id>.failure-reason.txt` for a treatment MACS3 could not
+  model.
 
 A single run-level aggregate is published at
 `WORKSPACE/RUN_NAME/output/multiqc/multiqc_report.html`, with the complete
